@@ -1,0 +1,251 @@
+{% extends "django_learning/_template.html" %}
+
+{% load staticfiles %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}{% endblock %}
+
+{% block body %}
+
+    {% if request.user.coder in project.admins.all %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Extract Project Sample</div>
+                    <table class="panel-body table table-condensed">
+
+                        <tr><th>Sample Name</th><th>HIT Type</th><th>Sampling Frame</th><th>Sampling Method</th><th>Size</th><th>Allow Overlap?</th><th></th></tr>
+                        <form class="form-inline" method="post" action="{% url 'django_learning:extract_sample' project.name %}">
+                            {% csrf_token %}
+                            <tr>
+                                <td>
+                                    <fieldset class="form-group">
+                                        <textarea name="sample_name" class="form-control" rows="1" placeholder="Name"></textarea>
+                                    </fieldset>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="hit_type_name" id="hit_type_name">
+                                            {% for hit_type in hit_types.keys %}
+                                                <option value="{{ hit_type }}">{{ hit_type }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="sampling_frame_name" id="sampling_frame_name">
+                                            {% for sampling_frame in sampling_frames %}
+                                                <option value="{{ sampling_frame.name }}" {% if sampling_frame.name == 'all_documents' %}selected{% endif %}>{{ sampling_frame }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="sampling_method" id="sampling_method">
+                                            {% for sampling_method in sampling_methods.keys %}
+                                                <option value="{{ sampling_method }}" {% if sampling_method == 'random' %}selected{% endif %}>{{ sampling_method }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <input type="number" value="0" id="size" name="size">
+                                    </div>
+                                </td>
+                                <td>
+                                    False<input type="hidden" value="0" id="allow_overlap_with_existing_project_samples" name="allow_overlap_with_existing_project_samples">
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary">Extract</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Create In-House HITs</div>
+                    <table class="panel-body table table-condensed">
+                        <tr><th>Sample</th><th>Num Coders</th><th></th></tr>
+                        <form class="form-inline" method="post" action="{% url 'django_learning:create_sample_hits_experts' project.name %}">
+                            {% csrf_token %}
+                            <tr>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="sample_name" id="sample_name">
+                                            {% for sample in samples %}
+                                                <option value="{{ sample.sample.name }}">{{ sample.sample }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <input type="number" value="0" id="num_coders" name="num_coders">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary">Launch</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Create Mechanical Turk HITs</div>
+                    <table class="panel-body table table-condensed">
+                        <tr><th>Sample</th><th>Num Coders</th><th>Production</th><th></th></tr>
+                        <form class="form-inline" method="post" action="{% url 'django_learning:create_sample_hits_mturk' project.name %}">
+                            {% csrf_token %}
+                            <tr>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="sample_name" id="sample_name">
+                                            {% for sample in samples %}
+                                                <option value="{{ sample.sample.name }}">{{ sample.sample }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <input type="number" value="0" id="num_coders" name="num_coders">
+                                    </div>
+                                </td>
+                                <td>
+                                    False<input type="hidden" value="0" id="prod" name="prod">
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary">Launch</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    {% endif %}
+
+    {% if samples|length > 0 %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <div class="panel-heading">{{ project.name }}: Samples</div>
+                    <table class="panel-body table table-condensed">
+                        <col>
+                        <colgroup span="4"></colgroup>
+                        <colgroup span="3"></colgroup>
+                        <tr>
+                            <th rowspan="2">Sample</th>
+                            <th rowspan="2">Sample Units</th>
+                            <th colspan="4" scope="colgroup">Mechanical Turk</th>
+                            <th colspan="3" scope="colgroup">In-House</th>
+                        </tr>
+                        <tr>
+                            <th scope="col">Total HITs</th>
+                            <th scope="col">HITs Completed</th>
+                            <th scope="col">Total Assignments</th>
+                            <th scope="col">Assignments Completed</th>
+                            <th scope="col">Total HITs</th>
+                            <th scope="col">HITs Completed</th>
+                            <th scope="col">HITs Available</th>
+                        </tr>
+                        {% for sample in samples %}
+                            <tr>
+                                <td scope="row">{{ sample.sample.name }}</td>
+                                <td scope="row">{{ sample.sample.document_units.count }}</td>
+                                <td>{{ sample.total_turk_hits.count }}</td>
+                                <td>{{ sample.completed_turk_hits.count }}</td>
+                                <td>{{ sample.total_turk_assignments }}</td>
+                                <td>{{ sample.completed_turk_assignments.count }}</td>
+                                <td>{{ sample.total_expert_hits.count }}</td>
+                                <td>{{ sample.completed_expert_hits.count }}</td>
+                                <td>{{ sample.available_expert_hits.count }}</td>
+                                <td>{% if sample.available_expert_hits.count > 0 %}<a class="btn btn-primary" href="{% url 'django_learning:code_random_assignment' project.name sample.sample.name %}">Start Coding</a>{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="row">
+            <p>No Samples Extracted</p>
+        </div>
+    {% endif %}
+
+    {% if request.user.coder in project.admins.all %}
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Access Results</div>
+                    <table class="panel-body table table-condensed">
+
+                        <tr><th>Project</th><th>Sample</th><th>Dataframe</th><th>Access Mode</th><th></th></tr>
+                        <form class="form-inline" method="post" action="/get_dataframe/{{ project.name }}">
+                            {% csrf_token %}
+                            <tr>
+                                <td>{{ project.name }}</td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="sample_name" id="sample_name">
+                                            <!-- <option value="all" {% if sample_name == "all" %}selected{% endif %}>All samples</option> -->
+                                            {% for b in project.samples.all %}
+                                                <option value="{{ b.name }}">{{ b.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="dataframe" id="dataframe">
+                                            {% for d in dataframes %}
+                                                <option value="{{ d }}">{{ d }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="access_mode" id="access_mode">
+                                            <option value="view" selected>View</option>
+                                            <option value="download" selected>Download</option>
+                                        </select>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary">Go</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    {% endif %}
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

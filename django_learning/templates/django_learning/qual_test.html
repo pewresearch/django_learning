@@ -1,0 +1,171 @@
+{% extends "django_learning/_template.html" %}
+
+{% load staticfiles %}
+
+{% block extra_head %}
+
+    <style>
+        .zoom {
+          zoom:1.2;
+          transform:scale(1.2);
+          -ms-transform:scale(1.2);
+          -webkit-transform:scale(1.2);
+          -o-transform:scale(1.2);
+          -moz-transform:scale(1.2);
+          transform-origin:0 0;
+          -ms-transform-origin:0 0;
+          -webkit-transform-origin:0 0;
+          -o-transform-origin:0 0;
+          -moz-transform-origin:0 0;
+          -webkit-transform-origin:0 0;
+          padding: 0px;
+        }
+        input[type="radio"], input[type="checkbox"], input[type="number"] {
+            line-height: normal;
+            margin-top: 0;
+        }
+        .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+            vertical-align: middle;
+        }
+        .tooltip-inner {
+            min-width: 150px;
+            max-width: 500px;
+            width: 500px;
+            font-size: 18px;
+        }
+        .container {
+          max-width: 1920px;
+          width: 100%;
+        }
+    </style>
+
+{% endblock %}
+
+{% block modals %}
+
+    {% for q in qual_test.questions.all %}
+        {% if q.examples.count > 0 or q.pointers|length > 0 %}
+            <div class="modal fade" id="{{ q.name }}_modal" tabindex="-1" role="dialog">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">{{ q.prompt }}</h4>
+                  </div>
+                  <div class="modal-body">
+
+                      <h4>What to Look For</h4>
+                      <table class="table table-condensed">
+                          <tr>{% for l in q.labels_reversed %}<th>{{ l.label }}</th>{% endfor %}</tr>
+                          <tr>
+                            {% for l in q.labels_reversed %}
+                                <td class="col-md-6">
+                                    <ui>
+                                        {% for p in l.pointers %}
+                                            <li>{{ p }}</li>
+                                        {% endfor %}
+                                    </ui>
+                                </td>
+                            {% endfor %}
+                          </tr>
+                      </table>
+
+                      <h4>Examples</h4>
+                      <table class="table table-condensed">
+                          {% for e in q.examples.all %}<tr><td class="col-md-6">"{{ e.quote }}"</td><td class="col-md-6">{{ e.explanation }}</td></tr>{% endfor %}
+                      </table>
+
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+{% endblock %}
+
+{% block body %}
+
+    <h3>{{ qual_test.title }}</h3>
+    <p>{{ qual_test.instructions }}</p>
+    <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
+    <form class="form" method="post" action="/complete_qualification/{{ project.name }}/{{ sample.name }}">
+        {% csrf_token %}
+        <input type="hidden" name="hit_id" value="{{ hit.pk }}">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <table class="panel-body table table-condensed">
+                        {% for q in qual_test.questions.all %}
+                            <tr>
+                                {% if q.display == 'header' %}
+                                    <th colspan="2">
+                                        {% if q.tooltip %}<a href="#" data-toggle="tooltip" title="{{ q.tooltip }}">{{ q.prompt }}</a>
+                                        {% else %}<a>{{ q.prompt }}</a>
+                                        {% endif %}
+                                    </th>
+                                {% else %}
+                                    <td>
+                                        {% if q.tooltip %}<span title="{{ q.tooltip }}" data-toggle="tooltip" data-placement="bottom">{% endif %}
+                                            {% if q.examples.count > 0 or q.pointers|length > 0 %}<a href="#" data-toggle="modal" data-target="#{{ q.name }}_modal">{{ q.prompt }}</a>
+                                            {% else %}<a>{{ q.prompt }}</a>
+                                            {% endif %}
+                                        {% if q.tooltip %}</span>{% endif %}
+                                    </td>
+                                    {% if q.display == 'radio' %}
+                                        <td class="form-group col-md-{{ q.codes.count }}">
+                                            {% for label in q.labels.all %}
+                                                <label class="radio-inline">
+                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}" {% if label.select_as_default %}checked="checked"{% endif %}>
+                                                    {{ label.label }}
+                                                </label>
+                                            {% endfor %}
+                                        </td>
+                                    {% elif q.display == 'number' %}
+                                        <td class="form-group">
+                                            <input class="zoom" type="number" name="{{ q.name }}">
+                                        </td>
+                                    {% endif %}
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                        <tr><td colspan="2"><button class="btn btn-primary btn-block" type="button" data-toggle="modal" data-target="#confirm_modal">Submit</button></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="confirm_modal" tabindex="-1" role="dialog">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Confirm submission</h4>
+              </div>
+              <div class="modal-body">
+                <p>Are you sure you're ready to submit?</p>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Go back</button>
+                <button type="submit" id="submitButton" class="btn btn-primary">Submit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+    </form>
+
+{% endblock %}
+
+{% block extra_body %}
+
+    <script>
+        $(document).ready(function(){
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+    </script>
+
+{% endblock %}

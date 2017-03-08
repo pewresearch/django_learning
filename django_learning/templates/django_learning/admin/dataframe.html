@@ -1,0 +1,57 @@
+{% extends "_template.html" %}
+
+{% load staticfiles %}
+
+{% block extra_head %}
+
+    <style>
+    </style>
+
+{% endblock %}
+
+{% block modals %}{% endblock %}
+
+{% block menu %}
+
+    <div class="row">
+        <form class="form-inline" method="post" action="/admin/{{ project.name }}/{{ dataframe_name }}">
+            {% csrf_token %}
+            <div class="form-group">
+                <select class="form-control" name="batch_name" id="batch_name">
+                    <option value="all" {% if batch_name == "all" %}selected{% endif %}>All batches</option>
+                    {% for b in project.batches.all %}
+                        <option value="{{ b.name }}" {% if batch_name == b.name %}selected{% endif %}>{{ b.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" id="submitButton" class="btn btn-primary">Filter</button>
+            </div>
+        </form>
+    </div>
+
+{% endblock %}
+
+{% block body %}
+
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">{{ dataframe_name }}</div>
+            <table class="panel-body table table-condensed">
+                <thead><tr>{% for col in df.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+                <tbody style="overflow-x: scroll; overflow-y: scroll;" >
+                    {% for index, row in df.iterrows %}
+                        <tr>
+                            {% for v in row.values %}
+                                <td>{{ v }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}
