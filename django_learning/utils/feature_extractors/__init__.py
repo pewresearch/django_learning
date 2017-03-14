@@ -4,7 +4,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from pewtils import is_not_null, decode_text
 from pewtils.django import CacheHandler, reset_django_connection_wrapper
-from django_learning.utils import get_param_repr
+from django_learning.utils import get_param_repr, preprocessors
 
 
 class BasicExtractor(BaseEstimator, TransformerMixin):
@@ -68,9 +68,8 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
         preprocessors = []
         if "preprocessors" in self.params.keys():
             for p, params in self.params["preprocessors"]:
-                preprocessor_module = importlib.import_module("logos.learning.utils.preprocessors.{0}".format(p))
                 if is_not_null(self.params["cache_identifier"]):
                     params["cache_identifier"] = self.params["cache_identifier"]
-                preprocessors.append(preprocessor_module.Preprocessor(**params))
+                preprocessors.append(preprocessors[p](**params))
 
         return preprocessors
