@@ -1,11 +1,11 @@
-import numpy
+import numpy, pandas, random, gensim
 
 from django.db import models
 
 from picklefield.fields import PickledObjectField
 
 from django_learning.utils.preprocessors.clean_text import Preprocessor as CleanTextPreprocessor
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
 
 from pewtils import chunker
@@ -13,13 +13,14 @@ from pewtils.django import get_model
 from pewtils.nlp import TextCleaner, SentenceTokenizer
 
 
-class Word2VecModel(DJANGO_LEARNING_BASE_MODEL):
-    # document_type = models.CharField(max_length=60, choices=get_document_types(), help_text="The type of document")
+class Word2VecModel(LoggedExtendedModel):
+
+    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="word2vec_models")
+
     window_size = models.IntegerField(default=10)
     use_skipgrams = models.BooleanField(default=False)
     use_sentences = models.BooleanField(default=False)
     dimensions = models.IntegerField(default=300)
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="word2vec_models", null=True)
 
     finalized = models.BooleanField(default=False)
 
@@ -27,16 +28,14 @@ class Word2VecModel(DJANGO_LEARNING_BASE_MODEL):
 
     training_documents = models.ManyToManyField("django_learning.Document", related_name="word2vec_models_trained")
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    class Meta:
 
-    # class Meta:
-    #
-    #   unique_together = ("document_type", "window_size", "use_skipgrams", "use_sentences", "dimensions")
+      unique_together = ("frame", "window_size", "use_skipgrams", "use_sentences", "dimensions")
 
     def __str__(self):
 
         return "{}, window_size={}, use_sentences={}, use_skipgrams={}, dimensions={}, finalized={}".format(
-            self.document_type,
+            self.frame,
             self.window_size,
             self.use_sentences,
             self.use_skipgrams,
@@ -53,15 +52,9 @@ class Word2VecModel(DJANGO_LEARNING_BASE_MODEL):
             w2v_model = self.model
 
             print "Extracting document IDs"
-            if self.frame:
-                doc_ids = self.frame.documents \
-                    .filter(is_clean=True) \
-                    .filter(text__isnull=False)
-            else:
-                doc_ids = get_model("Document").objects \
-                    .filter(**{"{}__isnull".format(self.document_type): False}) \
-                    .filter(is_clean=True) \
-                    .filter(text__isnull=False)
+            doc_ids = self.frame.documents \
+                .filter(is_clean=True) \
+                .filter(text__isnull=False)
             doc_ids = list(doc_ids.values_list("pk", flat=True))
             random.shuffle(doc_ids)
 

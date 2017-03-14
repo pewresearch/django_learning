@@ -1,11 +1,11 @@
 from django.db import models
 # from django.contrib.postgres.fields import ArrayField
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.managers import NgramSetManager
 
 
-class NgramSet(DJANGO_LEARNING_BASE_MODEL):
+class NgramSet(LoggedExtendedModel):
 
     name = models.CharField(max_length=100, db_index=True)
     dictionary = models.CharField(max_length=100, db_index=True)
@@ -23,14 +23,12 @@ class NgramSet(DJANGO_LEARNING_BASE_MODEL):
         return "{0}: {1}".format(self.dictionary, name)
 
 
-class DocumentNgramSet(DJANGO_LEARNING_BASE_MODEL):
+class DocumentNgramSet(LoggedExtendedModel):
 
     ngram_set = models.ForeignKey("django_learning.NgramSet", related_name="documents")
     document = models.ForeignKey("django_learning.Document", related_name="ngram_sets")
     count = models.IntegerField()
     percent = models.FloatField()
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
         unique_together = ("ngram_set", "document")

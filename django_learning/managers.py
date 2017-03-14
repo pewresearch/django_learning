@@ -10,11 +10,10 @@ from django.db.models import Count, F
 from pewtils import chunker, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer
 from pewtils.django import CacheHandler, get_model
+from pewtils.django.managers import BasicExtendedManager
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MANAGER
 
-
-class QuestionManager(DJANGO_LEARNING_BASE_MANAGER):
+class QuestionManager(BasicExtendedManager):
 
     def create_from_config(self, owner_model_name, owner, q, i):
 
@@ -40,7 +39,7 @@ class QuestionManager(DJANGO_LEARNING_BASE_MANAGER):
                     {
                         "label": decode_text(l["label"]),
                         "priority": j,
-                        # TODO: reenable: "pointers": [decode_text(p) for p in l["pointers"]],
+                        "pointers": [decode_text(p) for p in l["pointers"]],
                         "select_as_default": l.get("select_as_default", False)
                     }
                 ).pk
@@ -65,7 +64,7 @@ class QuestionManager(DJANGO_LEARNING_BASE_MANAGER):
         owner.questions.add(question)
 
 
-class DocumentManager(DJANGO_LEARNING_BASE_MANAGER):
+class DocumentManager(BasicExtendedManager):
 
     def reset_text_to_original(self):
         @transaction.atomic
@@ -179,7 +178,7 @@ class DocumentManager(DJANGO_LEARNING_BASE_MANAGER):
         return d2v_model
 
 
-# class CoderDocumentCodeManager(DJANGO_LEARNING_BASE_MANAGER):
+# class CoderDocumentCodeManager(BasicExtendedManager):
 #
 #     pass
 #
@@ -200,7 +199,7 @@ class DocumentManager(DJANGO_LEARNING_BASE_MANAGER):
 #     #             c.save()
 
 
-class NgramSetManager(DJANGO_LEARNING_BASE_MANAGER):
+class NgramSetManager(BasicExtendedManager):
 
     def get_dictionary_word_map(self, dictionary=None):
 

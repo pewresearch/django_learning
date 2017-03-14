@@ -9,16 +9,14 @@ from pewtils.django.sampling import SampleExtractor
 
 from tqdm import tqdm
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.utils import sampling_frames, sampling_methods
 
 
-class SamplingFrame(DJANGO_LEARNING_BASE_MODEL):
+class SamplingFrame(LoggedExtendedModel):
 
     name = models.CharField(max_length=200, unique=True)
     documents = models.ManyToManyField("django_learning.Document", related_name="sampling_frames")
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     def __str__(self):
 
@@ -56,7 +54,7 @@ class SamplingFrame(DJANGO_LEARNING_BASE_MODEL):
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
 
 
-class Sample(DJANGO_LEARNING_BASE_MODEL):
+class Sample(LoggedExtendedModel):
 
     DISPLAY_CHOICES = (
         ('article', 'Article'),
@@ -80,8 +78,6 @@ class Sample(DJANGO_LEARNING_BASE_MODEL):
 
     # AUTO-FILLED RELATIONS
     qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="samples")
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
         unique_together = ("project", "name")
@@ -266,13 +262,11 @@ class Sample(DJANGO_LEARNING_BASE_MODEL):
     #         )
 
 
-class SampleUnit(DJANGO_LEARNING_BASE_MODEL):
+class SampleUnit(LoggedExtendedModel):
 
     document = models.ForeignKey("django_learning.Document", related_name="sample_units")
     sample = models.ForeignKey("django_learning.Sample", related_name="document_units")
     weight = models.FloatField(default=1.0)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
         unique_together = ("document", "sample")

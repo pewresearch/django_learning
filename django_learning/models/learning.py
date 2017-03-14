@@ -9,7 +9,7 @@
 # from abc import abstractmethod
 # from collections import OrderedDict
 #
-# from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+# from django_commander.models import LoggedExtendedModel, DJANGO_LEARNING_BASE_MANAGER
 # from django_learning.utils import get_document_types
 #
 # from pewtils import is_not_null, is_null, decode_text
@@ -46,7 +46,7 @@
 #
 #
 #
-# class LearningModel(DJANGO_LEARNING_BASE_MODEL):
+# class LearningModel(LoggedExtendedModel):
 #
 #     name = models.CharField(max_length=100, unique=True, help_text="Unique name of the classifier")
 #     handler_class = models.CharField(max_length=100, default="DocumentClassificationHandler")

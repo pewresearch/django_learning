@@ -1,26 +1,26 @@
-import numpy
+import numpy, pandas, gensim, random, os
 
 from django.db import models
 
 from picklefield.fields import PickledObjectField
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
 
 from pewtils.django import get_model
 from pewtils.django.sampling import SampleExtractor
 
 
-class TopicModel(DJANGO_LEARNING_BASE_MODEL):
-    # document_type = models.CharField(max_length=60, choices=get_document_types(), help_text="The type of document")
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="topic_models", null=True)
+class TopicModel(LoggedExtendedModel):
+
+    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="topic_models")
     num_topics = models.IntegerField(default=100)
     decay = models.FloatField(default=.8)
     offset = models.IntegerField(default=1)
     passes = models.IntegerField(default=1)
     sample_size = models.IntegerField(default=10000)
-
     chunk_size = models.IntegerField(default=1000)
+
     workers = models.IntegerField(default=2)
 
     model = PickledObjectField(null=True)
@@ -28,36 +28,36 @@ class TopicModel(DJANGO_LEARNING_BASE_MODEL):
 
     training_documents = models.ManyToManyField("django_learning.Document", related_name="topic_models_trained")
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    class Meta:
+
+      unique_together = ("frame", "num_topics", "decay", "offset", "passes", "sample_size", "chunk_size")
 
     def __str__(self):
 
-        return "{}, {}, {}".format(self.document_type, self.frame.name, self.num_topics)
+        return "{}, num_topics={}, decay={}, offset={}, passes={}, sample_size={}, chunk_size={}".format(
+            self.frame,
+            self.decay,
+            self.offset,
+            self.passes,
+            self.sample_size,
+            self.chunk_size
+        )
 
     def _get_document_ids(self):
 
-        if self.frame:
-            doc_ids = list(
-                self.frame.documents \
-                    .filter(is_clean=True) \
-                    .filter(text__isnull=False) \
-                    .values_list("pk", flat=True)
-            )
-        else:
-            doc_ids = list(
-                get_model("Document").objects \
-                    .filter(**{"{}__isnull".format(self.document_type): False}) \
-                    .filter(is_clean=True) \
-                    .filter(text__isnull=False) \
-                    .values_list("pk", flat=True)
-            )
+        doc_ids = list(
+            self.frame.documents \
+                .filter(is_clean=True) \
+                .filter(text__isnull=False) \
+                .values_list("pk", flat=True)
+        )
 
         return doc_ids
 
     def save(self, *args, **kwargs):
 
         if not self.vectorizer:
-            print "Initializing new topic model ({}, {})".format(self.document_type, self.num_topics)
+            print "Initializing new topic model ({}, {})".format(self.frame, self.num_topics)
 
             from django_learning.utils.feature_extractors.tfidf import Extractor as TfidfExtractor
 
@@ -204,7 +204,7 @@ class TopicModel(DJANGO_LEARNING_BASE_MODEL):
                     #     return data
 
 
-class Topic(DJANGO_LEARNING_BASE_MODEL):
+class Topic(LoggedExtendedModel):
     """
     A topic extracted by a topic model.
     """
@@ -212,8 +212,6 @@ class Topic(DJANGO_LEARNING_BASE_MODEL):
     num = models.IntegerField()
     model = models.ForeignKey("django_learning.TopicModel", related_name="topics", null=True, on_delete=models.SET_NULL)
     label = models.CharField(max_length=100, db_index=True, null=True)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
 
@@ -286,23 +284,19 @@ class Topic(DJANGO_LEARNING_BASE_MODEL):
         return numpy.std(list(self.documents.values_list("value", flat=True)))
 
 
-class TopicNgram(DJANGO_LEARNING_BASE_MODEL):
+class TopicNgram(LoggedExtendedModel):
     name = models.CharField(max_length=40, db_index=True)
     topic = models.ForeignKey("django_learning.Topic", related_name="ngrams")
     weight = models.FloatField()
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     def __str__(self):
         return "{}*{}".format(self.name, self.weight)
 
 
-class DocumentTopic(DJANGO_LEARNING_BASE_MODEL):
+class DocumentTopic(LoggedExtendedModel):
     topic = models.ForeignKey("django_learning.Topic", related_name="documents")
     document = models.ForeignKey("django_learning.Document", related_name="topics")
     value = models.FloatField()
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
         unique_together = ("topic", "document")

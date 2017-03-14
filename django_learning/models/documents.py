@@ -11,16 +11,16 @@ from pewtils import is_not_null, is_null, decode_text
 from pewtils.nlp import get_hash
 from pewtils.django import get_fields_with_model
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL
+from django_commander.models import LoggedExtendedModel
 from django_learning.managers import DocumentManager
 
 
-class Document(DJANGO_LEARNING_BASE_MODEL):
+class Document(LoggedExtendedModel):
 
     text = models.TextField(help_text="The text content of the document")
     original_text = models.TextField(null=True)
-    # TODO: reimplement (after done with sqlite): duplicate_ids = ArrayField(models.IntegerField(), default=[])
-    # TODO: reimplement: alternative_text = ArrayField(models.TextField(), default=[])
+    duplicate_ids = ArrayField(models.IntegerField(), default=[])
+    alternative_text = ArrayField(models.TextField(), default=[])
     date = models.DateTimeField(null=True, help_text="An optional date associated with the document")
 
     is_clean = models.BooleanField(default=False)
@@ -46,6 +46,8 @@ class Document(DJANGO_LEARNING_BASE_MODEL):
     # )
 
     freeze_text = models.BooleanField(default=False)
+
+    external_link = models.URLField(null=True)
 
     objects = DocumentManager().as_manager()
 

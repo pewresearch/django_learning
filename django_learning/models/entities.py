@@ -1,10 +1,10 @@
 from django.db import models
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.managers import *
 
 
-class Entity(DJANGO_LEARNING_BASE_MODEL):
+class Entity(LoggedExtendedModel):
     ENTITY_TAGS = (
         ("per", "Person"),
         ("org", "Organization"),
@@ -12,8 +12,6 @@ class Entity(DJANGO_LEARNING_BASE_MODEL):
     )
     name = models.CharField(max_length=300)
     tag = models.CharField(max_length=30, choices=ENTITY_TAGS)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
         unique_together = ("name", "tag")

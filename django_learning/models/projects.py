@@ -6,11 +6,11 @@ from pewtils import is_not_null
 from pewtils.django import get_model
 
 from django_learning.managers import QuestionManager
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.utils import projects, project_hit_types, project_qualification_tests, project_qualification_scorers
 
 
-class Project(DJANGO_LEARNING_BASE_MODEL):
+class Project(LoggedExtendedModel):
 
     name = models.CharField(max_length=250, unique=True)
     coders = models.ManyToManyField("django_learning.Coder", related_name="projects")
@@ -18,8 +18,6 @@ class Project(DJANGO_LEARNING_BASE_MODEL):
     blacklist = models.ManyToManyField("django_learning.Coder", related_name="blacklisted_projects")
     instructions = models.TextField(null=True)
     qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="projects")
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     def __str__(self):
         return self.name
@@ -62,7 +60,7 @@ class Project(DJANGO_LEARNING_BASE_MODEL):
         return all([qual_test.is_qualified(coder) for qual_test in self.qualification_tests.all()])
 
 
-class Question(DJANGO_LEARNING_BASE_MODEL):
+class Question(LoggedExtendedModel):
 
     DISPLAY_CHOICES = (
         ('radio', 'radio'),
@@ -112,14 +110,15 @@ class Question(DJANGO_LEARNING_BASE_MODEL):
         else:
             labels = self.labels.filter(pk__in=labels)
 
+        if "qualification" in assignment._meta.verbose_name: fk = "qualification_assignment"
+        else: fk = "assignment"
         for l in labels:
-            current.append(
-                get_model("Code").objects.create_or_update(
-                    {"assignment": assignment, "label": l}
-                )
+            code = get_model("Code").objects.create_or_update(
+                {fk: assignment, "label": l}
             )
+            current.append(code.pk)
 
-        outdated = existing.exclude(current)
+        outdated = existing.exclude(pk__in=current)
         outdated.delete()
 
 
@@ -127,16 +126,14 @@ class Question(DJANGO_LEARNING_BASE_MODEL):
     #     return self.labels.get(value=label_value).get_consensus_documents(turk_only=turk_only, experts_only=experts_only)
 
 
-class Label(DJANGO_LEARNING_BASE_MODEL):
+class Label(LoggedExtendedModel):
 
     question = models.ForeignKey("django_learning.Question", related_name="labels")
     value = models.CharField(max_length=50, db_index=True, help_text="The code value")
     label = models.CharField(max_length=400, help_text="A longer label for the code value")
     priority = models.IntegerField(default=1)
-    # TODO: reimplement: pointers = ArrayField(models.TextField(), default=[])
+    pointers = ArrayField(models.TextField(), default=[])
     select_as_default = models.BooleanField(default=False)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
 
@@ -165,17 +162,15 @@ class Label(DJANGO_LEARNING_BASE_MODEL):
     #     return get_model("Document").objects.filter(pk__in=doc_ids)
 
 
-class Example(DJANGO_LEARNING_BASE_MODEL):
+class Example(LoggedExtendedModel):
 
     question = models.ForeignKey("django_learning.Question", related_name="examples")
 
     quote = models.TextField()
     explanation = models.TextField()
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
-
-class QualificationTest(DJANGO_LEARNING_BASE_MODEL):
+class QualificationTest(LoggedExtendedModel):
 
     name = models.CharField(max_length=50, unique=True)
     coders = models.ManyToManyField("django_learning.Coder", related_name="qualification_tests", through="django_learning.QualificationAssignment")
@@ -183,13 +178,11 @@ class QualificationTest(DJANGO_LEARNING_BASE_MODEL):
     turk_id = models.CharField(max_length=250, unique=True, null=True)
     title = models.TextField(null=True)
     description = models.TextField(null=True)
-    # TODO: reimplement: keywords = ArrayField(models.TextField(), default=[])
+    keywords = ArrayField(models.TextField(), default=[])
     price = models.FloatField(null=True)
     approval_wait_hours = models.IntegerField(null=True)
     duration_minutes = models.IntegerField(null=True)
     lifetime_days = models.IntegerField(null=True)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     def __str__(self):
         return self.name
@@ -222,7 +215,7 @@ class QualificationTest(DJANGO_LEARNING_BASE_MODEL):
         except QualificationAssignment.DoesNotExist: return False
 
 
-class QualificationAssignment(DJANGO_LEARNING_BASE_MODEL):
+class QualificationAssignment(LoggedExtendedModel):
 
     test = models.ForeignKey("django_learning.QualificationTest", related_name="assignments")
     coder = models.ForeignKey("django_learning.Coder", related_name="qualification_assignments")
@@ -235,8 +228,6 @@ class QualificationAssignment(DJANGO_LEARNING_BASE_MODEL):
     is_qualified = models.NullBooleanField()
     # results = models.PickleFileField()
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-
     def save(self, *args, **kwargs):
 
         if is_not_null(self.time_finished):
@@ -244,14 +235,14 @@ class QualificationAssignment(DJANGO_LEARNING_BASE_MODEL):
         super(QualificationAssignment, self).save(*args, **kwargs)
 
 
-class HITType(DJANGO_LEARNING_BASE_MODEL):
+class HITType(LoggedExtendedModel):
 
     project = models.ForeignKey("django_learning.Project", related_name="hit_types")
     name = models.CharField(max_length=50, unique=True)
 
     title = models.TextField(null=True)
     description = models.TextField(null=True)
-    # TODO: reimplement: keywords = ArrayField(models.TextField(), default=[])
+    keywords = ArrayField(models.TextField(), default=[])
     price = models.FloatField(null=True)
     approval_wait_hours = models.IntegerField(null=True)
     duration_minutes = models.IntegerField(null=True)
@@ -262,8 +253,6 @@ class HITType(DJANGO_LEARNING_BASE_MODEL):
     turk_id = models.CharField(max_length=250, unique=True, null=True)
 
     qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="hit_types")
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
 
     class Meta:
         unique_together = ("project", "name")
