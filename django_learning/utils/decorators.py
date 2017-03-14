@@ -1,4 +1,4 @@
-from logos.utils import is_null
+from pewtils import is_null
 
 
 def require_model(func):
