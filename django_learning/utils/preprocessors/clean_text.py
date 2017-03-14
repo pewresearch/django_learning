@@ -6,7 +6,9 @@ from pewtils import is_not_null, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
 from pewtils.django import CacheHandler
 
+from django_learning.utils import stopword_sets, regex_filters
 from django_learning.utils.preprocessors import BasicPreprocessor
+
 
 WHITELIST = [
     "state university",
@@ -92,8 +94,7 @@ class Preprocessor(BasicPreprocessor):
                 if self.cache:
                     slist = self.cache.read(stopword_set)
                 if not slist:
-                    stopword_module = importlib.import_module("logos.learning.utils.stopword_sets.{0}".format(stopword_set))
-                    slist = stopword_module.get_stopwords()
+                    slist = stopword_sets[stopword_set]()
                     slist = [decode_text(s) for s in slist if len(s) > 2 or stopword_set in ["english", "misc_boilerplate"]]
                     if stopword_set not in ["english", "misc_boilerplate"]:
                         final_slist = []
@@ -120,8 +121,7 @@ class Preprocessor(BasicPreprocessor):
         self.regex_filters = []
         if "regex_filters" in self.params.keys():
             for regex_filter in self.params['regex_filters']:
-                filter_module = importlib.import_module("logos.learning.utils.regex_filters.{}".format(regex_filter))
-                self.regex_filters.append(filter_module.get_regex())
+                self.regex_filters.append(regex_filters[regex_filter]())
 
         self.url_regex = re.compile(
             r"((https?:\/\/(www\.)?)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*))"
