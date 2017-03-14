@@ -1,219 +1,246 @@
-import numpy
+from __future__ import print_function
+import numpy, pandas, gensim, random, os
 
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 
 from picklefield.fields import PickledObjectField
+from corextopic import corextopic as corex_topic
 
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
+from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
+from django_learning.utils import topic_models
+from django_learning.models import SamplingFrame
 
-from pewtils.django import get_model
-from pewtils.django.sampling import SampleExtractor
+from pewtils import is_null, is_not_null
+from django_pewtils import get_model
+from pewanalytics.stats.sampling import SampleExtractor
 
 
-class TopicModel(DJANGO_LEARNING_BASE_MODEL):
-    # document_type = models.CharField(max_length=60, choices=get_document_types(), help_text="The type of document")
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="topic_models", null=True)
-    num_topics = models.IntegerField(default=100)
-    decay = models.FloatField(default=.8)
-    offset = models.IntegerField(default=1)
-    passes = models.IntegerField(default=1)
-    sample_size = models.IntegerField(default=10000)
+class TopicModel(LoggedExtendedModel):
+    """
+    A topic model that's been fit to a specific sampling frame. The ``model`` and ``vectorizer`` are pickled and saved
+    to their respective fields.
+    """
 
-    chunk_size = models.IntegerField(default=1000)
-    workers = models.IntegerField(default=2)
+    name = models.CharField(
+        max_length=200, unique=True, help_text="Unique name for the topic model"
+    )
+    frame = models.ForeignKey(
+        "django_learning.SamplingFrame",
+        related_name="topic_models",
+        on_delete=models.CASCADE,
+        help_text="Sampling frame the topic model belongs to",
+    )
 
-    model = PickledObjectField(null=True)
-    vectorizer = PickledObjectField(null=True)
+    model = PickledObjectField(null=True, help_text="Pickled topic model")
+    vectorizer = PickledObjectField(null=True, help_text="Pickled vectorizer")
 
-    training_documents = models.ManyToManyField("django_learning.Document", related_name="topic_models_trained")
+    parameters = PickledObjectField(
+        null=True, help_text="A pickle file of the parameters used"
+    )
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    training_documents = models.ManyToManyField(
+        "django_learning.Document",
+        related_name="topic_models_trained",
+        help_text="Documents the model was trained on",
+    )
 
     def __str__(self):
 
-        return "{}, {}, {}".format(self.document_type, self.frame.name, self.num_topics)
+        return self.name
+
+    def save(self, *args, **kwargs):
+        """
+        Extends the ``save`` function to pull and save the parameters from the config file
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        self.parameters = topic_models.topic_models[self.name]()
+        self.frame = SamplingFrame.objects.get(name=self.parameters["frame"])
+        super(TopicModel, self).save(*args, **kwargs)
 
     def _get_document_ids(self):
+        """
+        Returns the primary keys of the documents in the sampling frame
+        :return:
+        """
 
-        if self.frame:
-            doc_ids = list(
-                self.frame.documents \
-                    .filter(is_clean=True) \
-                    .filter(text__isnull=False) \
-                    .values_list("pk", flat=True)
-            )
-        else:
-            doc_ids = list(
-                get_model("Document").objects \
-                    .filter(**{"{}__isnull".format(self.document_type): False}) \
-                    .filter(is_clean=True) \
-                    .filter(text__isnull=False) \
-                    .values_list("pk", flat=True)
-            )
+        doc_ids = list(
+            self.frame.documents.filter(text__isnull=False).values_list("pk", flat=True)
+        )
 
         return doc_ids
 
-    def save(self, *args, **kwargs):
+    def load_model(self, refresh_model=False, refresh_vectorizer=False):
+        """
+        Loads an existing model or trains a new model.
+        :param refresh_model: (default is False) if True, the model will be re-trained even if it already exists
+        :param refresh_vectorizer: (default is False) if True, the vectorizer will be re-fit even if it already exists
+        :return:
+        """
 
-        if not self.vectorizer:
-            print "Initializing new topic model ({}, {})".format(self.document_type, self.num_topics)
+        if refresh_model or is_null(self.model):
 
-            from django_learning.utils.feature_extractors.tfidf import Extractor as TfidfExtractor
+            if refresh_vectorizer or is_null(self.vectorizer):
 
-            self.vectorizer = TfidfExtractor(
-                sublinear_tf=False,
-                max_df=.6,
-                min_df=max([10, int(float(self.sample_size) * .0005)]),
-                max_features=10000,
-                ngram_range=(1, 2),
-                use_idf=True,
-                norm="l2",
-                preprocessors=[
-                    ("clean_text", {
-                        "lemmatize": True,
-                        "regex_filters": [],
-                        "stopword_sets": ["english", "politicians", "states", "locations", "fb_links", "months",
-                                          "misc_boilerplate"]
-                    })
-                ]
+                from django_learning.utils.feature_extractors import feature_extractors
+
+                self.vectorizer = feature_extractors["tfidf"](
+                    **self.parameters["vectorizer"]
+                )
+
+                print("Extracting sample for vectorizer")
+
+                frame_ids = self._get_document_ids()
+                random.shuffle(frame_ids)
+
+                if not self.parameters["sample_size"]:
+                    sample_ids = frame_ids
+                else:
+                    sample_ids = SampleExtractor(
+                        pandas.DataFrame({"pk": frame_ids}), "pk"
+                    ).extract(
+                        self.parameters["sample_size"], sampling_strategy="random"
+                    )
+                self.training_documents.set(sample_ids)
+                sample = pandas.DataFrame.from_records(
+                    self.training_documents.values("pk", "text")
+                )
+
+                print("Training vectorizer on {} documents".format(len(sample)))
+                self.vectorizer = self.vectorizer.fit(sample)
+                print(
+                    "{} features extracted from vectorizer".format(
+                        len(self.vectorizer.get_feature_names())
+                    )
+                )
+
+            print(
+                "Initializing new topic model ({}, {})".format(
+                    self.frame, self.parameters["num_topics"]
+                )
+            )
+            self.model = corex_topic.Corex(
+                n_hidden=self.parameters["num_topics"], seed=42
+            )
+            tfidf = self.vectorizer.transform(
+                pandas.DataFrame.from_records(
+                    self.training_documents.values("pk", "text")
+                )
             )
 
-            print "Extracting sample for vectorizer"
+            ngrams = self.vectorizer.get_feature_names()
 
-            frame_ids = self._get_document_ids()
-            random.shuffle(frame_ids)
+            old_topics = list(self.topics.values())
 
-            frame_ids = pandas.DataFrame({"pk": frame_ids})
-            sample_ids = SampleExtractor(id_col="pk", sampling_strategy="random").extract(frame_ids, self.sample_size)
-            sample = pandas.DataFrame.from_records(
-                get_model("Document").objects.filter(pk__in=sample_ids).values("pk", "text"))
+            anchors = []
+            anchor_topic_num = 0
+            old_topic_map = {}
+            for t in old_topics:
+                if is_not_null(t["anchors"]):
+                    anchor_list = [
+                        anchor for anchor in t["anchors"] if anchor in ngrams
+                    ]
+                    if len(anchor_list) > 0:
+                        anchors.append(anchor_list)
+                        old_topic_map[anchor_topic_num] = t
+                        anchor_topic_num += 1
 
-            print "Training vectorizer on {} documents".format(len(sample))
-            self.vectorizer = self.vectorizer.fit(sample)
-            print "{} features extracted from vectorizer".format(len(self.vectorizer.get_feature_names()))
-
-        super(TopicModel, self).save(*args, **kwargs)
-
-    def update_model(self, doc_limit=None, recycle_existing=False):
-
-        vocab_dict = dict([(i, s) for i, s in enumerate(self.vectorizer.get_feature_names())])
-
-        lda_model = self.model
-        if not lda_model:
-            lda_model = gensim.models.ldamulticore.LdaMulticore(
-                chunksize=self.chunk_size,
-                passes=self.passes,
-                decay=self.decay,
-                offset=self.offset,
-                num_topics=self.num_topics,
-                workers=self.workers,
-                id2word=vocab_dict
+            self.model = self.model.fit(
+                tfidf,
+                words=self.vectorizer.get_feature_names(),
+                anchors=anchors,
+                anchor_strength=self.parameters["anchor_strength"],
             )
 
-        print "Extracting document IDs"
-        doc_ids = self._get_document_ids()
-        if not recycle_existing:
-            doc_ids = list(set(doc_ids) - set(self.training_documents.values_list("pk", flat=True)))
-        random.shuffle(doc_ids)
-
-        for i, chunk in tqdm(enumerate(chunker(doc_ids, self.chunk_size)), desc="Processing document chunks"):
-
-            print "Updating model with chunk %i (%i total)" % (i + 1, int((i + 1) * self.chunk_size))
-            chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
-            matrix = self.vectorizer.transform(
-                pandas.DataFrame.from_records(chunk_docs.values("pk", "text"))
-            )
-            matrix = gensim.matutils.Sparse2Corpus(matrix, documents_columns=False)
-            lda_model.update(matrix)
-
-            self.model = lda_model
             self.save()
-            self.training_documents.add(*chunk_docs)
 
-            print self.model.show_topics(self.num_topics)
+            self.topics.all().delete()
+            for i, topic_ngrams in enumerate(self.model.get_topics(n_words=20)):
 
-            self.update_topics()
+                topic = Topic.objects.create_or_update(
+                    {"num": i, "model": self},
+                    search_nulls=False,
+                    save_nulls=True,
+                    empty_lists_are_null=True,
+                )
+                topic.ngrams.all().delete()
+                for ngram, weight, corr in topic_ngrams:
+                    # The "corr" is either 1 or -1; as per the corex documentation:
+                    # If it is positive (1), then the word's presence is informative for the topic.
+                    # If it is negative (-1), then word's absensce is informative for the topic
+                    # Accordingly, we'll only look at positive terms
+                    if corr > 0:
+                        TopicNgram.objects.create(
+                            name=str(ngram), topic=topic, weight=weight
+                        )
+                print(str(topic))
 
-            if doc_limit and (i + 1) * self.chunk_size >= doc_limit:
-                break
+                old_topic = old_topic_map.get(i, None)
+                if old_topic:
 
-        print "Finished updating model"
+                    topic.name = old_topic["name"]
+                    topic.label = old_topic["label"]
+                    topic.anchors = old_topic["anchors"]
+                    topic.save()
 
-    def update_topics(self):
+    def apply_model(self, df, probabilities=False):
+        """
+        Applies the topic model to a dataframe of documents with a ``text`` column.
+        :param df: Dataframe with a ``text`` column
+        :param probabilities: (default is False) if True, returns topic probabilities instead of discrete binary flags
+        :return: A dataframe with additional columns for each topic in the model
+        """
 
-        for i in xrange(self.num_topics):
-            topic = Topic.objects.create_or_update(
-                {
-                    "num": i,
-                    "model": self
-                },
-                search_nulls=False,
-                save_nulls=True,
-                empty_lists_are_null=True
-            )
-            topic.ngrams.all().delete()
-            for weight, ngram in self.model.show_topic(i, topn=25):
-                if weight >= 0.0:
-                    TopicNgram.objects.create(
-                        name=str(ngram),
-                        topic=topic,
-                        weight=weight
-                    )
-
-        print "Topics updated"
-
-    def apply_model(self, min_probability=.5, doc_limit=None):
-
-        doc_ids = self._get_document_ids()
-        random.shuffle(doc_ids)
-        if doc_limit: doc_ids = doc_ids[:doc_limit]
-
-        lda_model = self.model
-        for i, chunk in tqdm(enumerate(chunker(doc_ids, self.chunk_size)), desc="Processing document chunks"):
-            print "Updating model with chunk %i (%i total)" % (i + 1, int((i + 1) * self.chunk_size))
-            chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
-            matrix = self.vectorizer.transform(
-                pandas.DataFrame.from_records(chunk_docs.values("pk", "text"))
-            )
-            matrix = gensim.matutils.Sparse2Corpus(matrix, documents_columns=False)
-            for doc, bow in zip(chunk_docs, matrix):
-                doc.topics.filter(topic__model=self).delete()
-                doc_topics = lda_model.get_document_topics(bow, minimum_probability=min_probability)
-                for topic, weight in doc_topics:
-                    get_model("DocumentTopic").objects.create_or_update(
-                        {"document": doc, "topic": self.topics.get(num=topic), "value": weight},
-                        return_object=False,
-                        save_nulls=True,
-                        search_nulls=False
-                    )
-
-                    # def top_n_documents(self, n=10, document_type=None):
-                    #     doc_topics = DocumentTopic.objects.all()
-                    #     if document_type: doc_topics = doc_topics.filter(**{"document__{0}_id__isnull".format(document_type): False})
-                    #     return doc_topics.filter(topic__model=self).order_by("-value")[:n]
-                    #
-                    # def topic_distribution(self):
-                    #
-                    #     df = pandas.DataFrame(
-                    #         list(DocumentTopic.objects.filter(topic__model=self).values("topic_id", "value"))
-                    #     )
-                    #     data = []
-                    #     for index, row in df.groupby("topic_id").agg({"value": numpy.average}).sort("value").iterrows():
-                    #         data.append((Topic.objects.get(pk=index), row["value"]))
-                    #     return data
+        tfidf = self.vectorizer.transform(df)
+        topic_names = list(self.topics.order_by("num").values_list("name", flat=True))
+        if not probabilities:
+            topic_df = pandas.DataFrame(
+                self.model.transform(tfidf), columns=topic_names
+            ).astype(int)
+        else:
+            topic_df = pandas.DataFrame(
+                self.model.transform(tfidf, details=True)[1], columns=topic_names
+            ).astype(float)
+        topic_df.index = df.index
+        return pandas.concat([df, topic_df], axis=1)
 
 
-class Topic(DJANGO_LEARNING_BASE_MODEL):
+class Topic(LoggedExtendedModel):
     """
     A topic extracted by a topic model.
     """
 
-    num = models.IntegerField()
-    model = models.ForeignKey("django_learning.TopicModel", related_name="topics", null=True, on_delete=models.SET_NULL)
-    label = models.CharField(max_length=100, db_index=True, null=True)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    num = models.IntegerField(
+        help_text="Unique number of the topic in the model (unique together with ``model``)"
+    )
+    model = models.ForeignKey(
+        "django_learning.TopicModel",
+        related_name="topics",
+        null=True,
+        on_delete=models.SET_NULL,
+        help_text="The model the topic belongs to (unique together with ``num``)",
+    )
+    name = models.CharField(
+        max_length=50,
+        db_index=True,
+        null=True,
+        help_text="Optional short name given to the topic",
+    )
+    label = models.CharField(
+        max_length=300,
+        db_index=True,
+        null=True,
+        help_text="Optional label/title given to the topic",
+    )
+    anchors = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        help_text="Optional list of terms to be used as anchors for this topic when training the model",
+    )
 
     class Meta:
 
@@ -221,95 +248,89 @@ class Topic(DJANGO_LEARNING_BASE_MODEL):
 
     def __str__(self):
 
-        if self.label:
+        if self.name:
+            return self.name
+        elif self.label:
             return self.label
         else:
             return self.top_ngrams()
 
     def set_label(self, label):
+        """
+        Sets the topic's label
+        :param label: Label to give to the topic
+        :return:
+        """
 
         self.label = label
         self.save()
 
-    def top_ngrams(self):
+    def anchor_string(self):
+        """
+        Returns a comma-delineated list of anchor terms belonging to the topic
+        :return:
+        """
 
-        return " ".join([n.replace(" ", "_") for n in
-                         self.ngrams.order_by("-weight").filter(weight__gte=.001).values_list("name", flat=True)[:10]])
+        return ", ".join(self.anchors)
 
-    def distinctive_ngrams(self):
+    def top_ngrams(self, top_n=25):
+        """
+        Returns a space-delineated string of the ``top_n`` terms belonging to the topic
+        :param top_n: Number of top terms to return
+        :return:
+        """
 
-        return " ".join([ngram.name.replace(" ", "_") for ngram in self.ngrams.order_by("-weight") if
-                         get_model("TopicNgram").objects.filter(name=ngram.name).filter(
-                             topic__model=self.model).order_by("-weight")[0].topic == self])
-
-    def most_similar(self, with_value=False):
-        sim = self.similar_topics()
-        if len(sim) > 0:
-            if with_value:
-                return sim[0]
-            else:
-                return sim[0][0]
-        else:
-            return None
-
-    def values(self):
-        return list(self.documents.values_list("value", flat=True))
-
-    def values_at_least_1pct(self):
-        return list(self.documents.filter(value__gte=.01).values_list("value", flat=True))
-
-    def top_n_documents(self, n=10):
-        return self.documents.order_by("-value")[:n]
-
-    def top_n_tweets(self, n=10):
-        return self.tweets.order_by("-value")[:n]
-
-    def top_n_bills(self, n=10):
-        return self.bills.order_by("-value")[:n]
-
-    def coef_avg(self):
-        return numpy.average(list(self.ngrams.values_list("weight", flat=True)))
-
-    def coef_total(self):
-        return sum(list(self.ngrams.values_list("weight", flat=True)))
-
-    def coef_std(self):
-        return numpy.std(list(self.ngrams.values_list("weight", flat=True)))
-
-    def document_avg(self):
-        return numpy.average(list(self.documents.values_list("value", flat=True)))
-
-    def document_total(self):
-        return sum(list(self.documents.values_list("value", flat=True)))
-
-    def document_std(self):
-        return numpy.std(list(self.documents.values_list("value", flat=True)))
+        return " ".join(
+            [
+                n.replace(" ", "_")
+                for n in self.ngrams.order_by("-weight")
+                .filter(weight__gte=0.001)
+                .values_list("name", flat=True)[:top_n]
+            ]
+        )
 
 
-class TopicNgram(DJANGO_LEARNING_BASE_MODEL):
-    name = models.CharField(max_length=40, db_index=True)
-    topic = models.ForeignKey("django_learning.Topic", related_name="ngrams")
-    weight = models.FloatField()
+class TopicNgram(LoggedExtendedModel):
+    """
+    An ngram that belongs to a particular topic, with a given ``weight``
+    """
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    name = models.CharField(max_length=40, db_index=True, help_text="The ngram")
+    topic = models.ForeignKey(
+        "django_learning.Topic",
+        related_name="ngrams",
+        on_delete=models.CASCADE,
+        help_text="The topic the ngram belongs to",
+    )
+    weight = models.FloatField(
+        help_text="Weight indicating 'how much' the ngram belongs to the topic; the mutual information of the wored with the topic"
+    )
 
     def __str__(self):
         return "{}*{}".format(self.name, self.weight)
 
 
-class DocumentTopic(DJANGO_LEARNING_BASE_MODEL):
-    topic = models.ForeignKey("django_learning.Topic", related_name="documents")
-    document = models.ForeignKey("django_learning.Document", related_name="topics")
-    value = models.FloatField()
+class DocumentTopic(LoggedExtendedModel):
+    """
+    Application of a topic model to a document; the degree to which the topic matches the document is indicated by ``value``.
+    """
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    topic = models.ForeignKey(
+        "django_learning.Topic",
+        related_name="documents",
+        on_delete=models.CASCADE,
+        help_text="The topic",
+    )
+    document = models.ForeignKey(
+        "django_learning.Document",
+        related_name="topics",
+        on_delete=models.CASCADE,
+        help_text="The document",
+    )
+    value = models.FloatField(help_text="Presence of the topic in the document")
 
     class Meta:
         unique_together = ("topic", "document")
 
     def __str__(self):
-        return "{0}, {1}: {2}".format(
-            str(self.document),
-            str(self.topic),
-            self.value
-        )
+        return "{0}, {1}: {2}".format(str(self.document), str(self.topic), self.value)

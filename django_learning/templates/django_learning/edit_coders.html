@@ -1,0 +1,95 @@
+{% extends django_learning_template %}
+
+{% load static %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+
+
+{% endblock %}
+
+{% block content %}
+
+    {% if project and request.user.coder in project.admins.all %}
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-danger">
+                    <div class="panel-heading">Update {{ mode }} coders for project '{{ project.name }}'</div>
+                    <table class="panel-body table table-condensed">
+
+                        <tr><th>Coder Name</th><th></th></tr>
+                        <form class="form-inline" method="post" action="{% url 'django_learning:edit_project_coders' project.name mode %}">
+                            <div class="modal fade" id="update_coders_modal" tabindex="-1" role="dialog">
+                              <div class="modal-dialog">
+                                <div class="modal-content">
+                                  <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                    <h4 class="modal-title">
+                                        Please confirm the following action
+                                    </h4>
+                                  </div>
+                                  <div class="modal-body">
+                                    <p>
+                                        Update coders
+                                    </p>
+                                  </div>
+                                  <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning" data-dismiss="modal">Cancel</button>
+                                    <button class="btn btn-danger" type="submit">Confirm</button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            {% csrf_token %}
+                            {% for coder in coders %}
+                                <tr>
+                                    <td>{{ coder.name }}</td>
+                                    <td>
+                                        <div class="form-group">
+                                            <select class="form-control" name="{{ coder.pk }}" id="{{ coder.pk }}">
+                                                {% if coder.status != 'assigned' %}
+                                                    <option value="---" selected>---</option>
+                                                {% endif %}
+                                                <option value="assigned" {% if coder.status == 'assigned' %}selected{%endif%}>Assigned</option>
+                                            </select>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            <tr>
+                                <td><input type="text" name="new_name" id="new_name" value="" placeholder="Create a new coder"></td>
+                                <td>
+                                    <div class="form-group">
+                                        <select class="form-control" name="new" id="new">
+                                            <option value="---" selected>---</option>
+                                            <option value="assigned">Assigned</option>
+                                        </select>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <button class="btn btn-danger btn-block" type="button" data-toggle="modal" data-target="#update_coders_modal">Update Coders</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <a class="btn btn-primary btn-block" href="{% url 'django_learning:view_project' project.name %}">Back to Project</a>
+            </div>
+        </div>
+
+    {% endif %}
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

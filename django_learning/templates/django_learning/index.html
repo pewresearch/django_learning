@@ -1,69 +1,39 @@
-{% extends "django_learning/_template.html" %}
+{% extends django_learning_template %}
 
-{% load staticfiles %}
+{% load static %}
 
 {% block extra_head %}{% endblock %}
 
 {% block modals %}{% endblock %}
 
-{% block body %}
+{% block content %}
 
     <div class="row">
-        <div class="col-md-12">
-            <div class="panel panel-default">
+        <div class="col-md-5">
+            <div class="panel panel-primary">
                 <div class="panel-heading">Projects</div>
                 <table class="panel-body table table-condensed">
-                    <tr><th>Project</th><th>Admins</th><th>Coders</th><th>Questions</th><th>Samples</th><th>Qualification Tests</th><th></th></tr>
+                    <tr><th>Project</th><!--<th>Status</th>--><th></th></tr>
                     {% for project in projects %}
                         <tr>
                             <td>{{ project.name }}</td>
-                            <td>{{ project.admins.count }}</td>
-                            <td>{{ project.coders.count }}</td>
-                            <td>{{ project.questions.count }}</td>
-                            <td>{{ project.samples.count }}</td>
-                            <td>{{ project.qualification_tests.all }}</td>
+                            <!--<td>Created</td>-->
                             <td><a class="btn btn-primary" href="{% url 'django_learning:view_project' project.name %}">View Project</a></td>
-                        </tr>
-                    {% endfor %}
-                    {% for project in uncreated_projects %}
-                        <tr>
-                            <td>{{ project }}</td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td><a class="btn btn-primary" href="{% url 'django_learning:create_project' project %}">Create Project</a></td>
                         </tr>
                     {% endfor %}
                 </table>
             </div>
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12">
-            <div class="panel panel-default">
+        <div class="col-md-7">
+            <div class="panel panel-primary">
                 <div class="panel-heading">Sampling Frames</div>
                 <table class="panel-body table table-condensed">
-                    <tr><th>Name</th><th>Documents</th><th>Config</th><th></th></tr>
+                    <tr><th>Name</th><th>Documents</th><th></th></tr>
                     {% for sampling_frame in sampling_frames %}
                         <tr>
                             <td>{{ sampling_frame.name }}</td>
                             <td>{{ sampling_frame.documents.count }}</td>
-                            <td>{{ sampling_frame.config }}</td>
-                            <td><a class="btn btn-warning" href="{% url 'django_learning:extract_sampling_frame' sampling_frame.name %}">Refresh Documents</a></td>
-                        </tr>
-                    {% endfor %}
-                    {% for sampling_frame in uncreated_sampling_frames %}
-                        <tr>
-                            <td>{{ sampling_frame }}</td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td><a class="btn btn-primary" href="{% url 'django_learning:extract_sampling_frame' sampling_frame %}">Extract Sampling Frame</a></td>
+                            <td><a class="btn btn-primary" href="{% url 'django_learning:view_sampling_frame' sampling_frame.name %}">View Sampling Frame</a></td>
                         </tr>
                     {% endfor %}
                 </table>

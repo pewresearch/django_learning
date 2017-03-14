@@ -1,0 +1,125 @@
+{% extends django_learning_template %}
+
+{% load static %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">{{ sample }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!--{% if total_expert_hits.count == 0 and request.user.coder in sample.project.admins.all %}-->
+            <!--<div class="col-md-6">-->
+                <!--<div class="panel panel-danger">-->
+                    <!--<div class="panel-heading">Create In-House HITs</div>-->
+                    <!--<table class="panel-body table table-condensed">-->
+                        <!--<tr><th>Num Coders</th><th></th></tr>-->
+                        <!--<form class="form-inline" method="post" action="{% url 'django_learning:create_sample_hits_experts' sample.project.name %}">-->
+                            <!--{% csrf_token %}-->
+                            <!--<tr>-->
+                                <!--<input type="hidden" name="sample_name" id="sample_name" value="{{ sample.name }}">-->
+                                <!--<td>-->
+                                    <!--<div class="form-group">-->
+                                        <!--<input type="number" value="0" id="num_coders" name="num_coders">-->
+                                    <!--</div>-->
+                                <!--</td>-->
+                                <!--<td>-->
+                                    <!--<div class="form-group">-->
+                                        <!--<button type="submit" class="btn btn-danger">Launch</button>-->
+                                    <!--</div>-->
+                                <!--</td>-->
+                            <!--</tr>-->
+                        <!--</form>-->
+                    <!--</table>-->
+                <!--</div>-->
+            <!--</div>-->
+        <!--{% elif total_expert_hits.count > 0 %}-->
+        <!--{% endif %} -->
+        <div class="col-md-8">
+            <div class="panel panel-primary">
+                <div class="panel-heading">In-House HITs</div>
+                <table class="panel-body table table-condensed">
+                    <tr>
+                        <th>Coder</th>
+                        <th>Total HITs</th>
+                        <th>HITs Completed</th>
+                        <th>HITs Available</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td>YOU</td>
+                        <td>{{ total_expert_hits.count }}</td>
+                        <td>{{ completed_expert_hits.count }}</td>
+                        <td>{{ available_expert_hits.count }}</td>
+                        <td>
+                            {% if available_expert_hits.count > 0 and request.user.coder in sample.project.coders.all %}
+                                <a class="btn btn-primary" href="{% url 'django_learning:code_assignment' sample.project.name sample.name %}">Start Coding</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ request.user.coder.pk }}">View Assignments</a>
+                        </td>
+                        <td>
+                            <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ request.user.coder.pk }}&uncodeable=True">Review Uncodeable ({{ uncodeable.count }})</a>
+                        </td>
+                    </tr>
+                    {% if request.user.coder in sample.project.admins.all %}
+                        {% for coder in expert_coder_completion %}
+                            <tr>
+                                <td>{{ coder.coder.name }}</td>
+                                <td>{{ total_expert_hits.count }}</td>
+                                <td>{{ coder.completed_expert_hits.count }}</td>
+                                <td>{{ coder.available_expert_hits.count }}</td>
+                                <td></td>
+                                <td>
+                                    <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ coder.coder.pk }}">View Assignments</a>
+                                </td>
+                                <td>
+                                    <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ coder.coder.pk }}&uncodeable=True">Review Uncodeable ({{ coder.uncodeable.count }})</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        {% if request.user.coder in sample.project.admins.all %}
+            <div class="col-md-4">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">Adjudicate Disagreements</div>
+                    <table class="panel-body table table-condensed">
+                        {% for question in sample.project.questions.all %}
+                            {% if question.display != "header" %}
+                                <tr>
+                                    <td><a href="{% url 'django_learning:adjudicate_question' sample.project.name sample.name question.name %}">{{ question.name }}</a></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            <a class="btn btn-primary btn-block" href="{% url 'django_learning:view_project' sample.project.name %}">Back to Project</a>
+        </div>
+        <div class="col-md-3">
+            <a class="btn btn-primary btn-block" href="{% url 'django_learning:download_sample' sample.project.name sample.name %}">Download codes</a>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

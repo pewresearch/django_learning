@@ -1,205 +1,491 @@
+from __future__ import print_function
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericRelation
 
 from pewtils import is_not_null
-from pewtils.django import get_model
+from django_pewtils import get_model
 
+from django_commander.models import LoggedExtendedModel
 from django_learning.managers import QuestionManager
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
-from django_learning.utils import projects, project_hit_types, project_qualification_tests, project_qualification_scorers
+from django_learning.exceptions import RequiredResponseException
+from django_learning.utils import projects
+from django_learning.utils import dataset_extractors
+from django_learning.utils import project_qualification_tests
+from django_learning.utils import project_qualification_scorers
+
+try:
+    from importlib import reload
+
+except ImportError:
+    pass
 
 
-class Project(DJANGO_LEARNING_BASE_MODEL):
+class Project(LoggedExtendedModel):
+    """
+    Projects represent codebooks - sets of questions that you want to use to code a set of documents.
 
-    name = models.CharField(max_length=250, unique=True)
-    coders = models.ManyToManyField("django_learning.Coder", related_name="projects")
-    admins = models.ManyToManyField("django_learning.Coder", related_name="admin_projects")
-    blacklist = models.ManyToManyField("django_learning.Coder", related_name="blacklisted_projects")
-    instructions = models.TextField(null=True)
-    qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="projects")
+    """
 
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    name = models.CharField(
+        max_length=250,
+        help_text="Name of the project (corresponds to a project config JSON file",
+    )
+    coders = models.ManyToManyField(
+        "django_learning.Coder",
+        related_name="projects",
+        help_text="Coders on the project",
+    )
+    admins = models.ManyToManyField(
+        "django_learning.Coder",
+        related_name="admin_projects",
+        help_text="Coders with admin privileges on the project",
+    )
+    instructions = models.TextField(
+        null=True,
+        help_text="Instructions to be displayed at the top of the coding interface",
+    )
+    qualification_tests = models.ManyToManyField(
+        "django_learning.QualificationTest",
+        related_name="projects",
+        help_text="Qualification tests that coders must take to qualify for the coding project",
+    )
+    mturk_sandbox = models.BooleanField(
+        default=True,
+        help_text="(default is True) whether or not the project is in sandbox mode (for the purposes of interacting with Mechanical Turk)",
+    )
+
+    def __init__(self, *args, **kwargs):
+
+        super(Project, self).__init__(*args, **kwargs)
+        self.__init_mturk_sandbox = self.mturk_sandbox
 
     def __str__(self):
-        return self.name
+        if self.mturk_sandbox:
+            return "{} (MTURK SANDBOX)".format(self.name)
+        else:
+            return self.name
 
     def save(self, *args, **kwargs):
+        """
+        Extends the ``save`` function to sync the project with its JSON config with the same name
+        :param args:
+        :param kwargs:
+        :return:
+        """
 
-        if self.name not in projects.keys():
-            raise Exception("Project '{}' is not defined in any of the known folders".format(self.name))
+        if (
+            self.mturk_sandbox
+                and not self.__init_mturk_sandbox
+                and self.hits.filter(turk=True).count() > 0
+        ):
+            raise Exception(
+                "This project already has live MTurk HITs, you can't switch it back to sandbox mode!"
+            )
+        elif not self.mturk_sandbox and self.__init_mturk_sandbox:
+            test_hits = projects.hits.filter(turk=True)
+            print(
+                "About to delete {} sandbox HITs and switch to live mode: continue?".format(
+                    test_hits.count()
+                )
+            )
+            test_hits.delete()
+            from django_commander.commands import commands
 
-        config = projects[self.name]
+            commands["django_learning_mturk_clear_sandbox"]()
+
+        if self.name not in projects.projects.keys():
+            reload(projects)
+            if self.name not in projects.projects.keys():
+                print(self.name)
+                print(projects.projects.keys())
+                raise Exception(
+                    "Project '{}' is not defined in any of the known folders".format(
+                        self.name
+                    )
+                )
+
+        config = projects.projects[self.name]
+        if "instructions" in config.keys():
+            self.instructions = config["instructions"]
         super(Project, self).save(*args, **kwargs)
 
         qual_tests = []
         for qual_test in config.get("qualification_tests", []):
             qual_tests.append(
-                QualificationTest.objects.create_or_update({"name": qual_test})
+                QualificationTest.objects.create_or_update(
+                    {"name": qual_test, "mturk_sandbox": self.mturk_sandbox}
+                )
             )
-        self.qualification_tests = qual_tests
+        self.qualification_tests.set(qual_tests)
 
         for i, q in enumerate(config["questions"]):
             Question.objects.create_from_config("project", self, q, i)
-        for c in config["coders"]:
-            try: user = User.objects.get(username=c["name"])
+
+        admin_names = [c for c in config.get("admins", [])]
+        coder_names = list(admin_names)
+        coder_names.extend(config.get("coders", []))
+
+        coders = []
+        admins = []
+        for c in coder_names:
+            try:
+                user = User.objects.get(username=c)
             except User.DoesNotExist:
                 user = User.objects.create_user(
-                    c["name"],
-                    "{}@pewresearch.org".format(c["name"]),
-                    "pass"
+                    c, "{}@pewresearch.org".format(c), "pass"
                 )
+                # TODO: build in better user management
             coder = get_model("Coder").objects.create_or_update(
-                {"name": c["name"]},
-                {"is_mturk": False, "user": user}
+                {"name": c}, {"is_mturk": False, "user": user}
             )
-            self.coders.add(coder)
-            if c["is_admin"]:
-                self.admins.add(coder)
+            coders.append(coder.pk)
+            if c in admin_names:
+                admins.append(coder.pk)
+
+        self.coders.set(get_model("Coder").objects.filter(pk__in=coders))
+        self.admins.set(get_model("Coder").objects.filter(pk__in=admins))
+
+    def expert_coders(self):
+        """
+        Returns in-house coders assigned to the project
+        :return:
+        """
+
+        return self.coders.filter(is_mturk=False)
+
+    def mturk_coders(self):
+        """
+        Returns Mechanical Turk coders assigned to the project
+        :return:
+        """
+
+        return self.coders.filter(is_mturk=True)
 
     def is_qualified(self, coder):
+        """
+        Given a coder, returns whether or not they qualify based on the qualification tests associated with the project
+        :param coder: a Coder instance
+        :return:
+        """
 
-        return all([qual_test.is_qualified(coder) for qual_test in self.qualification_tests.all()])
+        return all(
+            [
+                qual_test.is_qualified(coder)
+                for qual_test in self.qualification_tests.all()
+            ]
+        )
 
 
-class Question(DJANGO_LEARNING_BASE_MODEL):
+class Question(LoggedExtendedModel):
+
+    """
+    Question objects specify a question to ask coders to fill out, and the coding options available to them. Questions
+    can also be attached to qualification tests instead of projects. Question names should be unique within the
+    specific project or qualification test they are attached to.
+    """
 
     DISPLAY_CHOICES = (
-        ('radio', 'radio'),
-        ('checkbox', 'checkbox'),
-        ('dropdown', 'dropdown'),
-        ('text', 'text'),
-        ('header', 'header')
+        ("radio", "radio"),
+        ("checkbox", "checkbox"),
+        ("dropdown", "dropdown"),
+        ("text", "text"),
+        ("header", "header"),
     )
 
-    qualification_test = models.ForeignKey("django_learning.QualificationTest", related_name="questions", null=True)
-    project = models.ForeignKey("django_learning.Project", related_name="questions", null=True)
+    qualification_test = models.ForeignKey(
+        "django_learning.QualificationTest",
+        related_name="questions",
+        null=True,
+        on_delete=models.SET_NULL,
+        help_text="The qualification test the question belongs to",
+    )
+    project = models.ForeignKey(
+        "django_learning.Project",
+        related_name="questions",
+        null=True,
+        on_delete=models.SET_NULL,
+        help_text="The project the question belongs to",
+    )
 
-    name = models.CharField(max_length=250)
-    prompt = models.TextField()
-    display = models.CharField(max_length=20, choices=DISPLAY_CHOICES)
-    multiple = models.BooleanField(default=False)
-    tooltip = models.TextField(null=True)
-    priority = models.IntegerField(default=1)
+    name = models.CharField(
+        max_length=250,
+        help_text="Short name of the question, must be unique to the project or qualification test",
+    )
+    prompt = models.TextField(help_text="The prompt that will be displayed to coders")
+    display = models.CharField(
+        max_length=20,
+        choices=DISPLAY_CHOICES,
+        help_text="The format of the question and how it will be displayed",
+    )
+    multiple = models.BooleanField(
+        default=False, help_text="Whether or not multiple label selections are allowed"
+    )
+    tooltip = models.TextField(
+        null=True,
+        help_text="Optional text to be displayed when coders hover over the question",
+    )
+    priority = models.IntegerField(
+        default=1,
+        help_text="Order in which the question should be displayed relative to other questions. This gets set automatically based on the JSON config but can be modified manually. Lower numbers are higher priority.",
+    )
+    optional = models.BooleanField(
+        default=False,
+        help_text="(default is False) if True, coders will be able to skip the question",
+    )
+    show_notes = models.BooleanField(
+        default=False,
+        help_text="(default is False) if True, coders can write and submit notes about their decisions regarding this specific question",
+    )
+
+    dependency = models.ForeignKey(
+        "django_learning.Label",
+        related_name="dependencies",
+        null=True,
+        on_delete=models.SET_NULL,
+        help_text="The label on another question that must be selected for this question to be displayed",
+    )
 
     objects = QuestionManager().as_manager()
 
     class Meta:
         unique_together = ("project", "qualification_test", "name")
-        ordering = ['priority']
+        ordering = ["priority"]
 
     def __str__(self):
         return "{}, {}".format(self.project, self.name)
 
     def labels_reversed(self):
+        """
+        Returns the questions label options in reverse priority order
+        :return:
+        """
         return self.labels.order_by("-priority")
 
-    def update_assignment_response(self, assignment, label_values):
+    @property
+    def has_pointers(self):
+        """Whether or not any of the question labels have pointers associated with them"""
+        if any(len(l.pointers) > 0 for l in self.labels.all()):
+            return True
+        else:
+            return False
+
+    def all_dependencies(self):
+        """
+        Recursively iterates through dependencies to return a query set of all Label options that must be selected
+        for the question to be displayed
+        :return:
+        """
+
+        label_ids = []
+        dependency = self.dependency
+        while dependency:
+            label_ids.append(dependency.pk)
+            dependency = dependency.question.dependency
+        return get_model("Label", app_name="django_learning").objects.filter(
+            pk__in=label_ids
+        )
+
+    def update_assignment_response(self, assignment, label_values, notes=None):
+        """
+        Updates the specified assignment with a list of label IDs
+        :param assignment: Assignment instance that's being coded
+        :param label_values: A list of label IDs that were selected (must belong to the question)
+        :param notes: (Optional) notes that were passed along with the code
+        :return:
+        """
 
         existing = assignment.codes.filter(label__question=self)
 
         current = []
-        if not self.multiple: labels = [label_values]
-        else: labels = label_values
-
-        if self.display == "number":
+        if not self.multiple:
+            labels = [label_values]
+        else:
+            labels = label_values
+        labels = [l for l in labels if l]
+        if self.display == "checkbox" and len(labels) == 0:
+            labels = self.labels.filter(select_as_default=True)
+            # if none of the other options were checked, choose the select_as_default option
+        elif self.display == "number":
             labels = [
                 Label.objects.create_or_update(
-                    {"question": self, "value": l},
-                    {"label": l}
-                ) for l in labels
-            ]
-        else:
-            labels = self.labels.filter(pk__in=labels)
-
-        for l in labels:
-            current.append(
-                get_model("Code").objects.create_or_update(
-                    {"assignment": assignment, "label": l}
+                    {"question": self, "value": l}, {"label": l}
                 )
-            )
+                for l in labels
+            ]
+            labels = self.labels.filter(pk__in=[l.pk for l in labels])
+        elif self.display in ["text", "date"]:
+            try:
+                labels = self.labels.filter(value="open_response")
+            except:
+                label = Label.objects.create(question=self, value="open_response")
+                self.labels.add(label)
+                labels = self.labels.filter(value="open_response")
+        else:
+            labels = self.labels.filter(pk__in=[int(l) for l in labels])
+        if labels.count() == 0 and not self.optional:
+            raise RequiredResponseException()
 
-        outdated = existing.exclude(current)
+        if "qualification" in assignment._meta.verbose_name:
+            fk = "qualification_assignment"
+        else:
+            fk = "assignment"
+        for l in labels:
+            code = get_model("Code").objects.create_or_update(
+                {fk: assignment, "label": l}
+            )
+            current.append(code.pk)
+
+        outdated = existing.exclude(pk__in=current)
         outdated.delete()
 
+        if is_not_null(notes):
+            get_model("Code").objects.filter(pk__in=current).update(notes=notes)
 
     # def get_consensus_documents(self, label_value="1", turk_only=False, experts_only=False):
     #     return self.labels.get(value=label_value).get_consensus_documents(turk_only=turk_only, experts_only=experts_only)
 
 
-class Label(DJANGO_LEARNING_BASE_MODEL):
+class Label(LoggedExtendedModel):
+    """
+    Labels represent response options to a question.
+    """
 
-    question = models.ForeignKey("django_learning.Question", related_name="labels")
+    question = models.ForeignKey(
+        "django_learning.Question",
+        related_name="labels",
+        on_delete=models.CASCADE,
+        help_text="The question the label belongs to",
+    )
     value = models.CharField(max_length=50, db_index=True, help_text="The code value")
-    label = models.CharField(max_length=400, help_text="A longer label for the code value")
-    priority = models.IntegerField(default=1)
-    # TODO: reimplement: pointers = ArrayField(models.TextField(), default=[])
-    select_as_default = models.BooleanField(default=False)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    label = models.CharField(
+        max_length=400, help_text="A longer label for the code value"
+    )
+    priority = models.IntegerField(
+        default=1,
+        help_text="Display priority relative to other label options, lower numbers are higher priority (default is 1)",
+    )
+    pointers = ArrayField(
+        models.TextField(),
+        default=list,
+        help_text="List of bullet point-style tips for coders, specific to the particular label option",
+    )
+    select_as_default = models.BooleanField(
+        default=False,
+        help_text="(default is False) if True, this option will be selected as the default if no other option is chosen",
+    )
 
     class Meta:
 
         unique_together = ("question", "value")
-        ordering = ['priority']
+        ordering = ["priority"]
 
     def __str__(self):
         return "{}: {}".format(self.question, self.label)
 
-    # def get_consensus_documents(self, turk_only=False, experts_only=False):
 
-    #     doc_ids = []
-    #     sample_units = self.coder_documents.values_list("sample_unit_id", flat=True).distinct()
-    #     for sid in sample_units:
-    #         sample_unit = get_model("DocumentSampleDocument").objects.get(pk=sid)
-    #         codes = sample_unit.codes.filter(code__variable=self.variable)
-    #         if experts_only:
-    #             codes = codes.filter(coder__is_mturk=False)
-    #         if turk_only:
-    #             codes = codes.filter(coder__is_mturk=True)
-    #         codes = codes.exclude(consensus_ignore=True)
-    #         codes = codes.values("code_id").distinct()
-    #         if codes.count() == 1:
-    #             doc_ids.append(sample_unit.document_id)
+class Example(LoggedExtendedModel):
+    """
+    An example given for a particular question, consisting of an example document (``quote``) and an ``explanation``
+    that will be displayed in a pop-up modal if coders click on the question.
+    """
 
-    #     return get_model("Document").objects.filter(pk__in=doc_ids)
+    question = models.ForeignKey(
+        "django_learning.Question",
+        related_name="examples",
+        on_delete=models.CASCADE,
+        help_text="The question the example is assigned to",
+    )
 
-
-class Example(DJANGO_LEARNING_BASE_MODEL):
-
-    question = models.ForeignKey("django_learning.Question", related_name="examples")
-
-    quote = models.TextField()
-    explanation = models.TextField()
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    quote = models.TextField(help_text="Example text")
+    explanation = models.TextField(
+        help_text="An explanation of how the text should be coded"
+    )
 
 
-class QualificationTest(DJANGO_LEARNING_BASE_MODEL):
+class QualificationTest(LoggedExtendedModel):
+    """
+    Qualification tests provide sets of questions that coders must answer before they can qualify for coding on a
+    particular project. Qualification tests can be reused across multiple projects. They're specified by JSON config
+    files, and there must be a project qualification scorer function with the same name that can evaluate coders'
+    responses and determine if they qualify.
+    """
 
-    name = models.CharField(max_length=50, unique=True)
-    coders = models.ManyToManyField("django_learning.Coder", related_name="qualification_tests", through="django_learning.QualificationAssignment")
-    instructions = models.TextField(null=True)
-    turk_id = models.CharField(max_length=250, unique=True, null=True)
-    title = models.TextField(null=True)
-    description = models.TextField(null=True)
-    # TODO: reimplement: keywords = ArrayField(models.TextField(), default=[])
-    price = models.FloatField(null=True)
-    approval_wait_hours = models.IntegerField(null=True)
-    duration_minutes = models.IntegerField(null=True)
-    lifetime_days = models.IntegerField(null=True)
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
+    name = models.CharField(
+        max_length=50, help_text="Unique short name for the qualification test"
+    )
+    coders = models.ManyToManyField(
+        "django_learning.Coder",
+        related_name="qualification_tests",
+        through="django_learning.QualificationAssignment",
+        help_text="Coders that have taken the qualification test",
+    )
+    instructions = models.TextField(
+        null=True, help_text="Instructions to be displayed at the top of the test"
+    )
+    turk_id = models.CharField(
+        max_length=250,
+        unique=True,
+        null=True,
+        help_text="Mechanical Turk ID for the test, if it's been synced via the API",
+    )
+    title = models.TextField(
+        null=True, help_text="Title of the test (for Mechanical Turk)"
+    )
+    description = models.TextField(
+        null=True, help_text="Description of the test (for Mechanical Turk)"
+    )
+    keywords = ArrayField(
+        models.TextField(),
+        default=list,
+        help_text="List of keyword search terms (for Mechanical Turk)",
+    )
+    price = models.FloatField(
+        null=True, help_text="How much to pay Mechanical Turk workers (in dollars)"
+    )
+    approval_wait_hours = models.IntegerField(
+        null=True, help_text="How long to wait before auto-approving Turkers (in hours)"
+    )
+    duration_minutes = models.IntegerField(
+        null=True, help_text="How long Turkers have to take the test (in minutes)"
+    )
+    lifetime_days = models.IntegerField(
+        null=True, help_text="How long the test will be available (in days)"
+    )
+    mturk_sandbox = models.BooleanField(
+        default=False,
+        help_text="(default is False) if True, the test will be created in the Mechanical Turk sandbox",
+    )
 
     def __str__(self):
-        return self.name
+        if self.sandbox:
+            return "{} (MTURK SANDBOX)".format(self.name)
+        else:
+            return self.name
+
+    class Meta:
+        unique_together = ("name", "mturk_sandbox")
 
     def save(self, *args, **kwargs):
+        """
+        Extends the ``save`` function to sync the test with its JSON config with the same name
+        :param args:
+        :param kwargs:
+        :return:
+        """
 
-        if self.name not in project_qualification_tests.keys():
-            raise Exception("Qualification test '{}' is not defined in any of the known folders".format(self.name))
+        if (
+            self.name
+            not in project_qualification_tests.project_qualification_tests.keys()
+        ):
+            raise Exception(
+                "Qualification test '{}' is not defined in any of the known folders".format(
+                    self.name
+                )
+            )
 
-        config = project_qualification_tests[self.name]
+        config = project_qualification_tests.project_qualification_tests[self.name]
         for attr in [
             "instructions",
             "title",
@@ -207,7 +493,7 @@ class QualificationTest(DJANGO_LEARNING_BASE_MODEL):
             "price",
             "approval_wait_hours",
             "duration_minutes",
-            "lifetime_days"
+            "lifetime_days",
         ]:
             val = config.get(attr, None)
             setattr(self, attr, val)
@@ -217,89 +503,54 @@ class QualificationTest(DJANGO_LEARNING_BASE_MODEL):
             Question.objects.create_from_config("qualification_test", self, q, i)
 
     def is_qualified(self, coder):
+        """
+        Runs the qualification scorer to determine whether the specified coder passes the test
+        :param coder: A Coder instance
+        :return: True if the coder qualifies, False if not
+        """
 
-        try: return self.assignments.get(coder=coder).is_qualified
-        except QualificationAssignment.DoesNotExist: return False
-
-
-class QualificationAssignment(DJANGO_LEARNING_BASE_MODEL):
-
-    test = models.ForeignKey("django_learning.QualificationTest", related_name="assignments")
-    coder = models.ForeignKey("django_learning.Coder", related_name="qualification_assignments")
-
-    time_started = models.DateTimeField(null=True, auto_now_add=True)
-    time_finished = models.DateTimeField(null=True)
-    turk_id = models.CharField(max_length=250, null=True)
-    turk_status = models.CharField(max_length=40, null=True)
-
-    is_qualified = models.NullBooleanField()
-    # results = models.PickleFileField()
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-
-    def save(self, *args, **kwargs):
-
-        if is_not_null(self.time_finished):
-            self.is_qualified = project_qualification_scorers[self.test.name](self)
-        super(QualificationAssignment, self).save(*args, **kwargs)
-
-
-class HITType(DJANGO_LEARNING_BASE_MODEL):
-
-    project = models.ForeignKey("django_learning.Project", related_name="hit_types")
-    name = models.CharField(max_length=50, unique=True)
-
-    title = models.TextField(null=True)
-    description = models.TextField(null=True)
-    # TODO: reimplement: keywords = ArrayField(models.TextField(), default=[])
-    price = models.FloatField(null=True)
-    approval_wait_hours = models.IntegerField(null=True)
-    duration_minutes = models.IntegerField(null=True)
-    lifetime_days = models.IntegerField(null=True)
-    min_approve_pct = models.FloatField(null=True)
-    min_approve_cnt = models.IntegerField(null=True)
-
-    turk_id = models.CharField(max_length=250, unique=True, null=True)
-
-    qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="hit_types")
-
-    objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-
-    class Meta:
-        unique_together = ("project", "name")
-
-    def __str__(self):
-        return "{}: {}".format(self.project, self.name)
-
-    def save(self, *args, **kwargs):
-
-        if self.name not in project_hit_types.keys():
-            raise Exception("HIT Type '{}' is not defined in any of the known folders".format(self.name))
-
-        config = project_hit_types[self.name]
-        for attr in [
-            "title",
-            "description",
-            "price",
-            "approval_wait_hours",
-            "duration_minutes",
-            "lifetime_days",
-            "min_approve_pct",
-            "min_approve_cnt"
-        ]:
-            val = config.get(attr, None)
-            setattr(self, attr, val)
-
-        super(HITType, self).save(*args, **kwargs)
-
-        qual_tests = []
-        for qual_test in config.get("qualification_tests", []):
-            qual_tests.append(
-                QualificationTest.objects.create_or_update({"name": qual_test})
+        try:
+            assignment = self.assignments.filter(time_finished__isnull=False).get(
+                coder=coder
             )
-        self.qualification_tests = qual_tests
+            return project_qualification_scorers.project_qualification_scorers[
+                self.name
+            ](assignment)
+        except QualificationAssignment.DoesNotExist:
+            return False
 
-    def is_qualified(self, coder):
 
-        qual_tests = self.qualification_tests.all() | self.project.qualification_tests.all()
-        return all([qual_test.is_qualified(coder) for qual_test in qual_tests])
+class QualificationAssignment(LoggedExtendedModel):
+    """
+    A particular coder's attempt at a qualification test.
+    """
+
+    test = models.ForeignKey(
+        "django_learning.QualificationTest",
+        related_name="assignments",
+        on_delete=models.CASCADE,
+        help_text="The qualification test the coder took",
+    )
+    coder = models.ForeignKey(
+        "django_learning.Coder",
+        related_name="qualification_assignments",
+        on_delete=models.CASCADE,
+        help_text="The coder that took the test",
+    )
+
+    time_started = models.DateTimeField(
+        null=True, auto_now_add=True, help_text="When the coder started the test"
+    )
+    time_finished = models.DateTimeField(
+        null=True, help_text="When the coder finished the test"
+    )
+    turk_id = models.CharField(
+        max_length=250,
+        null=True,
+        help_text="The assignment ID from the Mechanical Turk API (if applicable)",
+    )
+    turk_status = models.CharField(
+        max_length=40,
+        null=True,
+        help_text="The status of the assignment in Mechanical Turk (if applicable)",
+    )

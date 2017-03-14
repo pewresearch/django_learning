@@ -1,634 +1,965 @@
-# import importlib
-#
-#
-# from django.db import models
-# from django.contrib.postgres.fields import ArrayField
-#
-# from picklefield.fields import PickledObjectField
-# from langdetect import detect
-# from abc import abstractmethod
-# from collections import OrderedDict
-#
-# from django_learning.settings import DJANGO_LEARNING_BASE_MODEL, DJANGO_LEARNING_BASE_MANAGER
-# from django_learning.utils import get_document_types
-#
-# from pewtils import is_not_null, is_null, decode_text
-# from pewtils.django import get_model
-#
-#
-#
-# class Classification(models.Model):
-#
-# 	document = models.ForeignKey("django_learning.Document", related_name="classifications")
-# 	label = models.ForeignKey("django_learning.Label", related_name="classifications")
-#
-# 	classifier = models.ForeignKey("django_learning.Classifier", related_name="classifications")
-# 	probability = models.FloatField(null=True, help_text="The probability of the assigned label, if applicable")
-#
-#     objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-#
-#     # def validate_unique(self, *args, **kwargs):
-#     #        super(ClassifierDocumentCode, self).validate_unique(*args, **kwargs)
-#     #        if not self.id:
-#     #            if self.__class__.objects.filter(code__variable=self.code.variable).exists():
-#     #                raise ValidationError(
-#     #                    {
-#     #                        NON_FIELD_ERRORS: [
-#     #                            'ClassifierDocumentCode with the same variable already exists'
-#     #                        ],
-#     #                    }
-#     #                )
-#
-#     #    def __repr__(self):
-#     #        return "<ClassifierDocumentCode value={0}, code__variable={1}, document_id={2}>".format(
-#     #            self.code.label, self.code.variable.name, self.document.id
-#     #        )
-#
-#
-#
-# class LearningModel(DJANGO_LEARNING_BASE_MODEL):
-#
-#     name = models.CharField(max_length=100, unique=True, help_text="Unique name of the classifier")
-#     handler_class = models.CharField(max_length=100, default="DocumentClassificationHandler")
-#     pipeline_name = models.CharField(max_length=150, null=True,
-#                                      help_text="The named pipeline used to seed the handler's parameters, if any; note that the JSON pipeline file may have changed since this classifier was created; refer to the parameters field to view the exact parameters used to compute the model")
-#     parameters = PickledObjectField(null=True,
-#                                     help_text="A pickle file of the parameters used to process the codes and generate the model")
-#     cv_folds = PickledObjectField(null=True)
-#     cv_folds_test = PickledObjectField(null=True)
-#
-#
-#     training_data_hash = models.CharField(max_length=256, null=True)
-#     model_hash =  models.CharField(max_length=256, null=True)
-#     # only update the hashes when you save the training_data or model
-#     # that way, even if the parameters change, you can always recover the S3 files
-#     # they just may get renamed if the configs change, but this thing should load using the saved hashes
-#     # and save using updated/recomputed hashes (which then get saved to point to the new files)
-#
-#     objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-#
-#     class Meta:
-#
-#         abstract = True
-#
-#     def __init__(self, *args, **kwargs):
-#
-#         self.model = None
-#         self.train_x = None
-#         self.train_y = None
-#         self.train_ids = None
-#         self.test_x = None
-#         self.test_y = None
-#         self.test_ids = None
-#         self.predict_y = None
-#
-#         # if not parameters, then load the file based on the pipeline name
-#         super(LearningModel, self).__init__(*args, **kwargs)
-#
-#     @property
-#     def training_data(self):
-#         pass
-#
-#     def load_training_data(self, refresh=False, only_load_existing=False, **kwargs):
-#
-#         cache_data = None
-#
-#         if not refresh:
-#             cache_data = self.cache.read(self.training_data_hash)
-#
-#         if is_null(cache_data) and not only_load_existing:
-#
-#             updated_hashstr = "".join([
-#                 self.cache_identifier,
-#                 str(OrderedDict(sorted(self.parameters.get("codes", {}).items(), key=lambda t: t[0]))),
-#                 str(OrderedDict(sorted(self.parameters.get("documents", {}).items(), key=lambda t: t[0])))
-#             ])
-#
-#             cache_data = self._get_training_data(**kwargs)
-#             self.cache.write(updated_hashstr, cache_data)
-#             self.training_data_hash = updated_hashstr
-#             self.save()
-#
-#         if is_not_null(cache_data):
-#             for k, v in cache_data.iteritems():
-#                 setattr(self, k, v)
-#
-#     @abstractmethod
-#     def _get_training_data(self):
-#         raise NotImplementedError
-#
-#     def load_model(selfs, refresh=False, clear_temp_cache=True, only_load_existing=False, **kwargs):
-#
-#         pass
-#         # pipeline_steps = copy.copy(self.parameters['pipeline']['steps'])
-#         # params = self._collapse_pipeline_params(
-#         #     pipeline_steps,
-#         #     self.parameters['pipeline']['params']
-#         # )
-#         #
-#         # if "name" in self.parameters["model"].keys():
-#         #
-#         #     if "classification" in self.pipeline_folders and "regression" not in str(self.__class__):
-#         #         model_module = importlib.import_module(
-#         #             "django_learning.supervised.models.classification.{0}".format(self.parameters["model"]['name'])
-#         #         )
-#         #     elif "regression" in self.pipeline_folders or "regression" in str(self.__class__):
-#         #         model_module = importlib.import_module(
-#         #             "django_learning.supervised.models.regression.{0}".format(self.parameters["model"]['name'])
-#         #         )
-#         #     else:
-#         #         model_module = importlib.import_module(
-#         #             "django_learning.supervised.models.{0}".format(self.parameters["model"]['name'])
-#         #         )
-#         #
-#         #     model_params = model_module.get_params()
-#         #     model_class = model_params.pop("model_class")
-#         #     model_params = model_params["params"]
-#         #     pipeline_steps.append(("model", model_class))
-#         #
-#         #     params.update({"model__{}".format(k): v for k, v in model_params.iteritems()})
-#         #     if 'params' in self.parameters['model'].keys():
-#         #         params.update({"model__{}".format(k): v for k, v in self.parameters['model']['params'].iteritems()})
-#         #
-#         # hashstr = "".join([
-#         #     self.cache_identifier,
-#         #     str(OrderedDict(sorted(self.parameters.get("codes", {}).items(), key=lambda t: t[0]))),
-#         #     str(OrderedDict(sorted(self.parameters.get("documents", {}).items(), key=lambda t: t[0]))),
-#         #     str(get_pipeline_repr(pipeline_steps)),
-#         #     str(get_param_repr(params)),
-#         #     str(OrderedDict(sorted(self.parameters.get("model", {}).items(), key=lambda t: t[0])))
-#         # ])
-#         #
-#         # cache_data = None
-#         #
-#         # if not refresh:
-#         #     cache_data = self.cache.read(hashstr)
-#         #
-#         #     # cache_data['test_y'] = cache_data['test_y'].reset_index()
-#         #     # del cache_data['test_y']['index']
-#         #     # cache_data['test_x'] = cache_data['test_x'].reset_index()
-#         #     # del cache_data['test_x']['index']
-#         #     # cache_data['test_ids'] = cache_data['test_x'].index
-#         #     # print "Resetting test indices"
-#         #     # self.cache.write(hashstr, cache_data)
-#         #
-#         #     # if "test_x_old" not in cache_data.keys():
-#         #     #     from logos.models import *
-#         #     #     cache_data['test_x_old'] = cache_data['test_x']
-#         #     #     cache_data['test_y_old'] = cache_data['test_y']
-#         #     #     cache_data['test_ids_old'] = cache_data['test_ids']
-#         #     #     cache_data['predict_y_old'] = cache_data['predict_y']
-#         #     #     good_docs = DocumentSampleDocument.objects.filter(sample__in=DocumentSample.objects.filter(pk__in=[12, 22])).values_list("document_id", flat=True)
-#         #     #     print "Old length: {}".format(len(cache_data['test_x']))
-#         #     #     cache_data['test_x'] = cache_data['test_x'][cache_data['test_x']['document_id'].isin(good_docs)]
-#         #     #     print "New length: {}".format(len(cache_data['test_x']))
-#         #     #     cache_data['test_y'] = cache_data['test_y'].iloc[cache_data['test_x'].index]
-#         #     #     cache_data['test_ids'] = cache_data['test_x'].index
-#         #     #     cache_data['predict_y'] = pandas.Series(cache_data['predict_y']).iloc[cache_data['test_x'].index].values
-#         #     #     self.cache.write(hashstr, cache_data)
-#         #
-#         # if is_null(cache_data) and not only_load_existing:
-#         #
-#         #     cache_data = CacheHandler("learning/supervised").read(hashstr)
-#         #     if is_null(cache_data):
-#         #         cache_data = self._get_model(pipeline_steps, params, **kwargs)
-#         #     self.cache.write(hashstr, cache_data)
-#         #
-#         # if is_not_null(cache_data):
-#         #     for k, v in cache_data.iteritems():
-#         #         setattr(self, k, v)
-#
-#     #@require_training_data
-#     def _get_model(self, pipeline_steps, params, **kwargs):
-#
-#         pass
-#         # df = self.training_data
-#         #
-#         # smallest_code = df[self.outcome_variable].value_counts(ascending=True).index[0]
-#         # largest_code = df[self.outcome_variable].value_counts(ascending=False).index[0]
-#         #
-#         # # print "Code frequencies: {}".format(dict(df[self.outcome_variable].value_counts(ascending=True)))
-#         #
-#         # if "training_weight" not in df.columns:
-#         #     df["training_weight"] = 1.0
-#         #
-#         # if self.parameters["model"].get("use_class_weights", False):
-#         #
-#         #     class_weights = {}
-#         #     base_weight = df[df[self.outcome_variable] == largest_code]['training_weight'].sum()
-#         #     # total_weight = df['training_weight'].sum()
-#         #     for c in df[self.outcome_variable].unique():
-#         #         # class_weights[c] = float(df[df[self.outcome_variable]==c]["training_weight"].sum()) / float(total_weight)
-#         #         class_weights[c] = base_weight / float(df[df[self.outcome_variable] == c]['training_weight'].sum())
-#         #     total_weight = sum(class_weights.values())
-#         #     class_weights = {k: float(v) / float(total_weight) for k, v in class_weights.items()}
-#         #     params["model__class_weight"] = [class_weights, ]
-#         #     print "Class weights: {}".format(class_weights)
-#         #
-#         # print "Creating train-test split"
-#         #
-#         # y = df[self.outcome_variable]
-#         # X_cols = df.columns.tolist()
-#         # X_cols.remove(self.outcome_variable)
-#         # X = df[X_cols]
-#         # if self.parameters["model"]["test_percent"] == 0.0:
-#         #     X_train, X_test, y_train, y_test, train_ids, test_ids = X, None, y, None, y.index, None
-#         #     print "Training on all {} cases".format(len(y_train))
-#         # else:
-#         #     X_train, X_test, y_train, y_test, train_ids, test_ids = train_test_split(X, y, y.index, test_size=
-#         #     self.parameters["model"]["test_percent"], random_state=5)
-#         #     print "Selected %i training cases and %i test cases" % (
-#         #         len(y_train),
-#         #         len(y_test)
-#         #     )
-#         #
-#         # scoring_function = None
-#         # if "scoring_function" in self.parameters["model"].keys():
-#         #     scoring_function = self._get_scoring_function(
-#         #         self.parameters["model"]["scoring_function"],
-#         #         binary_base_code=smallest_code if len(y.unique()) == 2 else None
-#         #     )
-#         #
-#         # print "Beginning grid search using %s and %i cores for %s" % (
-#         #     str(scoring_function),
-#         #     self.num_cores,
-#         #     self.outcome_variable
-#         # )
-#         #
-#         # model = GridSearchCV(
-#         #     Pipeline(pipeline_steps),
-#         #     params,
-#         #     fit_params={'model__sample_weight': [x for x in X_train["training_weight"].values]} if self.parameters[
-#         #         "model"].get("use_sample_weights", False) else {},
-#         #     cv=self.parameters["model"].get("cv", 5),
-#         #     n_jobs=self.num_cores,
-#         #     verbose=1,
-#         #     scoring=scoring_function
-#         # )
-#         #
-#         # model.fit(X_train, y_train)
-#         #
-#         # print "Finished training model, best score: {}".format(model.best_score_)
-#         #
-#         # predict_y = model.predict(X_test) if is_not_null(X_test) else None
-#         #
-#         # cache_data = {
-#         #     "model": model,
-#         #     "train_x": X_train,
-#         #     "train_y": y_train,
-#         #     "train_ids": train_ids,
-#         #     "test_x": X_test,
-#         #     "test_y": y_test,
-#         #     "test_ids": test_ids,
-#         #     "predict_y": predict_y
-#         # }
-#         #
-#         # return cache_data
-#
-#     def _get_scoring_function(self, func_name, binary_base_code=None):
-#
-#         pass
-#         # try:
-#         #
-#         #     from django_learning.utils import scoring_functions
-#         #     scoring_function = scoring_functions[func_name]
-#         #     # scoring_function = importlib.import_module(
-#         #     #     "logos.learning.utils.scoring_functions.{0}".format(func_name)
-#         #     # )
-#         #     scoring_function = make_scorer(scoring_function.scorer)
-#         #
-#         # except:
-#         #
-#         #     if "regression" in str(self.__class__):
-#         #         func_map = {
-#         #             "mean_squared_error": (mean_squared_error, False, False),
-#         #             "r2": (r2_score, True, False)
-#         #         }
-#         #         func, direction, needs_proba = func_map[func_name]
-#         #         scoring_function = make_scorer(func, needs_proba=needs_proba, greater_is_better=direction)
-#         #     elif binary_base_code:
-#         #         func_map = {
-#         #             "f1": (f1_score, True, False),
-#         #             "precision": (precision_score, True, False),
-#         #             "recall": (recall_score, True, False),
-#         #             "brier_loss": (brier_score_loss, False, True)
-#         #         }
-#         #         func, direction, needs_proba = func_map[func_name]
-#         #         scoring_function = make_scorer(func, needs_proba=needs_proba, greater_is_better=direction,
-#         #                                        pos_label=binary_base_code)
-#         #     else:
-#         #         if self.parameters["model"]["scoring_function"] == "f1":
-#         #             scoring_function = "f1_macro"
-#         #             # scoring_function = "f1_micro"
-#         #             # scoring_function = "f1_weighted"
-#         #         elif self.parameters["model"]["scoring_function"] == "precision":
-#         #             scoring_function = "precision"
-#         #         else:
-#         #             scoring_function = "recall"
-#         #
-#         # return scoring_function
-#
-#     def _collapse_pipeline_params(self, pipeline, params, names=None):
-#
-#         pass
-#         # final_params = {}
-#         # if not names:
-#         #     names = []
-#         # if isinstance(pipeline, Pipeline):
-#         #     for sname, step in pipeline.steps:
-#         #         final_params.update(self._collapse_pipeline_params(step, params, names=names + [sname]))
-#         # elif isinstance(pipeline, FeatureUnion):
-#         #     final_params.update(self._collapse_pipeline_params(pipeline.transformer_list, params, names=names))
-#         # elif isinstance(pipeline, tuple):
-#         #     final_params.update(pipeline[1], params, names=names + [pipeline[0]])
-#         # elif isinstance(pipeline, list):
-#         #     for sname, step in pipeline:
-#         #         final_params.update(self._collapse_pipeline_params(step, params, names=names + [sname]))
-#         # else:
-#         #     if names[-1] in params.keys():
-#         #         for k, v in params[names[-1]].iteritems():
-#         #             # if k == "preprocessors":
-#         #             #     preprocessor_sets = []
-#         #             #     for pset in v:
-#         #             #         preprocessors = []
-#         #             #         try:
-#         #             #             for preprocessor_name, preprocessor_params in pset:
-#         #             #                 preprocessor_module = importlib.import_module("logos.learning.utils.preprocessors.{0}".format(preprocessor_name))
-#         #             #                 preprocessors.append(preprocessor_module.Preprocessor(**preprocessor_params))
-#         #             #         except ValueError: pass
-#         #             #         preprocessor_sets.append(preprocessors)
-#         #             #     v = preprocessor_sets
-#         #             if len(v) > 0:
-#         #                 final_params["__".join(names + [k])] = v
-#         #     if isinstance(pipeline, BasicExtractor):
-#         #         final_params["{}__cache_identifier".format("__".join(names))] = [self.cache_identifier]
-#         #         final_params["{}__feature_name_prefix".format("__".join(names))] = [names[-1]]
-#         #         if hasattr(self, 'document_types'):
-#         #             final_params["{}__document_types".format("__".join(names))] = [self.document_types]
-#         #
-#         # return final_params
-#
-#     #@require_model
-#     def get_feature_names(self, m):
-#
-#         pass
-#         # features = []
-#         #
-#         # if hasattr(m, "steps"):
-#         #     for name, step in m.steps:
-#         #         features.append(self.get_feature_names(step))
-#         # elif hasattr(m, "transformer_list"):
-#         #     for name, step in m.transformer_list:
-#         #         features.append(self.get_feature_names(step))
-#         # elif hasattr(m, "get_feature_names"):
-#         #     return m.get_feature_names()
-#         #
-#         # return [f for sublist in features for f in sublist]
-#
-#     #@require_model
-#     def print_report(self):
-#
-#         pass
-#         # print "'%s' results" % self.outcome_variable
-#         #
-#         # print "Best score: {} ({} std.)".format(self.model.best_score_,
-#         #                                         getattr(self.model, "best_score_std_", None))
-#         #
-#         # # print "Best parameters:"
-#         # # params = self.model.best_params_
-#         # # for p in params.keys():
-#         # #     if p.endswith("__stop_words"):
-#         # #         del params[p]
-#         # # print params
-#         #
-#         # try:
-#         #     self.show_top_features()
-#         # except:
-#         #     pass
-#
-#     #@require_model
-#     #@temp_cache_wrapper
-#     def apply_model(self, data, keep_cols=None, clear_temp_cache=True):
-#
-#         pass
-#         # if not keep_cols: keep_cols = []
-#         #
-#         # predictions = self.model.predict(data)
-#         # try:
-#         #     probabilities = self.model.predict_proba(data)
-#         # except AttributeError:
-#         #     probabilities = [None] * len(data)
-#         #
-#         # codes = []
-#         # for index, pred, prob in zip(data.index, predictions, probabilities):
-#         #     if type(prob) == list or type(prob) == tuple:
-#         #         prob = max(prob)
-#         #     code = {
-#         #         self.outcome_variable: pred,
-#         #         "probability": prob
-#         #     }
-#         #     for col in keep_cols:
-#         #         code[col] = data.loc[index, col]
-#         #     codes.append(code)
-#         #
-#         # return pandas.DataFrame(codes)
-#
-#     # TODO: convert everything to model-based handlers
-#     # move everything from BasicHandler, etc, over to these
-#     # you should still store the big stuff in S3, but it'll be cleaner and easier to modify and update
-#     # if you don't have separate handler classes
-#
-#
-# class DocumentLearningModel(LearningModel):
-#
-#     document_types = ArrayField(models.CharField(max_length=60, choices=get_document_types()),
-#                                 help_text="The type of documents the classifier was trained to code")
-#     # frame = models.ForeignKey("django_learning.DocumentSampleFrame", related_name="classifiers", null=True)
-#     frames = models.ManyToManyField("django_learning.DocumentSampleFrame", related_name="classifiers")
-#
-#     objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-#
-#     class Meta:
-#
-#         abstract = True
-#
-#
-# class DocumentClassificationModel(DocumentLearningModel):
-#
-#     """
-#     Holds data for a classifier for a given variable and type of document.  Only one classifier may exist for a given
-#     combination of code variable and document type - to keep things simple and uncomplicated (we don't want competing
-#     alternative versions of a model that do the same thing.)  Holds pickled objects that contain the training/test data
-#     and parameters used to train the model, and the actual trained model itself.
-#     """
-#
-#     variable = models.ForeignKey("django_learning.CodeVariable", related_name="classifiers",
-#                                  help_text="The code variable whose codes the classifier is attempting to assign")
-#
-#     objects = DJANGO_LEARNING_BASE_MANAGER().as_manager()
-#
-#     def __str__(self):
-#
-#         return "{}, {}, {}".format(self.name, self.variable.name, self.document_types)
-#
-#     def save(self, *args, **kwargs):
-#
-#         self.parameters['pipeline']['steps'] = [(k, v) for k, v in self.parameters['pipeline']['steps'] if k != 'model']
-#         # TODO: figure out where this bug is occuring, but for now we'll deal with extra "model" params sneaking in
-#
-#         super(DocumentClassificationModel, self).save(*args, **kwargs)
-#
-#     @property
-#     def handler(self):
-#
-#         handler_class = None
-#         module = importlib.import_module("django_learning.learning.supervised")
-#         if hasattr(module, self.handler_class):
-#             handler_class = getattr(module, self.handler_class)
-#         if handler_class:
-#             if self.handler_class == "MetaDocumentClassificationHandler":
-#                 h = handler_class(
-#                     self.variable.name,
-#                     self.parameters["classifiers"],
-#                     self.parameters["operator"],
-#                     saved_name=self.name,
-#                     verbose=False
-#                 )
-#             else:
-#                 h = handler_class(
-#                     self.document_types,
-#                     self.variable.name,
-#                     saved_name=self.name,
-#                     verbose=False
-#                 )
-#
-#         return h
-#
-#         # if self.parameters["model"].get("binary_scoring_function"):
-#         #     h = DocumentClassificationRegressionHandler(
-#         #         self.document_types,
-#         #         self.variable.name,
-#         #         saved_name=self.name,
-#         #         verbose=False
-#         #     )
-#         # elif "classifiers" in self.parameters.keys():
-#         #     h = MetaDocumentClassificationHandler(
-#         #         self.variable.name,
-#         #         self.parameters["classifiers"],
-#         #         self.parameters["operator"]
-#         #     )
-#         # else:
-#         #     h = DocumentClassificationHandler(
-#         #         self.document_types,
-#         #         self.variable.name,
-#         #         saved_name=self.name,
-#         #         verbose=False
-#         #     )
-#         # return h
-#
-#     @property
-#     def training_data(self):
-#
-#         return self.handler.training_data
-#
-#     @property
-#     def model(self):
-#
-#         return self.handler.model
-#
-#     def compute_cv_folds(self, use_test_data=False, num_folds=5, refresh=False):
-#
-#         h = self.handler
-#         fold_preds = None
-#         if (not use_test_data and (is_null(self.cv_folds) or refresh)) or \
-#                 (use_test_data and (is_null(self.cv_folds_test) or refresh)):
-#             fold_preds = h.compute_cv_folds(use_test_data=use_test_data, num_folds=num_folds)
-#         if fold_preds:
-#             if use_test_data:
-#                 self.cv_folds_test = fold_preds
-#             else:
-#                 self.cv_folds = fold_preds
-#             self.save()
-#
-#     def get_code_cv_training_scores(self, use_test_data=False, code_value="1", partition_by=None,
-#                                     restrict_document_type=None, min_support=0):
-#
-#         h = self.handler
-#         h.load_model(only_load_existing=True)
-#         if is_not_null(h.model):
-#
-#             if use_test_data:
-#                 X = h.test_x
-#                 y = h.test_y
-#                 fold_preds = self.cv_folds_test
-#             else:
-#                 X = h.train_x
-#                 y = h.train_y
-#                 fold_preds = self.cv_folds
-#
-#             return h.get_code_cv_training_scores(
-#                 fold_preds, X, y,
-#                 code_value=code_value,
-#                 partition_by=partition_by,
-#                 restrict_document_type=restrict_document_type,
-#                 min_support=min_support
-#             )
-#
-#         else:
-#             print "Couldn't find cached model to load using the saved parameters"
-#             return None
-#
-#     def get_code_validation_test_scores(self, code_value="1", partition_by=None, restrict_document_type=None,
-#                                         use_expert_consensus_subset=False, compute_for_experts=False, min_support=0):
-#
-#         h = self.handler
-#         h.load_model(only_load_existing=True)
-#         if is_not_null(h.model):
-#
-#             return h.get_code_validation_test_scores(
-#                 code_value=code_value,
-#                 partition_by=partition_by,
-#                 restrict_document_type=restrict_document_type,
-#                 use_expert_consensus_subset=use_expert_consensus_subset,
-#                 compute_for_experts=compute_for_experts,
-#                 min_support=min_support
-#             )
-#
-#         else:
-#             print "Couldn't find cached model to load using the saved parameters"
-#             return None
-#
-#     def show_top_features(self, n=10):
-#
-#         self.handler.show_top_features(n=n)
-#
-#     def print_report(self):
-#
-#         self.handler.print_report()
-#
-#     def get_report_results(self):
-#
-#         return self.handler.get_report_results()
-#
-#     def apply_model_to_frames(self, num_cores=2, chunk_size=1000, refresh_existing=False):
-#
-#         h = self.handler
-#         h.load_model(only_load_existing=True)
-#         if is_not_null(h.model):
-#             print "Selecting frame documents"
-#             docs = get_model("Document").objects.filter(sample_frames__in=self.frames.all())
-#             if not refresh_existing:
-#                 existing = self.coded_documents.values_list("document_id", flat=True)
-#                 keep = get_model("Document").objects.filter(
-#                     pk__in=set(docs.values_list("pk", flat=True)).difference(set(existing)))
-#                 print "Skipping {} existing documents, {} remaining".format(existing.count(), keep.count())
-#                 # if existing.count() > 0:
-#                 #    docs = docs.exclude(pk__in=existing)
-#                 docs = keep
-#             print "Applying model to {} documents".format(docs.count())
-#             h.apply_model_to_database(docs, chunk_size=chunk_size, num_cores=num_cores)
-#
-#
-# class DocumentRegressionModel(DocumentLearningModel):
-#
-#     pass
+from __future__ import print_function
+import importlib, copy, pandas, numpy, os
+
+from django.db import models
+from django.conf import settings
+
+from picklefield.fields import PickledObjectField
+from collections import OrderedDict
+from tempfile import mkdtemp
+from shutil import rmtree
+
+from sklearn.model_selection import StratifiedKFold, train_test_split, GridSearchCV
+from sklearn.metrics import (
+    f1_score,
+    precision_score,
+    recall_score,
+    brier_score_loss,
+    make_scorer,
+    mean_squared_error,
+    r2_score,
+    matthews_corrcoef,
+    accuracy_score,
+    f1_score,
+    roc_auc_score,
+)
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.model_selection import ParameterGrid
+
+from django_commander.models import LoggedExtendedModel
+
+from django_learning.utils import get_pipeline_repr, get_param_repr
+from django_learning.utils.decorators import require_model, temp_cache_wrapper
+from django_learning.utils.scoring import compute_scores_from_datasets_as_coders
+
+from pewtils import is_not_null, is_null, recursive_update
+from django_pewtils import get_model, CacheHandler
+
+
+class LearningModel(LoggedExtendedModel):
+
+    """
+    The base class for machine learning models. This class gets inherited by ``ClassificationModel`` and
+    ``DocumentClassificationModel``. Provides generic functions for training and applying models that are compatible
+    with the sklearn framework.
+    """
+
+    project = models.ForeignKey(
+        "django_learning.Project",
+        related_name="+",
+        null=True,
+        on_delete=models.SET_NULL,
+        help_text="Coding project associated with the model",
+    )
+    name = models.CharField(
+        max_length=100, unique=True, help_text="Unique name of the classifier"
+    )
+
+    pipeline_name = models.CharField(
+        max_length=150,
+        null=True,
+        help_text="The named pipeline used to seed the handler's parameters, if any; note that the JSON pipeline file may have changed since this classifier was created; refer to the parameters field to view the exact parameters used to compute the model",
+    )
+    parameters = PickledObjectField(
+        null=True,
+        help_text="A pickle file of the parameters used to process the codes and generate the model",
+    )
+
+    cv_folds = PickledObjectField(
+        null=True, help_text="Indices of the cross-validation folds"
+    )
+
+    model_cache_hash = models.CharField(
+        max_length=256,
+        null=True,
+        help_text="A unique caching hash for the ML model, based on the current parameters",
+    )
+    dataset_cache_hash = models.CharField(
+        max_length=256,
+        null=True,
+        help_text="A unique caching hash for the training dataset, based on the current parameters",
+    )
+    test_dataset_cache_hash = models.CharField(
+        max_length=256,
+        null=True,
+        help_text="A unique caching hash for the test dataset, based on the current parameters",
+    )
+
+    class Meta:
+
+        abstract = True
+
+    def __str__(self):
+        return self.name
+
+    def __init__(self, *args, **kwargs):
+        """
+        Extends ``__init__`` to initialize caching handlers.
+        :param args:
+        :param kwargs:
+        """
+
+        super(LearningModel, self).__init__(*args, **kwargs)
+
+        self.cache_identifier = "{}_{}".format(self.name, self.pipeline_name)
+
+        # self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
+        self.dataset = None
+
+        self.model = None
+        self.train_dataset = None
+        self.test_dataset = None
+        self.predict_dataset = None
+
+        self.cache = CacheHandler(
+            os.path.join(
+                settings.DJANGO_LEARNING_S3_CACHE_PATH,
+                "learning_models/{}".format(self.cache_identifier),
+            ),
+            hash=False,
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
+            bucket=settings.S3_BUCKET,
+        )
+        self.dataset_cache = CacheHandler(
+            os.path.join(
+                settings.DJANGO_LEARNING_S3_CACHE_PATH
+                if settings.DJANGO_LEARNING_USE_S3
+                else settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
+                "datasets",
+            ),
+            hash=False,
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
+            bucket=settings.S3_BUCKET,
+        )
+        self.temp_cache = CacheHandler(
+            os.path.join(
+                settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
+                "feature_extractors/{}".format(self.cache_identifier),
+            ),
+            hash=False,
+            use_s3=False,
+        )
+
+    def _refresh_parameters(self, key=None):
+        """
+        Refreshes the saved parameters from the pipeline configuration file. Optionally takes a ``key`` (e.g.
+        ``dataset_extractor``) to reload just a subset of the parameters.
+        :param key: (Optional) a ``key`` that refers to a specific section of the pipeline
+        :return:
+        """
+
+        params = {}
+        if self.pipeline_name:
+            try:
+                from django_learning.utils.pipelines import pipelines
+
+                params.update(pipelines[self.pipeline_name]())
+            except KeyError:
+                print(
+                    "WARNING: PIPELINE '{}' NOT FOUND, STICKING WITH STORED PARAMS".format(
+                        self.pipeline_name
+                    )
+                )
+                params = self.parameters
+        else:
+            params = self.parameters
+
+        if key:
+            self.parameters[key] = params[key]
+        else:
+            self.parameters = params
+        self.save()
+        self.refresh_from_db()  # do a handshake
+        if key:
+            print("Refreshed {} parameters".format(key))
+        else:
+            print("Refreshed all parameters")
+
+    def _get_dataset_extractor(self, key):
+        """
+        Initializes the dataset extractor as specified in the ``dataset_extractor`` section of the pipeline parameters
+        :param key: ``dataset_extractor`` or ``test_dataset_extractor``
+        :return:
+        """
+
+        dataset_extractor = None
+        try:
+            from django_learning.utils.dataset_extractors import dataset_extractors
+
+            dataset_extractor = dataset_extractors[self.parameters[key]["name"]](
+                **self.parameters[key]["parameters"]
+            )
+        except TypeError:
+            print(
+                "WARNING: couldn't identify dataset extractor, it may not exist anymore!"
+            )
+
+        return dataset_extractor
+
+    def save(self, *args, **kwargs):
+
+        super(LearningModel, self).save(*args, **kwargs)
+        self.refresh_from_db()  # pickles and unpickles self.parameters so it remains in a consistent format
+
+    def _check_for_valid_weights(self, weight_col):
+        return len(set(weight_col)) > 1 or float(weight_col.unique()[0]) != 1.0
+
+    def extract_dataset(self, refresh=False, only_load_existing=False, **kwargs):
+        """
+        Initializes the dataset extractor and extracts the dataset, saving it to the cache. The dataset becomes
+        available in ``self.dataset``.
+        :param refresh: (default is False) if True, the extractor will recompile the dataset rather than loading from the cache
+        :param only_load_existing: (default is False) if True, the extractor will only load a dataset if it exists in the cache
+        :param kwargs: 
+        :return:
+        """
+
+        test_dataset = None
+        if not refresh and self.dataset_cache_hash:
+            self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
+            self.dataset_extractor.cache_hash = self.dataset_cache_hash
+            self.dataset = self.dataset_extractor.extract(
+                refresh=False, only_load_existing=only_load_existing, **kwargs
+            )
+            if (
+                "test_dataset_extractor" in self.parameters.keys()
+                and self.test_dataset_cache_hash
+            ):
+                test_dataset_extractor = self._get_dataset_extractor(
+                    "test_dataset_extractor"
+                )
+                test_dataset_extractor.cache_hash = self.test_dataset_cache_hash
+                test_dataset = test_dataset_extractor.extract(
+                    refresh=False, only_load_existing=only_load_existing, **kwargs
+                )
+
+        if is_null(self.dataset) and not only_load_existing:
+
+            self._refresh_parameters()  # pickles and unpickles self.parameters so it remains in a consistent format
+            self.dataset_extractor = self._get_dataset_extractor(
+                "dataset_extractor"
+            )  # update the extractor with latest params
+            self.dataset = self.dataset_extractor.extract(refresh=True, **kwargs)
+            self.dataset_cache_hash = self.dataset_extractor.cache_hash
+            self.save()
+
+            if "test_dataset_extractor" in self.parameters.keys():
+                test_dataset_extractor = self._get_dataset_extractor(
+                    "test_dataset_extractor"
+                )
+                test_dataset = test_dataset_extractor.extract(refresh=True, **kwargs)
+                self.test_dataset_cache_hash = test_dataset_extractor.cache_hash
+                self.save()
+
+        if is_not_null(self.dataset):
+            if (
+                hasattr(self.dataset_extractor, "project")
+                and self.dataset_extractor.project
+            ):
+                self.project = self.dataset_extractor.project
+                self.save()
+            if not self.dataset_extractor.outcome_column:
+                outcome_col = self.parameters["dataset_extractor"].get(
+                    "outcome_column", None
+                )
+                if outcome_col:
+                    self.dataset_extractor.set_outcome_column(outcome_col)
+                else:
+                    raise Exception(
+                        "Extractor '{}' has no outcome column set and one was not specified in your pipeline".format(
+                            self.parameters["dataset_extractor"]["name"]
+                        )
+                    )
+                # self.outcome_column = self.dataset_extractor.outcome_column
+
+        if is_not_null(test_dataset):
+            test_dataset.index = test_dataset.index.map(lambda x: "test_{}".format(x))
+            self.dataset = pandas.concat([self.dataset, test_dataset])
+
+        if "training_weight" not in self.dataset.columns:
+            self.dataset["training_weight"] = 1.0
+        if self.parameters["model"].get("use_sample_weights", False):
+            self.dataset["training_weight"] = (
+                self.dataset["training_weight"] * self.dataset["sampling_weight"]
+            )
+        elif (
+            "sampling_weight" in self.dataset.columns
+            and self._check_for_valid_weights(self.dataset["sampling_weight"])
+        ):
+            print(
+                "Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation"
+            )
+
+    @temp_cache_wrapper
+    def load_model(
+        self,
+        refresh=False,
+        clear_temp_cache=True,
+        only_load_existing=False,
+        num_cores=1,
+        **kwargs
+    ):
+        """
+        Loads an existing model or trains a new one. Will attempt to load the model from the cache, and retrains if it
+        doesn't exist (or if ``refresh=True``). Once trained, the model becomes available in ``self.model`` as well as
+        the indices of the cross-validation folds in ``self.cv_folds``.
+
+        :param refresh: (default is False) if True, the model will be retrained regardless of whether it already exists in the cache
+        :param clear_temp_cache: (default is True) if False, row-level caching will not be automatically cleared before and after model training
+        :param only_load_existing: (default is False) if True, the model will not be trained if it doesn't exist in the cache
+        :param num_cores: (default is 1) number of cores to use during training
+        :param kwargs:
+        :return:
+        """
+
+        if is_null(self.dataset):
+            self.extract_dataset(only_load_existing=only_load_existing)
+
+        cache_data = None
+
+        if not refresh and self.model_cache_hash:
+            cache_data = self.cache.read(self.model_cache_hash)
+            # note: if you hit an ImportError when loading the pickle, you probably need to
+            # scroll up to the top and load a utils module in this file
+            # (e.g. from django_learning.utils.scoring_functions import scoring_functions)
+
+        if is_null(cache_data) and not only_load_existing:
+
+            # refresh the model and pipeline parameters (but not the dataset ones)
+            self._refresh_parameters("model")
+            self._refresh_parameters("pipeline")
+
+            pipeline_steps = copy.copy(self.parameters["pipeline"]["steps"])
+            pipeline_params = copy.copy(self.parameters["pipeline"]["params"])
+            params = self._collapse_pipeline_params(pipeline_steps, pipeline_params)
+
+            if "name" in self.parameters["model"].keys():
+
+                from django_learning.utils.models import models as learning_models
+
+                model_params = learning_models[self.parameters["model"]["name"]]()
+                model_class = model_params.pop("model_class")
+                model_params = model_params["params"]
+                pipeline_steps.append(("model", model_class))
+
+                params.update(
+                    {"model__{}".format(k): v for k, v in model_params.items()}
+                )
+                if "params" in self.parameters["model"].keys():
+                    params.update(
+                        {
+                            "model__{}".format(k): v
+                            for k, v in self.parameters["model"]["params"].items()
+                        }
+                    )
+
+            updated_hashstr = "".join(
+                [
+                    self.cache_identifier,
+                    self.dataset_extractor.get_hash(),
+                    str(get_pipeline_repr(pipeline_steps)),
+                    str(get_param_repr(params)),
+                    str(
+                        OrderedDict(
+                            sorted(
+                                self.parameters.get("model", {}).items(),
+                                key=lambda t: t[0],
+                            )
+                        )
+                    ),
+                ]
+            )
+            updated_hashstr = self.cache.file_handler.get_key_hash(updated_hashstr)
+            cache_data = self._train_model(
+                pipeline_steps, params, num_cores=num_cores, **kwargs
+            )
+            self.cache.write(updated_hashstr, cache_data, timeout=None)
+            self.model_cache_hash = updated_hashstr
+            self.cv_folds = None
+            self.save()
+
+        if is_not_null(cache_data):
+            for k, v in cache_data.items():
+                setattr(self, k, v)
+
+    def _get_largest_code(self):
+        """
+        If ``self.dataset_extractor`` has a base class ID, it uses that. If it does not, it returns the most common
+        value in ``self.dataset[self.dataset_extractor.outcome_column]``.
+        :return: Base class or most common code
+        """
+
+        if (
+            hasattr(self.dataset_extractor, "base_class_id")
+            and self.dataset_extractor.base_class_id
+        ):
+            largest_code = self.dataset_extractor.base_class_id
+        else:
+            largest_code = (
+                self.dataset[self.dataset_extractor.outcome_column]
+                .value_counts(ascending=False)
+                .index[0]
+            )
+
+        return largest_code
+
+    def _get_fit_params(self, train_dataset):
+        """
+        Compiles the fit parameters for the model and adds training weights to the sample weights passed to sklearn.
+        :param train_dataset: Training dataset (which is used to grab the weights)
+        :return:
+        """
+
+        fit_params = {
+            "model__{}".format(k): v
+            for k, v in self.parameters["model"].get("fit_params", {}).items()
+        }
+        # if self.parameters["model"].get("use_sample_weights", False) or self.parameters["model"].get("use_class_weights", False):
+        if self._check_for_valid_weights(train_dataset["training_weight"]):
+            fit_params["model__sample_weight"] = [
+                x for x in train_dataset["training_weight"].values
+            ]
+
+        return fit_params
+
+    def _train_model(self, pipeline_steps, params, num_cores=1, **kwargs):
+        """
+        Trains the model using sklearn's GridSearchCV
+        :param pipeline_steps: Pipeline steps (from the pipeline config)
+        :param params: Pipeline parameters (from the pipeline config)
+        :param num_cores: (default is 1) number of cores to use during grid search
+        :param kwargs:
+        :return:
+        """
+
+        df = copy.copy(self.dataset)
+
+        print("Creating train-test split")
+
+        y = df[self.dataset_extractor.outcome_column]
+        X_cols = df.columns.tolist()
+        X_cols.remove(self.dataset_extractor.outcome_column)
+        X = df[X_cols]
+        if self.parameters["model"]["test_percent"] == 0.0:
+            train_ids, test_ids = y.index, None
+            print("Training on all {} cases".format(len(train_ids)))
+            # if is_not_null(self.test_dataset):
+            if "test_dataset_extractor" in self.parameters.keys():
+                test_ids = [i for i in self.dataset.index if str(i).startswith("test_")]
+                train_ids = [
+                    i for i in self.dataset.index if not str(i).startswith("test_")
+                ]
+                print(
+                    "Adding {} test cases from separate dataset".format(len(test_ids))
+                )
+        else:
+            _, _, _, _, train_ids, test_ids = train_test_split(
+                X,
+                y,
+                y.index,
+                test_size=self.parameters["model"]["test_percent"],
+                random_state=5,
+            )
+            print(
+                "Selected %i training cases and %i test cases"
+                % (len(train_ids), len(test_ids))
+            )
+
+        train_dataset = df.loc[train_ids]
+        test_dataset = (
+            df.loc[test_ids] if is_not_null(test_ids) and len(test_ids) > 0 else None
+        )
+
+        scoring_function = None
+        if "scoring_function" in self.parameters["model"].keys():
+            scoring_function = self._get_scoring_function(
+                self.parameters["model"]["scoring_function"],
+                binary_base_code=self._get_largest_code()
+                if len(y.unique()) == 2
+                else None,
+            )
+
+        try:
+            sklearn_cache = mkdtemp(
+                prefix="sklearn",
+                dir=os.path.join(
+                    settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
+                    "feature_extractors/{}".format(self.cache_identifier),
+                ),
+            )
+        except:
+            print("Couldn't create local sklearn cache dir")
+            sklearn_cache = None
+
+        fit_params = self._get_fit_params(train_dataset)
+        estimator = Pipeline(pipeline_steps, memory=sklearn_cache)
+
+        if len(ParameterGrid(params)) == 1:
+            print("Singular parameter set detected; skipping grid search")
+            params = ParameterGrid(params)[0]
+            model = estimator.set_params(**params)
+        else:
+            grid_search_cv = self.parameters["model"].get("cv", 5)
+
+            print(
+                "Beginning grid search using %s and %i cores for %s"
+                % (
+                    str(scoring_function),
+                    num_cores,
+                    self.dataset_extractor.outcome_column,
+                )
+            )
+
+            model = GridSearchCV(
+                estimator,
+                params,
+                cv=grid_search_cv,
+                n_jobs=num_cores,
+                verbose=2,
+                scoring=scoring_function,
+            )
+
+        model.fit(
+            train_dataset,
+            train_dataset[self.dataset_extractor.outcome_column],
+            **fit_params
+        )
+        if sklearn_cache:
+            rmtree(sklearn_cache)
+
+        cache_data = {
+            "model": model,
+            "train_dataset": train_dataset,
+            "test_dataset": test_dataset,
+            # "predict_dataset": predict_dataset
+        }
+
+        return cache_data
+
+    @require_model
+    def describe_model(self):
+        """
+        Placeholder for more specific model results (gets implemented on more specific models that inherit ``LearningModel``)
+        :return:
+        """
+
+        print("'{}' results".format(self.dataset_extractor.outcome_column))
+
+    @require_model
+    def get_test_prediction_results(self, refresh=False, only_load_existing=False):
+        """
+        Runs the model on the test dataset (what was specified by ``holdout_pct`` or ``test_dataset_extractor`` and
+        computes the scores.
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, only returns exising cached results (does not try to apply the model)
+        :return:
+        """
+
+        self.predict_dataset = None
+        if is_not_null(self.test_dataset):
+            self.predict_dataset = self.produce_prediction_dataset(
+                self.test_dataset,
+                cache_key="predict_main",
+                refresh=refresh,
+                only_load_existing=only_load_existing,
+            )
+            scores = self.compute_prediction_scores(
+                self.test_dataset, predicted_df=self.predict_dataset
+            )
+            return scores
+
+    def print_test_prediction_report(self, refresh=False, only_load_existing=True):
+        """
+        Wrapper around ``self.get_test_prediction_results`` that prints the results.
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, only returns exising cached results (does not try to apply the model)
+        :return:
+        """
+
+        print(
+            self.get_test_prediction_results(
+                refresh=refresh, only_load_existing=only_load_existing
+            )
+        )
+
+    @require_model
+    def get_cv_prediction_results(
+        self, refresh=False, only_load_existing=False, return_averages=True
+    ):
+        """
+        Applies the model using k-fold cross validation (number of folds is specified in the pipeline config in the
+        ``cv`` field). Computes the scores across all folds in ``self.cv_folds``.
+        :param refresh: (default is False) if True, does a fresh cross-validation run
+        :param only_load_existing: (default is False) if True, only returns existing cached results (does not try to apply the model)
+        :param return_averages: (default is True) if False, will return a vertically-concatenated dataframe of results from all folds;
+            if True, the results will be averaged across the folds
+        :return:
+        """
+
+        print("Computing cross-fold predictions")
+        _final_model = copy.deepcopy(self.model)
+        _final_model_best_estimator = self.model.best_estimator_
+        dataset = copy.copy(self.train_dataset)
+
+        all_fold_scores = []
+        if refresh or not self.cv_folds:
+            self.cv_folds = [
+                f
+                for f in StratifiedKFold(
+                    len(dataset.index),
+                    n_folds=self.parameters["model"].get("cv", 5),
+                    shuffle=True,
+                )
+            ]
+            self.save()
+        for i, folds in enumerate(self.cv_folds):
+            fold_train_index, fold_test_index = folds
+            # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
+            fold_train_dataset = dataset.ix[
+                pandas.Series(dataset.index).iloc[fold_train_index].values
+            ]  # self.dataset.ix[fold_train_index]
+            fold_test_dataset = dataset.ix[
+                pandas.Series(dataset.index).iloc[fold_test_index].values
+            ]  # self.dataset.ix[fold_test_index]
+
+            fold_predict_dataset = None
+            if not refresh:
+                fold_predict_dataset = self.produce_prediction_dataset(
+                    fold_test_dataset,
+                    cache_key="predict_fold_{}".format(i),
+                    refresh=False,
+                    only_load_existing=True,
+                )
+            if is_null(fold_predict_dataset) and not only_load_existing:
+                fit_params = self._get_fit_params(fold_train_dataset)
+                self.model = _final_model_best_estimator.fit(
+                    fold_train_dataset,
+                    fold_train_dataset[self.dataset_extractor.outcome_column],
+                    **fit_params
+                )
+                fold_predict_dataset = self.produce_prediction_dataset(
+                    fold_test_dataset,
+                    cache_key="predict_fold_{}".format(i),
+                    refresh=refresh,
+                )
+
+            if is_not_null(fold_predict_dataset):
+                fold_scores = self.compute_prediction_scores(
+                    fold_test_dataset, predicted_df=fold_predict_dataset
+                )
+            else:
+                fold_scores = None
+            all_fold_scores.append(fold_scores)
+
+        self.model = _final_model
+        if any([is_null(f) for f in all_fold_scores]):
+            return None
+        else:
+            fold_score_df = pandas.concat(all_fold_scores)
+            if return_averages:
+                fold_score_df = pandas.concat(
+                    [
+                        all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                        fold_score_df.groupby(fold_score_df.index).mean(),
+                    ],
+                    axis=1,
+                )
+
+            return fold_score_df
+
+    def print_cv_prediction_report(
+        self, refresh=False, only_load_existing=True, return_averages=True
+    ):
+        """
+        Wrapper around ``self.get_cv_prediction_results`` that prints the results
+        :param refresh: (default is False) if True, does a fresh cross-validation run
+        :param only_load_existing: (default is False) if True, only returns existing cached results (does not try to apply the model)
+        :param return_averages: (default is True) if False, will return a vertically-concatenated dataframe of results from all folds;
+            if True, the results will be averaged across the folds
+        :return:
+        """
+
+        print(
+            self.get_cv_prediction_results(
+                refresh=refresh,
+                only_load_existing=only_load_existing,
+                return_averages=return_averages,
+            )
+        )
+
+    def _get_scoring_function(self, func_name, binary_base_code=None):
+        """
+        Creates the scoring function for the model. For classification with a ``binary_base_code`` specified, the
+        options are "f1", "precision", "recall" and "brier_loss". For classification without a base class specified,
+        options are "f1", "precision" and "recall".
+
+        :param func_name: Name of the scoring function
+        :param binary_base_code: Base label for binary classification
+        :return: Scoring function
+        """
+
+        try:
+
+            from django_learning.utils.scoring_functions import scoring_functions
+
+            scoring_function = make_scorer(scoring_functions[func_name])
+
+        except:
+
+            if "regression" in str(self.__class__):
+                func_map = {
+                    "mean_squared_error": (mean_squared_error, False, False),
+                    "r2": (r2_score, True, False),
+                }
+                func, direction, needs_proba = func_map[func_name]
+                scoring_function = make_scorer(
+                    func, needs_proba=needs_proba, greater_is_better=direction
+                )
+            elif binary_base_code:
+                func_map = {
+                    "f1": (f1_score, True, False),
+                    "precision": (precision_score, True, False),
+                    "recall": (recall_score, True, False),
+                    "brier_loss": (brier_score_loss, False, True),
+                }
+                func, direction, needs_proba = func_map[func_name]
+                func_params = {
+                    "needs_proba": needs_proba,
+                    "greater_is_better": direction,
+                    "pos_label": binary_base_code,
+                }
+                if func_name in ["f1", "precision", "recall"]:
+                    func_params["labels"] = self.dataset[
+                        self.dataset_extractor.outcome_column
+                    ].unique()
+                scoring_function = make_scorer(func, **func_params)
+            else:
+                if self.parameters["model"]["scoring_function"] == "f1":
+                    scoring_function = "f1_macro"
+                    # scoring_function = "f1_micro"
+                    # scoring_function = "f1_weighted"
+                elif self.parameters["model"]["scoring_function"] == "precision":
+                    scoring_function = "precision"
+                else:
+                    scoring_function = "recall"
+
+        return scoring_function
+
+    def _collapse_pipeline_params(self, pipeline, params, names=None):
+
+        final_params = {}
+        if not names:
+            names = []
+        if isinstance(pipeline, Pipeline):
+            for sname, step in pipeline.steps:
+                final_params.update(
+                    self._collapse_pipeline_params(step, params, names=names + [sname])
+                )
+        elif isinstance(pipeline, FeatureUnion):
+            final_params.update(
+                self._collapse_pipeline_params(
+                    pipeline.transformer_list, params, names=names
+                )
+            )
+        elif isinstance(pipeline, tuple):
+            final_params.update(pipeline[1], params, names=names + [pipeline[0]])
+        elif isinstance(pipeline, list):
+            for sname, step in pipeline:
+                final_params.update(
+                    self._collapse_pipeline_params(step, params, names=names + [sname])
+                )
+        else:
+            if names[-1] in params.keys():
+                for k, v in params[names[-1]].items():
+                    if len(v) > 0:
+                        final_params["__".join(names + [k])] = v
+            from django_learning.utils.feature_extractors import BasicExtractor
+
+            if isinstance(pipeline, BasicExtractor):
+                final_params["{}__cache_identifier".format("__".join(names))] = [
+                    self.cache_identifier
+                ]
+                final_params["{}__feature_name_prefix".format("__".join(names))] = [
+                    names[-1]
+                ]
+                if hasattr(self, "document_types"):
+                    final_params["{}__document_types".format("__".join(names))] = [
+                        self.document_types
+                    ]
+
+        return final_params
+
+    @require_model
+    def get_feature_names(self, m):
+
+        features = []
+
+        if hasattr(m, "steps"):
+            for name, step in m.steps:
+                features.append(self.get_feature_names(step))
+        elif hasattr(m, "transformer_list"):
+            for name, step in m.transformer_list:
+                features.append(self.get_feature_names(step))
+        elif hasattr(m, "get_feature_names"):
+            return m.get_feature_names()
+
+        return [f for sublist in features for f in sublist]
+
+    @require_model
+    @temp_cache_wrapper
+    def apply_model(
+        self,
+        data,
+        keep_cols=None,
+        clear_temp_cache=True,
+        disable_probability_threshold_warning=False,
+    ):
+        """
+        Applies the model directly to a dataset.
+        :param data: A dataframe in the same format as the training data
+        :param keep_cols: (Optional) a subset of columns to filter to
+        :param clear_temp_cache: (default is True) if False, temporary row-level caches will be preserved
+        :param disable_probability_threshold_warning: (default is False) if True, a warning will not be raised if you
+            use the model when a probability threshold is set (only matters for ``ClassificationModel`` instances)
+        :return: Model predictions on the dataset
+        """
+
+        if not keep_cols:
+            keep_cols = []
+
+        predictions = self.model.predict(data)
+        has_probabilities = False
+        try:
+            probabilities = self.model.predict_proba(data)
+            has_probabilities = True
+        except AttributeError:
+            probabilities = [None] * len(data)
+
+        labels = []
+        for index, pred, prob in zip(data.index, predictions, probabilities):
+            if type(prob) in [list, tuple, numpy.ndarray]:
+                prob = max(prob)
+            label = {self.dataset_extractor.outcome_column: pred, "probability": prob}
+            for col in keep_cols:
+                label[col] = data.loc[index, col]
+            labels.append(label)
+
+        labels = pandas.DataFrame(labels, index=data.index)
+        if not has_probabilities:
+            del labels["probability"]
+
+        return labels
+
+    @require_model
+    def produce_prediction_dataset(
+        self,
+        df_to_predict,
+        cache_key=None,
+        refresh=False,
+        only_load_existing=False,
+        disable_probability_threshold_warning=False,
+    ):
+        """
+        The preferred method of producing predictions for a dataset.
+        :param df_to_predict: A dataframe in the same format as the training data
+        :param cache_key: (Optional) a unique cache identifier for the dataset
+        :param refresh: (default is False) if True, existing cached predictions will be ignored and recomputed
+        :param only_load_existing: (default is False) if True, only returns existing cached results (will not recompute)
+        :param disable_probability_threshold_warning: (default is False) if True, disables the prediction threshold warning
+        :return: A dataset with model predictions
+        """
+
+        from django_learning.utils.dataset_extractors import dataset_extractors
+
+        predicted_df = dataset_extractors["model_prediction_dataset"](
+            dataset=df_to_predict,
+            learning_model=self,
+            cache_key=cache_key,
+            disable_probability_threshold_warning=disable_probability_threshold_warning,
+        ).extract(refresh=refresh, only_load_existing=only_load_existing)
+
+        return predicted_df
+
+    @require_model
+    def compute_prediction_scores(
+        self,
+        df_to_predict,
+        predicted_df=None,
+        cache_key=None,
+        refresh=False,
+        only_load_existing=False,
+    ):
+        """
+        Computes scores for a dataset of predictions and a dataset of actual values. Expects that the existing dataset
+        (``df_to_predict``) already has ``self.dataset_extractor.outcome_column`` filled in with correct values.
+
+        :param df_to_predict: The original dataset to predict
+        :param predicted_df: (Optional) a dataset with predicted values; if nothing is passed, it will use the model
+            to produce new predictions
+        :param cache_key: (Optional) a unique cache identifier for the dataset
+        :param refresh: (default is False) if True, existing cached predictions will be ignored and recomputed
+        :param only_load_existing: (default is False) if True, only returns existing cached results (will not recompute)
+        :return: Scores that detail the model performance
+        """
+
+        if (
+            "sampling_weight" in df_to_predict.columns
+            and self._check_for_valid_weights(df_to_predict["sampling_weight"])
+        ):
+            weight_col = "sampling_weight"
+        else:
+            weight_col = None
+        if is_null(predicted_df):
+            predicted_df = self.produce_prediction_dataset(
+                df_to_predict,
+                cache_key=cache_key,
+                refresh=refresh,
+                only_load_existing=only_load_existing,
+            )
+        if is_not_null(predicted_df):
+            return compute_scores_from_datasets_as_coders(
+                df_to_predict,
+                predicted_df,
+                "index",
+                self.dataset_extractor.outcome_column,
+                weight_column=weight_col,
+            )
+        else:
+            return None
+
+
+class DocumentLearningModel(LearningModel):
+    """
+    Extends LearningModel for use with Documents.
+    """
+
+    sampling_frame = models.ForeignKey(
+        "django_learning.SamplingFrame",
+        related_name="learning_models",
+        on_delete=models.CASCADE,
+        help_text="Sampling frame that the model is associated with",
+    )
+
+    class Meta:
+
+        abstract = True
+
+    def save(self, *args, **kwargs):
+
+        super(DocumentLearningModel, self).save(*args, **kwargs)
+
+    def extract_dataset(self, refresh=False, **kwargs):
+        """
+        Auto-detects the sampling frame from the dataset extractor after loading the dataset.
+        :param refresh:
+        :param kwargs:
+        :return:
+        """
+
+        super(DocumentLearningModel, self).extract_dataset(refresh=refresh, **kwargs)
+        if (
+            hasattr(self.dataset_extractor, "sampling_frame")
+            and self.dataset_extractor.sampling_frame
+        ):
+            self.sampling_frame = self.dataset_extractor.sampling_frame
+            self.save()

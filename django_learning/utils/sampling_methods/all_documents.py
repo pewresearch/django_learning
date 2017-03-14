@@ -1,7 +1,3 @@
 def get_method():
 
-    return {
-        "sampling_strategy": None,
-        "stratify_by": None,
-        "sampling_searches": {}
-    }
+    return {"sampling_strategy": "all", "stratify_by": None, "sampling_searches": {}}

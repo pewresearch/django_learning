@@ -1,0 +1,144 @@
+{
+  "instructions": "Instructions",
+  "qualification_tests": ["test_qualification"],
+  "admins": [
+    "coder1"
+  ],
+  "coders": [
+    "coder1",
+    "coder2"
+  ],
+  "questions": [
+    {
+      "prompt": "Test Radio",
+      "name": "test_radio",
+      "display": "radio",
+      "labels": [
+        {
+          "label": "Comedy",
+          "value": "comedy",
+          "pointers": []
+        },
+        {
+          "label": "Action",
+          "value": "action",
+          "pointers": []
+        },
+        {
+          "label": "Other",
+          "value": "other",
+          "pointers": []
+        }
+      ],
+      "tooltip": "",
+      "examples": [
+        {
+          "quote": "",
+          "explanation": ""
+        }
+      ]
+    },
+    {
+      "prompt": "Test Dropdown",
+      "name": "test_dropdown",
+      "display": "dropdown",
+      "labels": [
+        {
+          "label": "Good",
+          "value": "1",
+          "pointers": []
+        },
+        {
+          "label": "Bad",
+          "value": "0",
+          "pointers": []
+        }
+      ],
+      "tooltip": "",
+      "examples": [
+        {
+          "quote": "",
+          "explanation": ""
+        }
+      ]
+    },
+    {
+      "prompt": "Test Dropdown Multiple",
+      "name": "test_dropdown_multiple",
+      "display": "dropdown",
+      "multiple": true,
+      "labels": [
+        {
+          "label": "Good",
+          "value": "1",
+          "pointers": []
+        },
+        {
+          "label": "Bad",
+          "value": "0",
+          "pointers": []
+        }
+      ],
+      "tooltip": "",
+      "examples": [
+        {
+          "quote": "",
+          "explanation": ""
+        }
+      ]
+    },
+    {
+      "prompt": "Test Number",
+      "name": "test_number",
+      "display": "number",
+      "labels": [],
+      "tooltip": "",
+      "examples": [
+        {
+          "quote": "",
+          "explanation": ""
+        }
+      ]
+    },
+    {
+      "prompt": "Test Checkbox",
+      "name": "test_checkbox",
+      "display": "checkbox",
+      "labels": [
+        {
+          "label": "Good",
+          "value": "1",
+          "pointers": []
+        },
+        {
+          "label": "Bad",
+          "value": "0",
+          "pointers": [],
+          "select_as_default": true
+        }
+      ],
+      "tooltip": "",
+      "examples": [
+        {
+          "quote": "",
+          "explanation": ""
+        }
+      ]
+    },
+    {
+      "prompt": "Test Text",
+      "name": "test_text",
+      "display": "text",
+      "labels": [{
+          "label": "Open response",
+          "value": "open_response",
+          "pointers": [],
+          "select_as_default": true
+        }],
+      "tooltip": "",
+      "examples": [],
+      "show_notes": true,
+      "optional": true
+    }
+  ]
+}

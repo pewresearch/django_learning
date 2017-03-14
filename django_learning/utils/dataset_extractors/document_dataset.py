@@ -1,0 +1,98 @@
+from django_learning.utils.dataset_extractors.document_coder_dataset import (
+    Extractor as DocumentCoderDatasetExtractor,
+)
+
+
+class Extractor(DocumentCoderDatasetExtractor):
+    def __init__(self, **kwargs):
+
+        super(Extractor, self).__init__(**kwargs)
+
+        self.coder_aggregation_function = kwargs.get(
+            "coder_aggregation_function", "mean"
+        )
+
+        self.convert_to_discrete = kwargs.get("convert_to_discrete", False)
+        self.threshold = kwargs.get("threshold", None)
+        self.base_class_id = kwargs.get("base_class_id", None)
+        if self.base_class_id and self.valid_label_ids:
+            try:
+                self.labels.get(pk=self.base_class_id)
+            except:
+                raise Exception(
+                    "If you specify a base_class_id, it needs to belong to one of the selected questions"
+                )
+
+        self.index_levels = ["document_id"]
+
+    def _additional_steps(self, dataset, **kwargs):
+
+        dataset = super(Extractor, self)._additional_steps(dataset, **kwargs)
+
+        if len(dataset) == 0:
+            return dataset
+
+        if self.coder_aggregation_function == "mean":
+            dataset = dataset.groupby("document_id").mean().reset_index()
+        elif self.coder_aggregation_function == "median":
+            dataset = dataset.groupby("document_id").median().reset_index()
+        elif self.coder_aggregation_function == "max":
+            dataset = dataset.groupby("document_id").max().reset_index()
+        elif self.coder_aggregation_function == "min":
+            dataset = dataset.groupby("document_id").min().reset_index()
+        else:
+            raise Exception("Specify another aggregation function, fool!")
+        for col in ["coder_is_mturk", "coder_id"]:
+            if col in dataset.columns:
+                del dataset[col]
+
+        if self.convert_to_discrete:
+
+            def get_max(x):
+
+                if self.base_class_id:
+                    try:
+                        max_col, max_val = sorted(
+                            [
+                                (col, x[col])
+                                for col in self.outcome_columns
+                                if col != "label_{}".format(self.base_class_id)
+                            ],
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[0]
+                    except IndexError:
+                        # In some cases, you may have filtered down to a dataset where only the base class is left
+                        max_col, max_val = sorted(
+                            [(col, x[col]) for col in self.outcome_columns],
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[0]
+                else:
+                    max_col, max_val = sorted(
+                        [(col, x[col]) for col in self.outcome_columns],
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )[0]
+
+                return_val = None
+                if self.threshold:
+                    if max_val >= self.threshold:
+                        return_val = max_col.split("_")[-1]
+                    elif self.base_class_id:
+                        return_val = str(self.base_class_id)
+                elif max_val > 0:
+                    return_val = max_col.split("_")[-1]
+                if return_val is None and self.base_class_id:
+                    return str(self.base_class_id)
+                else:
+                    return return_val
+
+            dataset["label_id"] = dataset.apply(get_max, axis=1)
+            for col in self.outcome_columns:
+                del dataset[col]
+            self.outcome_columns = []
+            self.outcome_column = "label_id"
+            self.discrete_classes = True
+
+        return dataset

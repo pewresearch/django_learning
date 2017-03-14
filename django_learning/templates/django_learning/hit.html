@@ -1,6 +1,6 @@
-{% extends "django_learning/_template.html" %}
+{% extends django_learning_template %}
 
-{% load staticfiles %}
+{% load static %}
 
 {% block extra_head %}
 
@@ -44,12 +44,14 @@
         <script type='text/javascript' src='https://s3.amazonaws.com/mturk-public/externalHIT_v1.js'></script>
     {% endif %}
 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
 {% endblock %}
 
 {% block modals %}
 
     {% for q in hit.sample.project.questions.all %}
-        {% if q.examples.count > 0 or q.pointers|length > 0 %}
+        {% if q.examples.count > 0 or q.has_pointers > 0 %}
             <div class="modal fade" id="{{ q.name }}_modal" tabindex="-1" role="dialog">
               <div class="modal-dialog">
                 <div class="modal-content">
@@ -75,10 +77,12 @@
                           </tr>
                       </table>
 
-                      <h4>Examples</h4>
-                      <table class="table table-condensed">
-                          {% for e in q.examples.all %}<tr><td class="col-md-6">"{{ e.quote }}"</td><td class="col-md-6">{{ e.explanation }}</td></tr>{% endfor %}
-                      </table>
+                      {% if q.examples.count > 0 %}
+                          <h4>Examples</h4>
+                          <table class="table table-condensed">
+                              {% for e in q.examples.all %}<tr><td class="col-md-6">"{{ e.quote }}"</td><td class="col-md-6">{{ e.explanation }}</td></tr>{% endfor %}
+                          </table>
+                      {% endif %}
 
                   </div>
                   <div class="modal-footer">
@@ -92,49 +96,61 @@
 
 {% endblock %}
 
-{% block body %}
+{% block content %}
 
     {% if hit.hit_type.title %}<h3>{{ hit.hit_type.title }}</h3>{% endif %}
     {% if project.instructions %}<p>{{ project.instructions }}</p>{% endif %}
     <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
-    {% if hit.hit_type.title %}<h3>{{ hit.hit_type.title }}</h3>{% endif %}
-    {% if project.instructions %}<p>{{ project.instructions }}</p>{% endif %}
-    <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
     {% if hit.turk %}<form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
-    {% else %}<form class="form" method="post" action="/code_random_assignment/{{ project.name }}/{{ sample.name }}">
+    {% else %}
+        {% if form_post_path %}
+            <form class="form" method="post" action="{{ form_post_path }}">
+        {% else %}
+            <form class="form" method="post" action="{% url 'django_learning:code_assignment' project.name sample.name %}">
+        {% endif %}
     {% endif %}
         {% csrf_token %}
         {% if hit.turk %}<input type='hidden' value='' name='assignmentId' id='assignmentId'/>{% endif %}
         <input type="hidden" name="hit_id" value="{{ hit.pk }}">
+        <input type="hidden" name="assignment_id" value="{{ assignment.pk }}">
         <div class="row">
             <div class="col-md-5">
                 <div class="panel panel-default">
                     <div class="panel-body" style="overflow: scroll; height: 450px;">
-                        <p>{{ hit.observation.decoded_content }}</p>
-                        <!--
-                        {% if hit.observation.external_link and hit.observation.external_link != 'nan' %}
-                            <iframe src="{{ hit.observation.external_link }}" width="500" height="600" style="border:none;overflow:scroll" scrolling="yes" frameborder="0" allowTransparency="true"></iframe>
-                        {% endif %}
-                        -->
+                        <p>{{ hit.sample_unit.document.text|safe|linebreaks }}</p>
                     </div>
                 </div>
                 <fieldset class="form-group">
-                    <textarea name="notes" class="form-control" rows="3" placeholder="Notes"></textarea>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Notes">{% if assignment.notes %}{{ assignment.notes }}{% endif %}</textarea>
                 </fieldset>
                 <label class="form-group">
                     <label class="checkbox-inline">
-                        <input class="zoom" type="checkbox" name="uncodeable" value="1">
-                        Uncodeable
+                        <input class="zoom" type="checkbox" name="uncodeable" value="1"
+                            {% if assignment.uncodeable %}checked="checked"
+                            {% endif %}
+                        >
+                        Needs Review / Uncodeable
                     </label>
                 </label>
+                {% if not hit.turk %}
+                    {% if remaining_count %}
+                        <p>{{ remaining_count }} HITs remaining in this batch</p>
+                    {% endif %}
+                    {% if last_assignment_id %}
+                        <p><a href="{% url 'django_learning:code_assignment' project.name sample.name %}/{{ last_assignment_id }}">Correct last assignment</a></p>
+                    {% endif %}
+                {% endif %}
             </div>
             <div class="col-md-7">
                 <div class="panel panel-default">
                     <table class="panel-body table table-condensed">
-                        {% for q in hit.sample.project.questions.all %}
-                            <tr>
+                        {% for q in questions %}
+                            <tr id="tr_{{ q.name }}" data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}">
                                 {% if q.display == 'header' %}
-                                    <th colspan="2">
+                                    </tr>
+                                    </table>
+                                    <table class="panel-body table table-condensed">
+                                    <th colspan="2" id="{{ q.name }}" {% if q.dependency %}data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}>
                                         {% if q.tooltip %}<a href="#" data-toggle="tooltip" title="{{ q.tooltip }}">{{ q.prompt }}</a>
                                         {% else %}<a>{{ q.prompt }}</a>
                                         {% endif %}
@@ -142,7 +158,7 @@
                                 {% else %}
                                     <td>
                                         {% if q.tooltip %}<span title="{{ q.tooltip }}" data-toggle="tooltip" data-placement="bottom">{% endif %}
-                                            {% if q.examples.count > 0 or q.pointers|length > 0 %}<a href="#" data-toggle="modal" data-target="#{{ q.name }}_modal">{{ q.prompt }}</a>
+                                            {% if q.examples.count > 0 or q.has_pointers %}<a href="#" data-toggle="modal" data-target="#{{ q.name }}_modal">{{ q.prompt }}</a>
                                             {% else %}<a>{{ q.prompt }}</a>
                                             {% endif %}
                                         {% if q.tooltip %}</span>{% endif %}
@@ -151,14 +167,59 @@
                                         <td class="form-group col-md-{{ q.codes.count }}">
                                             {% for label in q.labels.all %}
                                                 <label class="radio-inline">
-                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}" {% if label.select_as_default %}checked="checked"{% endif %}>
+                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}" id="{{ q.name }}_{{ label.value }}"
+                                                           {% if label.select_as_default and not assignment.time_finished %}checked="checked" selected="selected"
+                                                           {% elif label.pk in q.existing_label_ids %}checked="checked" selected="selected"
+                                                           {% endif %}
+                                                           {% if not q.optional %}required{% endif %}
+                                                           {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                                    >
                                                     {{ label.label }}
                                                 </label>
                                             {% endfor %}
                                         </td>
                                     {% elif q.display == 'number' %}
                                         <td class="form-group">
-                                            <input class="zoom" type="number" name="{{ q.name }}">
+                                            <input class="zoom" type="number" name="{{ q.name }}" id="{{ q.name }}"
+                                                   {% if q.existing_value %}value="{{ q.existing_value }}"{% endif %}
+                                                   {% if not q.optional %}required{% endif %}
+                                                   {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                            >
+                                        </td>
+                                    {% elif q.display == 'dropdown' %}
+                                        <td class="form-group">
+                                            <select {% if q.multiple %} multiple {% endif %}class="form-control" name="{{ q.name }}" id="{{ q.name }}"
+                                                    {% if not q.optional %}required{% endif %}
+                                                    {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                            >
+                                                <option value="" disabled {% if q.existing_label_ids|length == 0 %}selected{% endif %}>---</option>
+                                                {% for label in q.labels.all %}
+                                                    <option value="{{ label.pk }}" id="{{ q.name }}_{{ label.value }}"
+                                                            {% if label.select_as_default and not assignment.time_finished %}selected="selected"
+                                                            {% elif label.pk in q.existing_label_ids %}selected="selected"
+                                                            {% endif %}
+                                                    >{{ label.label }}<!-- ({{label.pk}}): {{ q.existing_label_ids }} --></option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                    {% elif q.display == "checkbox" %}
+                                        <td class="form-group">
+                                            {% for label in q.labels.all %}
+                                                {% if not label.select_as_default %}
+                                                    <label><input name="{{ q.name }}" type="checkbox" value="{{ label.pk }}" class="zoom"
+                                                                  id="{{ q.name }}_{{ label.value }}"
+                                                                  {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                                                  {% if label.select_as_default and not assignment.time_finished %}checked="checked"
+                                                                  {% elif label.pk in q.existing_label_ids %}checked="checked"
+                                                                  {% endif %}
+                                                    > {% if q.labels.count > 2 %}{{ label.label }}{% endif %}</label> <!-- {{ q.existing_label_ids }} -->
+                                                {% endif %}
+                                            {% endfor %}
+                                        </td>
+                                    {% endif %}
+                                    {% if q.show_notes %}
+                                        <td class="form-group">
+                                            <textarea name="{{ q.name }}_notes" class="form-control" rows="3" placeholder="Notes">{% if q.notes %}{{ q.notes }}{% endif %}</textarea>
                                         </td>
                                     {% endif %}
                                 {% endif %}
@@ -196,9 +257,73 @@
 
     <script>
         $(document).ready(function(){
+
             $('[data-toggle="tooltip"]').tooltip();
+
+            {% for q in questions %}
+
+
+                {% if q.dependency %}
+
+                    $('*[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
+                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
+
+                    {% if q.dependency.question.display == "dropdown" %}
+                        $(document).on('change','#{{q.dependency.question.name}}',function(){
+                           if($("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':selected')) {
+                                $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
+                                $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
+                            } else {
+                                $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                                $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
+                                {% for label in q.labels.all %}
+                                    $("#{{ q.name }}_{{ label.value }}").prop("checked", false);
+                                    $("#{{ q.name }}_{{ label.value }}").prop("selected", false);
+                                    $("#{{ q.name }}_{{ label.value }}").trigger("change");
+                                    $("#{{ q.name }}").trigger("change");
+                                {% endfor %}
+                            };
+                          });
+                    {% else %}
+                        {% for label in q.dependency.question.labels.all %}
+                            $("#{{ q.dependency.question.name }}_{{ label.value }}").change(function() {
+                                if($("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':checked') | $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':selected')) {
+                                    $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
+                                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
+                                } else {
+                                    $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
+                                    {% for label in q.labels.all %}
+                                        $("#{{ q.name }}_{{ label.value }}").prop("checked", false);
+                                        $("#{{ q.name }}_{{ label.value }}").prop("selected", false);
+                                        $("#{{ q.name }}_{{ label.value }}").trigger("change");
+                                        $("#{{ q.name }}").trigger("change");
+                                    {% endfor %}
+                                };
+                            });
+                        {% endfor %}
+
+
+                    {% endif %}
+                {% endif %}
+
+            {% endfor %}
+
+            {% for q in questions %}
+                {% for label in q.labels.all %}
+                    {% if label.pk in q.existing_label_ids %}
+                        $("#{{ q.name }}_{{ label.value }}").prop("checked", true);
+                        $("#{{ q.name }}_{{ label.value }}").prop("selected", true);
+                        $("#{{ q.name }}_{{ label.value }}").trigger("change");
+                        $("#{{ q.name }}").trigger("change");
+                    {% endif %}
+                {% endfor %}
+
+            {% endfor %}
+
         });
     </script>
+
     {% if hit.turk %}<script language='Javascript'>turkSetAssignmentID();</script>{% endif %}
 
 {% endblock %}

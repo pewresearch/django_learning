@@ -1,51 +1,63 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+from __future__ import print_function
+from django_commander.models import LoggedExtendedModel
+from django_learning.managers import DocumentManager
+from django.apps import apps
+from django.contrib.postgres.fields import ArrayField
+from django.db import models
+from django.db.models.signals import class_prepared
+from langdetect import detect
+from pewtils import is_not_null, is_null, decode_text
+from pewtils import get_hash
 import re
 
-from django.db import models
-from django.contrib.postgres.fields import ArrayField, JSONField
-from django.apps import apps
-from django.db.models.signals import class_prepared
 
-from langdetect import detect
+class Document(LoggedExtendedModel):
 
-from pewtils import is_not_null, is_null, decode_text
-from pewtils.nlp import get_hash
-from pewtils.django import get_fields_with_model
-
-from django_learning.settings import DJANGO_LEARNING_BASE_MODEL
-from django_learning.managers import DocumentManager
-
-
-class Document(DJANGO_LEARNING_BASE_MODEL):
+    """
+    Documents are at the core of Django Learning - these are the pieces of text that you want to code. They also
+    link all of the other models in Django Learning with the models in your own Django app. To do this, you simply
+    need to create a ``OneToOneRelation`` with ``django_learning.models.Document`` with a model in your own app.
+    For example, if you have a model for Facebook posts, you can create a Document for each post and populate the
+    ``text`` field with the text of each post.
+    """
 
     text = models.TextField(help_text="The text content of the document")
-    original_text = models.TextField(null=True)
-    # TODO: reimplement (after done with sqlite): duplicate_ids = ArrayField(models.IntegerField(), default=[])
-    # TODO: reimplement: alternative_text = ArrayField(models.TextField(), default=[])
-    date = models.DateTimeField(null=True, help_text="An optional date associated with the document")
-
-    is_clean = models.BooleanField(default=False)
-
-    # nilsimsa = models.CharField(max_length=256, null=True, db_index=True)
-    # tlsh = models.CharField(max_length=256, null=True, db_index=True)
-    ssdeep = models.CharField(max_length=256, null=True, db_index=True)
-
-    language = models.CharField(max_length=5, null=True)
-
-    paragraphs = models.ManyToManyField("self", symmetrical=False, related_name="parent")
-    paragraph_id = models.IntegerField(null=True)
-
-    entities = models.ManyToManyField("django_learning.Entity", related_name="documents")
-
-    coded_labels = models.ManyToManyField("django_learning.Label",
-        related_name="coded_documents",
-        through="django_learning.Code"
+    date = models.DateTimeField(
+        null=True, help_text="An optional date associated with the document"
     )
-    # classified_labels = models.ManyToManyField("django_learning.Label",
-    #     related_name="classified_documents",
-    #     through="django_learning.Classification"
-    # )
 
-    freeze_text = models.BooleanField(default=False)
+    ssdeep = models.CharField(
+        max_length=256,
+        null=True,
+        db_index=True,
+        help_text="Locally-sensitive ssdeep hash of the document (set automatically)",
+    )
+
+    language = models.CharField(
+        max_length=5,
+        null=True,
+        help_text="If null (default), this gets auto-detected by ``langdetect``",
+    )
+
+    coded_labels = models.ManyToManyField(
+        "django_learning.Label",
+        related_name="coded_documents",
+        through="django_learning.Code",
+        help_text="Labels that have been assigned to the document by a coder",
+    )
+    classified_labels = models.ManyToManyField(
+        "django_learning.Label",
+        related_name="classified_documents",
+        through="django_learning.Classification",
+        help_text="Labels that have been assigned to the document by a classification model",
+    )
+
+    freeze_text = models.BooleanField(
+        default=False,
+        help_text="If True, the document text will be modified and attempts to change it will raise an exception",
+    )
 
     objects = DocumentManager().as_manager()
 
@@ -56,78 +68,86 @@ class Document(DJANGO_LEARNING_BASE_MODEL):
         super(Document, self).__init__(*args, **kwargs)
         self.__init_text = self.text
 
+    @classmethod
+    def get_parent_relations(cls):
+        """
+        Returns models that have a one-to-one relationship with the Document table
+        :return:
+        """
+        obj_models = []
+        from django.db.models.fields.reverse_related import OneToOneRel
+
+        for field in cls._meta.get_fields():
+            if type(field) == OneToOneRel:
+                obj_models.append(field)
+        return obj_models
+
+    @property
+    def document_type(self):
+        """
+        Returns the name of the model that has a one-to-one relationship with this specific document
+        :return:
+        """
+
+        for doc_type in self._meta.model.objects.document_types():
+            if hasattr(self, doc_type) and getattr(self, doc_type):
+                return doc_type
+        return None
+
     @property
     def object(self):
 
-        from django.db.models.fields.reverse_related import OneToOneRel
-        # for field, _ in self._meta.get_fields_with_model():
-        for field, _ in get_fields_with_model(self):
-            if type(field) == OneToOneRel:
-                return getattr(self, re.sub(" ", "_", field.related_model._meta.verbose_name))
+        """
+        Returns the "parent" object that has a one-to-one relationship with this document
+        :return:
+        """
+
+        for parent_field in self.get_parent_relations():
+            if hasattr(self, parent_field.name):
+                return getattr(self, parent_field.name)
         return None
 
     def __str__(self):
 
         return "Document #{}, {}: {}...".format(
-            self.pk,
-            str(self.object),
-            decode_text(self.text[:50])
+            self.pk, str(self.object), decode_text(self.text[:50])
         )
 
-    #     # parent_field = self.get_parent_field()
-    #     # if parent_field:
-    #     #     parent_str = str(parent_field.related_model.objects.get(pk=getattr(self, parent_field.name).pk))
-    #     #     return "Document #{}, <{}>: {}...".format(
-    #     #         self.pk,
-    #     #         parent_str,
-    #     #         decode_text(self.text[:50])
-    #     #     )
-    #     #     # return "Document, {0}_id={1}: {2}{3}".format(
-    #     #     #     str(parent_field.related_model._meta.model_name),
-    #     #     #     getattr(self, parent_field.name).pk,
-    #     #     #     decode_text(self.text[:50]),
-    #     #     #     "..."
-    #     #     # )
-    #     # else:
-    #     #     return "Document #{}, <no parent>: {}...".format(
-    #     #         self.pk,
-    #     #         decode_text(self.text[:50])
-    #     #     )
-
-    def _update_paragraphs(self):
-
-        if not self.parent:
-            for i, paragraph in enumerate(self.text.split("\n")):
-                self.paragraphs.create_or_update(
-                    {"paragraph_id": i},
-                    {
-                        "text": paragraph,
-                        "date": self.date,
-                        "is_clean": self.is_clean,
-                        "language": self.language
-                    },
-                    return_object=False
-                )
-
     def freeze(self):
+        """Sets ``freeze_text=True`` and freezes the document text"""
 
         self.freeze_text = True
         self.save()
 
     def unfreeze(self):
+        """ Sets ``freeze_text=False`` and unfreezes the document text"""
 
         self.freeze_text = False
         self.save()
 
     def save(self, *args, **kwargs):
+        """
+        Extends the ``save`` function and detects changes to the text. If changes have occurred, a warning and
+        confirmation prompt will be raised by default before existing text-dependent relations are cleared out.
+
+        :param args:
+        :param ignore_warnings: (default is False) if True, ignores warnings about modified text and will automatically
+            delete existing labels and other text-dependent relations if the text has been modified
+        :param allow_modified_text: (default is False) if True, existing text-dependent relations will be preserved
+            even if the text has been modified
+        :param kwargs:
+        :return:
+        """
 
         if "ignore_warnings" in kwargs.keys():
-            ignore = kwargs.pop("ignore_warnings")
+            ignore_warnings = kwargs.pop("ignore_warnings")
         else:
-            ignore = False
+            ignore_warnings = False
 
-        if not self.original_text:
-            self.original_text = self.text
+        if "allow_modified_text" in kwargs.keys():
+            allow_modified_text = kwargs.pop("allow_modified_text")
+        else:
+            allow_modified_text = False
 
         if not self.language:
             try:
@@ -135,35 +155,46 @@ class Document(DJANGO_LEARNING_BASE_MODEL):
             except:
                 self.language = "unk"
 
-        # self.nilsimsa = get_hash(self.text, hash_function="nilsimsa")
-        # self.tlsh = get_hash(self.text, hash_function="tlsh")
-        if self.__init_text != self.text and not self.freeze_text:
-            self.ssdeep = get_hash(self.text, hash_function="ssdeep")
-            for m2m in ["document_fragments", "entities", "ngram_sets", "topics"]:
-                if getattr(self, m2m).count() > 0:
-                    if not ignore:
-                        print "Warning: text for document {} was modified, clearing out {}".format(self.pk, m2m)
-                    # setattr(self, m2m, [])
-                    # getattr(self, m2m).clear()
-                    try:
-                        getattr(self, m2m).clear()
-                    except:
-                        getattr(self, m2m).all().delete()
-            # for su in self.sample_weights.all():
-            #     # if not ignore:
-            if self.coded_labels.count() > 0:
-                print "Warning: text for document {} was modified, clearing out coded labels".format(self.pk)
-                import pdb
-                pdb.set_trace()
-                self.coded_labels.through.delete()
-            if self.classified_labels.count() > 0:
-                print "Warning: text for document {} was modified, clearing out classified labels".format(self.pk)
-                import pdb
-                pdb.set_trace()
-                self.classified_labels.through.delete()
-            self._update_paragraphs()
-        else:
-            self.text = self.__init_text
+        if not allow_modified_text:
+            if self.__init_text != self.text and not self.freeze_text:
+                self.ssdeep = get_hash(self.text, hash_function="ssdeep")
+                for m2m in [
+                    "ngram_sets",
+                    "topics",
+                    "classified_labels",
+                    "coded_labels",
+                ]:
+                    if getattr(self, m2m).count() > 0:
+                        delete = True
+                        if not ignore_warnings:
+                            print(
+                                "Warning: text for document {} was modified, continuing will clear out {}".format(
+                                    self.pk, m2m
+                                )
+                            )
+                            print(
+                                "Quit, or set delete=False and continue to skip this from happening"
+                            )
+                            print(
+                                "To allow text modifications to happen without triggering this warning, pass allow_modified_text=True to the Document save function"
+                            )
+                            import pdb
+
+                            pdb.set_trace()
+                        if delete:
+                            if hasattr(self, m2m) and hasattr(
+                                hasattr(self, m2m), "through"
+                            ):
+                                getattr(self, m2m).through.delete()
+                            else:
+                                try:
+                                    getattr(self, m2m).clear()
+                                except:
+                                    getattr(self, m2m).all().delete()
+                        else:
+                            print("Manual override, skipping")
+            else:
+                self.text = self.__init_text
 
         super(Document, self).save(*args, **kwargs)
         if self.object:
@@ -172,26 +203,3 @@ class Document(DJANGO_LEARNING_BASE_MODEL):
             self.object.save()
 
         self.__init_text = self.text
-        if self.paragraphs.count() == 0:
-            self._update_paragraphs()
-
-    def get_parent_field(self):
-
-        parent_field = None
-        for f in self._meta.get_fields():
-            if f.is_relation and f.one_to_one and hasattr(self, f.name) and is_not_null(getattr(self, f.name)):
-                parent_field = f
-        return parent_field
-
-
-# def add_foreign_keys(sender, **kwargs):
-#
-#     if sender.__base__ == DocumentModel:
-#         for app, model_list in apps.all_models.iteritems():
-#             for model_name, model in model_list.iteritems():
-#                 if hasattr(model._meta, "is_document") and getattr(model._meta, "is_document"):
-#                     field = models.OneToOneField("{}.{}".format(app, model.__name__), null=True, related_name="document")
-#                     field.contribute_to_class(sender, re.sub(" ", "_", model._meta.verbose_name))
-#
-# class_prepared.connect(add_foreign_keys)
-

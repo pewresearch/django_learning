@@ -1,0 +1,63 @@
+{% extends django_learning_template %}
+
+{% load static %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Classification Model: {{ model.name }}</div>
+                <table class="panel-body table table-condensed">
+                    <tr><th></th><th></th></tr>
+                    <tr><td>Probability Threshold:</td><td>{{ model.probability_threshold }}</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Classifications</div>
+                <table class="panel-body table table-condensed">
+                    <tr><th>Question</th><th>Value</th><th>Documents</th><th></th></tr>
+                    {% for c in classifications %}
+                        <tr>
+                            <td>{{ c.label__question__name }}</td>
+                            <td>{{ c.label__label }}</td>
+                            <td>{{ c.c }}</td>
+                            <td><a href="{% url 'django_learning:view_document_classifications' model.name c.label__pk %}">View Sample</a></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Hold-out Test Results</div>
+                <table class="panel-body table table-condensed">
+                    {{ test_results }}
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Cross-validation Results</div>
+                <table class="panel-body table table-condensed">
+                    {{ cv_results }}
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

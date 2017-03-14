@@ -1,127 +1,91 @@
-import re, importlib
-
-from nltk.corpus import wordnet
+from __future__ import print_function
+import re
 
 from pewtils import is_not_null, decode_text
-from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
-from pewtils.django import CacheHandler
+from pewanalytics.text import TextCleaner, SentenceTokenizer
 
+from django_learning.utils.stopword_sets import stopword_sets
+from django_learning.utils.stopword_whitelists import stopword_whitelists
+from django_learning.utils.regex_filters import regex_filters
+from django_learning.utils.regex_replacers import regex_replacers
 from django_learning.utils.preprocessors import BasicPreprocessor
 
-WHITELIST = [
-    "state university",
-    "university",
-    "former",
-    "for president",
-    "call",
-    "bottom",
-    "cut off",
-    "fair",
-    "canada",
-    "market",
-    "bolivia",
-    "sincere",
-    "9/11",
-    "should",
-    "must",
-    "need",
-    "needs",
-    "onset",
-    "courage",
-    "new home",
-    "hometown",
-    "turkey",
-    "sudan",
-    "underage",
-    "isis",
-    "flint",
-    "new roads",
-    "wheat",
-    "gateway",
-    "patriot",
-    "israel",
-    "friendship",
-    "severance",
-    "system",
-    "together",
-    "vice",
-    "jesus",
-    "god",
-    "interest",
-	"iran",
-	"syria",
-	"interest",
-	"never",
-	"cannot",
-	"not",
-	"yucca",
-    "capitol",
-    "prosperity",
-    "homeland",
-    "bureau",
-    "student",
-    "serious",
-    "century",
-    "bedrock",
-    "republic",
-	"full",
-	"against",
-	"never",
-    "equality",
-    "fire",
-    "against",
-    "dairy",
-	"interests",
-	"hurricane",
-	"op-ed",
-	"cliff",
-	"against"
-]
 
 class Preprocessor(BasicPreprocessor):
-
     def __init__(self, *args, **kwargs):
+        """
+
+        :param stopword_sets: Names of `django_learning` stopword lists. By default, no stopwords will be used! It is \
+            recommended to at least pass ["english"] to use a built-in list of English stopwords.
+        :param stopword_whitelists: Names of `django_learning` stopword whitelists (used to override stopword_sets)
+        :param regex_filters: Names of `django_learning` regex filters; sentences that don't match to *all* of the \
+            provided filters will be removed
+        :param regex_replacers: Names of `django_learning` regex replacers to use
+        :param refresh_stopwords: Whether or not to refresh a custom list of stopwords from the cache (default is False)
+        :param kwargs: All other keyword arguments are passed along to a `pewanalytics.text.TextCleaner` object
+
+        """
 
         self.name = "clean_text"
         super(Preprocessor, self).__init__(*args, **kwargs)
 
+        whitelist = []
+        if "stopword_whitelists" in self.params.keys():
+            for stopword_whitelist in self.params["stopword_whitelists"]:
+                whitelist.extend(stopword_whitelists[stopword_whitelist]())
         stopwords = []
         if "stopword_sets" in self.params.keys():
-            for stopword_set in self.params['stopword_sets']:
+            for stopword_set in self.params["stopword_sets"]:
                 slist = None
-                if self.cache:
+                if self.cache and not self.params.get("refresh_stopwords", False):
                     slist = self.cache.read(stopword_set)
                 if not slist:
-                    stopword_module = importlib.import_module("logos.learning.utils.stopword_sets.{0}".format(stopword_set))
-                    slist = stopword_module.get_stopwords()
-                    slist = [decode_text(s) for s in slist if len(s) > 2 or stopword_set in ["english", "misc_boilerplate"]]
-                    if stopword_set not in ["english", "misc_boilerplate"]:
-                        final_slist = []
-                        for s in slist:
-                            if s.lower() not in WHITELIST:
-                                if len(s) > 3: final_slist.append(s)
-                                elif is_probable_stopword(s.lower()):
-                                    final_slist.append(s)
-                        slist = final_slist
+                    slist = stopword_sets[stopword_set]()
+                    slist = [
+                        decode_text(s)
+                        for s in slist
+                        if len(s) > 2
+                        or stopword_set in ["english", "months", "misc_boilerplate"]
+                    ]
                     if self.cache:
-                        # print "Recomputed stopword set {}, saving to local cache".format(stopword_set)
+                        # print(
+                        #     "Recomputed stopword set {}, saving to local cache".format(
+                        #         stopword_set
+                        #     )
+                        # )
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
-        stopwords = sorted(list(set(stopwords)), key=lambda x: len(x), reverse=True)
+        stopwords = list(set(stopwords))
+        stopwords = [s for s in stopwords if s not in whitelist]
+        stopwords = sorted(stopwords, key=lambda x: len(x), reverse=True)
         self.stopwords = stopwords
 
-        self.cleaner = TextCleaner(
-            skip_decode=True,
-            stopwords=stopwords,
-            **{k: v for k, v in self.params.items() if k not in ["stopword_sets", "regex_filters", "cache_identifier"]}
+        replacers = []
+        for r in self.params.get("regex_replacers", []):
+            replacers.extend(regex_replacers[r]())
+        kwargs = {"stopwords": stopwords, "strip_html": True, "replacers": replacers}
+        kwargs.update(
+            {
+                k: v
+                for k, v in self.params.items()
+                if k
+                not in [
+                    "regex_replacers",
+                    "stopword_sets",
+                    "regex_filters",
+                    "cache_identifier",
+                    "stopword_whitelists",
+                    "refresh_stopwords",
+                ]
+            }
         )
+        self.cleaner = TextCleaner(**kwargs)
         self.tokenizer = SentenceTokenizer()
 
         self.regex_filters = []
         if "regex_filters" in self.params.keys():
-            for regex_filter in self.params['regex_filters']:
-                filter_module = importlib.import_module("logos.learning.utils.regex_filters.{}".format(regex_filter))
-                self.regex_filters.append(filter_module.get_regex())
+            for regex_filter in self.params["regex_filters"]:
+                self.regex_filters.append(regex_filters[regex_filter]())
 
         self.url_regex = re.compile(
             r"((https?:\/\/(www\.)?)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*))"
@@ -133,9 +97,6 @@ class Preprocessor(BasicPreprocessor):
         clean_text = None
         if self.cache:
             clean_text = self.get_row_cache(key_text)
-            if clean_text:
-                pass
-                # print "Loaded from cache"
 
         if not clean_text:
 
@@ -146,24 +107,8 @@ class Preprocessor(BasicPreprocessor):
                     if is_not_null(sent) and filter.search(sent):
                         final_tokens.append(sent)
                 text = " ".join(final_tokens)
-                    # sent = self.cleaner.clean(sent)
-                    # if self.re_search.match(sent):
-                    #     final_tokens.append(sent)
-                # tokens = self.cleaner.clean(sent).split()
-                # for i, token in enumerate(tokens):
-                #     if self.re_search.match(token):
-                #         final_tokens.extend(tokens[max([0, i-self.params['token_window_size']]):min([len(tokens), i+self.params['token_window_size']])])
 
-            # found_stopwords = self.stopword_regex.findall(text)
-            # text = self.stopword_regex.sub('', text)
             clean_text = self.cleaner.clean(text)
-            # print text
-            # print "Stopwords removed: {}".format(set(found_stopwords))
-            # probable_stopwords = set()
-            # for w in text.split():
-            #     if is_probable_stopword(w):
-            #         probable_stopwords.add(w)
-            # print probable_stopwords
 
             if self.cache:
                 self.set_row_cache(key_text, clean_text)

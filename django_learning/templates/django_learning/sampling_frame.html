@@ -1,0 +1,60 @@
+{% extends django_learning_template %}
+
+{% load static %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+    <div class="modal fade" id="extract_modal" tabindex="-1" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">
+                Please confirm the following action
+            </h4>
+          </div>
+          <div class="modal-body">
+            <p>
+                {% if sampling_frame and sampling_frame.documents.count > 0 %}Re-extract and re-weight documents for this sampling frame?
+                {% else %}Extract documents for this sampling frame?
+                {% endif %}
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-warning" data-dismiss="modal">Cancel</button>
+            <a class="btn btn-danger" href="{% url 'django_learning:extract_sampling_frame' sampling_frame_name %}">Confirm</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Sampling Frame: {% if sampling_frame %}{{ sampling_frame }}{% else %}{{ sampling_frame_name }}{% endif %}</div>
+                <table class="panel-body table table-condensed">
+                    <tr><td>Name</td><td>{{ sampling_frame_name }}</td></tr>
+                    <tr><td>Filters</td><td>{{ sampling_frame_config.filter_dict }}</td></tr>
+                    <tr><td>Excludes</td><td>{{ sampling_frame_config.exclude_dict }}</td></tr>
+                    <tr><td>Extracted Documents</td><td>{{ sampling_frame.documents.count }}</td></tr>
+                </table>
+                <div class="panel-footer">
+                    <button class="btn btn-danger btn-block" type="button" data-toggle="modal" data-target="#extract_modal">
+                        {% if sampling_frame and sampling_frame.documents.count > 0 %}Refresh Documents
+                        {% else %}Extract Documents
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

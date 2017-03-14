@@ -1,26 +1,36 @@
 import re, os
 
+import numpy as np
+
 from collections import OrderedDict
 from sklearn.pipeline import Pipeline, FeatureUnion
 from django.apps import apps
 from django.conf import settings
 
-from pewtils import extract_attributes_from_folder_modules, extract_json_from_folder, decode_text
-from pewtils.django import get_model
+from pewtils import (
+    extract_attributes_from_folder_modules,
+    extract_json_from_folder,
+    decode_text,
+)
+from django_pewtils import get_model, get_app_settings_folders
 
 
 def get_document_types():
+    """
+    Returns a list of names of all models that have a one-to-one relationship with the Document model.
+    :return:
+    """
 
-    # doc_types = set()
-    # for app, model_list in apps.all_models.iteritems():
-    #     for model_name, model in model_list.iteritems():
-    #         if hasattr(model._meta, "is_document") and getattr(model._meta, "is_document"):
-    #             doc_types.add(re.sub(" ", "_", model._meta.verbose_name))
-    # return list(doc_types)
     return [f.name for f in get_model("Document")._meta.get_fields() if f.one_to_one]
 
 
 def get_pipeline_repr(pipeline, name=None):
+    """
+    Given a machine learning pipeline configuration, returns a string representation that's used for hashing.
+    :param pipeline:
+    :param name:
+    :return:
+    """
 
     text_repr = OrderedDict()
     if isinstance(pipeline, Pipeline):
@@ -47,6 +57,11 @@ def get_pipeline_repr(pipeline, name=None):
 
 
 def get_param_repr(params):
+    """
+    Given a dictionary of parameters, returns a unique string representation that's used for hashing.
+    :param params:
+    :return:
+    """
 
     if type(params) == dict:
         new_params = OrderedDict()
@@ -54,7 +69,12 @@ def get_param_repr(params):
             new_params[k] = get_param_repr(v)
         return new_params
     elif type(params) in [list, tuple]:
-        return sorted([get_param_repr(p) for p in params])
+        repr = [get_param_repr(p) for p in params]
+        try:
+            repr = sorted(repr)
+        except TypeError:
+            pass
+        return repr
     else:
         val = {}
         function = False
@@ -63,7 +83,7 @@ def get_param_repr(params):
             val["name"] = decode_text(params.name)
         elif hasattr(params, "func_name"):
             function = True
-            val["name"] = params.func_name
+            val["name"] = params.__name__
         if function and hasattr(params, "params"):
             val["params"] = get_param_repr(params.params)
             return val
@@ -71,125 +91,89 @@ def get_param_repr(params):
             return decode_text(params)
 
 
-for mod_category, attribute_name in [
-    ("balancing_variables", "var_mapper"),
-    ("code_filters", "filter"),
-    ("document_filters", "filter"),
-    ("feature_extractors", "Extractor"),
-    ("preprocessors", "Preprocessor"),
-    ("regex_filters", "get_regex"),
-    ("scoring_functions", "scorer"),
-    ("stopword_sets", "get_stopwords"),
-    ("pipelines", "get_pipeline"),
-    ("sampling_frames", "get_frame"),
-    ("sampling_methods", "get_method"),
-    ("project_qualification_scorers", "scorer")
-]:
-    mods = extract_attributes_from_folder_modules(
-        os.path.join(__path__[0], mod_category),
-        attribute_name,
-        include_subdirs=True,
-        concat_subdir_names=True
-    )
-    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
-    if hasattr(settings, conf_var):
-        mods.update(
-            extract_attributes_from_folder_modules(
-                getattr(settings, conf_var),
-                attribute_name,
-                include_subdirs=True,
-                concat_subdir_names=True
-            )
-        )
-    globals()[mod_category] = mods
+def filter_queryset_by_params(objs, params):
+    """
+    Takes a query set and a dictionary containing Django Learning sampling frame configuration parameters (see
+    documentation) and filters the query set accordingly.
+    :param objs: A QuerySet of objects
+    :param params: A dictionary containing one or more of: filter_dict/exclude_dict/complex_filters/complex_excludes
+    :return: A filtered query st
+    """
+
+    if "filter_dict" in params.keys() and params["filter_dict"]:
+        objs = objs.filter(**params["filter_dict"])
+    if "exclude_dict" in params.keys() and params["exclude_dict"]:
+        objs = objs.exclude(**params["exclude_dict"])
+    if "complex_filters" in params.keys() and params["complex_filters"]:
+        for c in params["complex_filters"]:
+            objs = objs.filter(c)
+    if "complex_excludes" in params.keys() and params["complex_excludes"]:
+        for c in params["complex_excludes"]:
+            objs = objs.exclude(c)
+
+    return objs
 
 
-for json_category in [
-    "projects",
-    "project_hit_types",
-    "project_qualification_tests"
-]:
-    mods = extract_json_from_folder(
-        os.path.join(__path__[0], json_category),
-        include_subdirs=True,
-        concat_subdir_names=True
-    )
-    conf_var = "DJANGO_LEARNING_{}".format(json_category.upper())
-    if hasattr(settings, conf_var):
-        mods.update(
-            extract_json_from_folder(
-                getattr(settings, conf_var),
-                include_subdirs=True,
-                concat_subdir_names=True
-            )
-        )
-    globals()[json_category] = mods
+### DO NOT RELEASE
+def wmom(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
+    """
+    A weighted average function that was taken from https://github.com/esheldon/esutil/blob/master/esutil/stat/util.py
 
+    NAME:
+      wmom()
+    PURPOSE:
+      Calculate the weighted mean, error, and optionally standard deviation of
+      an input array.  By default error is calculated assuming the weights are
+      1/err^2, but if you send calcerr=True this assumption is dropped and the
+      error is determined from the weighted scatter.
+    CALLING SEQUENCE:
+     wmean,werr = wmom(arr, weights, inputmean=None, calcerr=False, sdev=False)
+    INPUTS:
+      arr: A numpy array or a sequence that can be converted.
+      weights: A set of weights for each elements in array.
+    OPTIONAL INPUTS:
+      inputmean:
+          An input mean value, around which them mean is calculated.
+      calcerr=False:
+          Calculate the weighted error.  By default the error is calculated as
+          1/sqrt( weights.sum() ).  If calcerr=True it is calculated as sqrt(
+          (w**2 * (arr-mean)**2).sum() )/weights.sum()
+      sdev=False:
+          If True, also return the weighted standard deviation as a third
+          element in the tuple.
+    OUTPUTS:
+      wmean, werr: A tuple of the weighted mean and error. If sdev=True the
+         tuple will also contain sdev: wmean,werr,wsdev
+    REVISION HISTORY:
+      Converted from IDL: 2006-10-23. Erin Sheldon, NYU
+   """
 
-# class LazyModule(dict):
-#     def __init__(self, mod_category, attribute_name, *args, **kwargs):
-#
-#         self.mod_category = mod_category
-#         self.attribute_name = attribute_name
-#
-#         self.attributes = None
-#
-#         super(LazyModule, self).__init__(*args, **kwargs)
-#
-#     def _load(self):
-#
-#         self.attributes = {}
-#
-#         mods = extract_attributes_from_folder_modules(
-#             os.path.join(__path__[0], self.mod_category),
-#             self.attribute_name
-#         )
-#         conf_var = "ADDITIONAL_{}".format(self.mod_category.upper())
-#         if hasattr(settings, conf_var):
-#             mods.update(
-#                 extract_attributes_from_folder_modules(
-#                     getattr(settings, conf_var),
-#                     self.attribute_name
-#                 )
-#             )
-#         self.attributes = mods
-#
-#     def __getitem__(self, item):
-#         if not self.attributes: self._load()
-#         return self.attributes[item]
-#
-#     def __repr__(self):
-#         if not self.attributes: self._load()
-#         return repr(self.attributes)
-#
-#     def __len__(self):
-#         if not self.attributes: self._load()
-#         return len(self.attributes)
-#
-#     def keys(self):
-#         if not self.attributes: self._load()
-#         return self.attributes.keys()
-#
-#     def items(self):
-#         if not self.attributes: self._load()
-#         return self.attributes.items()
-#
-#     def __contains__(self, item):
-#         if not self.attributes: self._load()
-#         return item in self.attributes
-#
-#     def __iter__(self):
-#         if not self.attributes: self._load()
-#         return iter(self.attributes)
-#
-# for mod_category, attribute_name in [
-#     ("balancing_variables", "var_mapper"),
-#     ("code_filters", "filter"),
-#     ("document_filters", "filter"),
-#     ("feature_extractors", "Extractor"),
-#     ("preprocessors", "Preprocessor"),
-#     ("regex_filters", "get_regex"),
-#     ("scoring_functions", "scorer"),
-#     ("stopword_sets", "get_stopwords")
-# ]:
-#     globals()[mod_category] = LazyModule(mod_category, attribute_name)
+    # no copy made if they are already arrays
+    arr = np.array(arrin, ndmin=1, copy=False)
+
+    # Weights is forced to be type double. All resulting calculations
+    # will also be double
+    weights = np.array(weights_in, ndmin=1, dtype="f8", copy=False)
+
+    wtot = weights.sum()
+
+    # user has input a mean value
+    if inputmean is None:
+        wmean = (weights * arr).sum() / wtot
+    else:
+        wmean = float(inputmean)
+
+    # how should error be calculated?
+    if calcerr:
+        werr2 = (weights ** 2 * (arr - wmean) ** 2).sum()
+        werr = np.sqrt(werr2) / wtot
+    else:
+        werr = 1.0 / np.sqrt(wtot)
+
+    # should output include the weighted standard deviation?
+    if sdev:
+        wvar = (weights * (arr - wmean) ** 2).sum() / wtot
+        wsdev = np.sqrt(wvar)
+        return wmean, werr, wsdev
+    else:
+        return wmean, werr

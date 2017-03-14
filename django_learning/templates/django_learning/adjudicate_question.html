@@ -1,0 +1,99 @@
+{% extends django_learning_template %}
+
+{% load static %}
+{% load template_filters %}
+
+{% block extra_head %}
+
+    <style>
+        .zoom {
+          zoom:1.2;
+          transform:scale(1.2);
+          -ms-transform:scale(1.2);
+          -webkit-transform:scale(1.2);
+          -o-transform:scale(1.2);
+          -moz-transform:scale(1.2);
+          transform-origin:0 0;
+          -ms-transform-origin:0 0;
+          -webkit-transform-origin:0 0;
+          -o-transform-origin:0 0;
+          -moz-transform-origin:0 0;
+          -webkit-transform-origin:0 0;
+          padding: 0px;
+        }
+        input[type="radio"], input[type="checkbox"], input[type="number"] {
+            line-height: normal;
+            margin-top: 0;
+        }
+        .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
+            vertical-align: middle;
+        }
+        .tooltip-inner {
+            min-width: 150px;
+            max-width: 500px;
+            width: 500px;
+            font-size: 18px;
+        }
+        .container {
+          max-width: 1920px;
+          width: 100%;
+        }
+    </style>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+{% endblock %}
+
+{% block modals %}
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-default">
+                <div class="panel-body" style="overflow: scroll; height: 400px;">
+                    <p>{{ hit.sample_unit.document.date }}: {{ hit.sample_unit.document.text|safe|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <table>
+                <tr><td>Question: </td><td>{{ question_name }}</td></tr>
+                <tr><td>Coder: </td><td>{{ coder_1.name }}</td></tr>
+                <tr><td>Code: </td><td>{{ label_1.value }}</td></tr>
+                <tr><td colspan="2">
+                    <form class="form" method="post" action="{% url 'django_learning:adjudicate_question' sample.project.name sample.name question_name %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="hit_id" value="{{ hit.pk }}">
+                        <input type="hidden" name="ignore_coder_id" value="{{ coder_2.pk }}">
+                        <button type="submit" id="submitButton_1" class="btn btn-primary">Pick as Correct</button>
+                    </form>
+                </td></tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <table>
+                <tr><td>Question: </td><td>{{ question_name }}</td></tr>
+                <tr><td>Coder: </td><td>{{ coder_2.name }}</td></tr>
+                <tr><td>Code: </td><td>{{ label_2.value }}</td></tr>
+                <tr><td colspan="2">
+                    <form class="form" method="post" action="{% url 'django_learning:adjudicate_question' sample.project.name sample.name question_name %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="hit_id" value="{{ hit.pk }}">
+                        <input type="hidden" name="ignore_coder_id" value="{{ coder_1.pk }}">
+                        <button type="submit" id="submitButton_2" class="btn btn-primary">Pick as Correct</button>
+                    </form>
+                </td></tr>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}
+
+{% endblock %}
