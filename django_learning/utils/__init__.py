@@ -6,7 +6,7 @@ from django.apps import apps
 from django.conf import settings
 
 from pewtils import extract_attributes_from_folder_modules, extract_json_from_folder, decode_text
-from pewtils.django import get_model
+from pewtils.django import get_model, get_app_settings_folders
 
 
 def get_document_types():
@@ -92,10 +92,10 @@ for mod_category, attribute_name in [
         concat_subdir_names=True
     )
     conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
-    if hasattr(settings, conf_var):
+    for folder in get_app_settings_folders(conf_var):
         mods.update(
             extract_attributes_from_folder_modules(
-                getattr(settings, conf_var),
+                folder,
                 attribute_name,
                 include_subdirs=True,
                 concat_subdir_names=True
@@ -115,10 +115,10 @@ for json_category in [
         concat_subdir_names=True
     )
     conf_var = "DJANGO_LEARNING_{}".format(json_category.upper())
-    if hasattr(settings, conf_var):
+    for folder in get_app_settings_folders(conf_var):
         mods.update(
             extract_json_from_folder(
-                getattr(settings, conf_var),
+                folder,
                 include_subdirs=True,
                 concat_subdir_names=True
             )
