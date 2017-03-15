@@ -1,5 +1,5 @@
 from django.db import models
-# from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField
 
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import NgramSetManager
@@ -10,8 +10,7 @@ class NgramSet(LoggedExtendedModel):
     name = models.CharField(max_length=100, db_index=True)
     dictionary = models.CharField(max_length=100, db_index=True)
     label = models.CharField(max_length=100, db_index=True, null=True)
-    # TODO: reimplement
-    # words = ArrayField(models.CharField(max_length=50), default=[])
+    words = ArrayField(models.CharField(max_length=50), default=[])
 
     objects = NgramSetManager().as_manager()
 

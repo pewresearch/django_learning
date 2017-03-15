@@ -92,9 +92,9 @@
     <h3>{{ qual_test.title }}</h3>
     <p>{{ qual_test.instructions }}</p>
     <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
-    <form class="form" method="post" action="/complete_qualification/{{ project.name }}/{{ sample.name }}">
+    <form class="form" method="post" action="{% url 'django_learning:complete_qualification' project.name sample.name qual_test.name %}">
         {% csrf_token %}
-        <input type="hidden" name="hit_id" value="{{ hit.pk }}">
+        <input type="hidden" name="test_id" value="{{ qual_test.pk }}">
         <div class="row">
             <div class="col-md-12">
                 <div class="panel panel-default">

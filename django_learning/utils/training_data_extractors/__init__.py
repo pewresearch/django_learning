@@ -4,21 +4,23 @@ from pewtils import extract_attributes_from_folder_modules, extract_json_from_fo
 from pewtils.django import get_model, get_app_settings_folders
 
 
-for json_category in [
-    "project_qualification_tests"
+for mod_category, attribute_name in [
+    ("training_data_extractors", "get_training_data")
 ]:
-    mods = extract_json_from_folder(
-        os.path.join(__path__[0], json_category),
+    mods = extract_attributes_from_folder_modules(
+        os.path.join(__path__[0], mod_category),
+        attribute_name,
         include_subdirs=True,
         concat_subdir_names=True
     )
-    conf_var = "DJANGO_LEARNING_{}".format(json_category.upper())
+    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
     for folder in get_app_settings_folders(conf_var):
         mods.update(
-            extract_json_from_folder(
+            extract_attributes_from_folder_modules(
                 folder,
+                attribute_name,
                 include_subdirs=True,
                 concat_subdir_names=True
             )
         )
-    globals()[json_category] = mods
+    globals()[mod_category] = mods

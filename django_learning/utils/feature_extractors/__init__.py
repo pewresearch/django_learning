@@ -1,10 +1,31 @@
-import importlib
-
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from pewtils import is_not_null, decode_text
-from pewtils.django import CacheHandler, reset_django_connection_wrapper
-from django_learning.utils import get_param_repr, preprocessors
+from pewtils import is_not_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
+from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
+from django_learning.utils import get_param_repr
+from django_learning.utils.preprocessors import preprocessors
+
+
+for mod_category, attribute_name in [
+    ("feature_extractors", "Extractor")
+]:
+    mods = extract_attributes_from_folder_modules(
+        os.path.join(__path__[0], mod_category),
+        attribute_name,
+        include_subdirs=True,
+        concat_subdir_names=True
+    )
+    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
+    for folder in get_app_settings_folders(conf_var):
+        mods.update(
+            extract_attributes_from_folder_modules(
+                folder,
+                attribute_name,
+                include_subdirs=True,
+                concat_subdir_names=True
+            )
+        )
+    globals()[mod_category] = mods
 
 
 class BasicExtractor(BaseEstimator, TransformerMixin):

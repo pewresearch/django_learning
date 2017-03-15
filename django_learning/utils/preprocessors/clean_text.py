@@ -6,7 +6,8 @@ from pewtils import is_not_null, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
 from pewtils.django import CacheHandler
 
-from django_learning.utils import stopword_sets, regex_filters
+from django_learning.utils.stopword_sets import stopword_sets
+from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.preprocessors import BasicPreprocessor
 
 

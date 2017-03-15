@@ -59,9 +59,9 @@ class TopicModel(LoggedExtendedModel):
         if not self.vectorizer:
             print "Initializing new topic model ({}, {})".format(self.frame, self.num_topics)
 
-            from django_learning.utils.feature_extractors.tfidf import Extractor as TfidfExtractor
+            from django_learning.utils.feature_extractors import feature_extractors
 
-            self.vectorizer = TfidfExtractor(
+            self.vectorizer = feature_extractors['tfidf'](
                 sublinear_tf=False,
                 max_df=.6,
                 min_df=max([10, int(float(self.sample_size) * .0005)]),

@@ -4,7 +4,7 @@ from django.db import models
 
 from picklefield.fields import PickledObjectField
 
-from django_learning.utils.preprocessors.clean_text import Preprocessor as CleanTextPreprocessor
+from django_learning.utils.preprocessors import preprocessors
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
 
@@ -121,7 +121,7 @@ class Word2VecModel(LoggedExtendedModel):
         if not stopword_sets: stopword_sets = []
         if not regex_filters: regex_filters = []
 
-        cleaner = CleanTextPreprocessor(lemmatize=False, stopword_sets=stopword_sets, regex_filters=regex_filters)
+        cleaner = preprocessors['clean_text'](lemmatize=False, stopword_sets=stopword_sets, regex_filters=regex_filters)
         df['text'] = df['text'].map(cleaner.run)
 
         model = self.model

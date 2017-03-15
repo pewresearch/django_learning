@@ -34,7 +34,7 @@ class SupervisedLearningHandler(object):
         self.num_cores = num_cores
         self.pipeline_name = pipeline
 
-        from django_learning.utils import pipelines
+        from django_learning.utils.pipelines import pipelines
         self._parameters = pipelines[pipeline]()
 
         if params:
@@ -271,7 +271,7 @@ class SupervisedLearningHandler(object):
 
         try:
 
-            from django_learning.utils import scoring_functions
+            from django_learning.utils.scoring_functions import scoring_functions
             scoring_function = scoring_functions[func_name]
             # scoring_function = importlib.import_module(
             #     "logos.learning.utils.scoring_functions.{0}".format(func_name)

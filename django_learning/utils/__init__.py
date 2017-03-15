@@ -71,59 +71,60 @@ def get_param_repr(params):
             return decode_text(params)
 
 
-for mod_category, attribute_name in [
-    ("balancing_variables", "var_mapper"),
-    ("code_filters", "filter"),
-    ("document_filters", "filter"),
-    ("feature_extractors", "Extractor"),
-    ("preprocessors", "Preprocessor"),
-    ("regex_filters", "get_regex"),
-    ("scoring_functions", "scorer"),
-    ("stopword_sets", "get_stopwords"),
-    ("pipelines", "get_pipeline"),
-    ("sampling_frames", "get_frame"),
-    ("sampling_methods", "get_method"),
-    ("project_qualification_scorers", "scorer")
-]:
-    mods = extract_attributes_from_folder_modules(
-        os.path.join(__path__[0], mod_category),
-        attribute_name,
-        include_subdirs=True,
-        concat_subdir_names=True
-    )
-    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
-    for folder in get_app_settings_folders(conf_var):
-        mods.update(
-            extract_attributes_from_folder_modules(
-                folder,
-                attribute_name,
-                include_subdirs=True,
-                concat_subdir_names=True
-            )
-        )
-    globals()[mod_category] = mods
+# for mod_category, attribute_name in [
+#     ("balancing_variables", "var_mapper"),
+#     ("code_filters", "filter"),
+#     ("document_filters", "filter"),
+#     ("feature_extractors", "Extractor"),
+#     ("preprocessors", "Preprocessor"),
+#     ("regex_filters", "get_regex"),
+#     ("scoring_functions", "scorer"),
+#     ("stopword_sets", "get_stopwords"),
+#     ("pipelines", "get_pipeline"),
+#     ("sampling_frames", "get_frame"),
+#     ("sampling_methods", "get_method"),
+#     ("project_qualification_scorers", "scorer"),
+#     ("training_data_extractors", "get_training_data")
+# ]:
+#     mods = extract_attributes_from_folder_modules(
+#         os.path.join(__path__[0], mod_category),
+#         attribute_name,
+#         include_subdirs=True,
+#         concat_subdir_names=True
+#     )
+#     conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
+#     for folder in get_app_settings_folders(conf_var):
+#         mods.update(
+#             extract_attributes_from_folder_modules(
+#                 folder,
+#                 attribute_name,
+#                 include_subdirs=True,
+#                 concat_subdir_names=True
+#             )
+#         )
+#     globals()[mod_category] = mods
 
 
-for json_category in [
-    "projects",
-    "project_hit_types",
-    "project_qualification_tests"
-]:
-    mods = extract_json_from_folder(
-        os.path.join(__path__[0], json_category),
-        include_subdirs=True,
-        concat_subdir_names=True
-    )
-    conf_var = "DJANGO_LEARNING_{}".format(json_category.upper())
-    for folder in get_app_settings_folders(conf_var):
-        mods.update(
-            extract_json_from_folder(
-                folder,
-                include_subdirs=True,
-                concat_subdir_names=True
-            )
-        )
-    globals()[json_category] = mods
+# for json_category in [
+#     "projects",
+#     "project_hit_types",
+#     "project_qualification_tests"
+# ]:
+#     mods = extract_json_from_folder(
+#         os.path.join(__path__[0], json_category),
+#         include_subdirs=True,
+#         concat_subdir_names=True
+#     )
+#     conf_var = "DJANGO_LEARNING_{}".format(json_category.upper())
+#     for folder in get_app_settings_folders(conf_var):
+#         mods.update(
+#             extract_json_from_folder(
+#                 folder,
+#                 include_subdirs=True,
+#                 concat_subdir_names=True
+#             )
+#         )
+#     globals()[json_category] = mods
 
 
 # class LazyModule(dict):

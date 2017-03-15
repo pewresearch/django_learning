@@ -124,8 +124,8 @@ class Coder(LoggedExtendedModel):
     user = models.OneToOneField(User, related_name="coder", null=True)
     is_mturk = models.BooleanField(default=False, help_text="Whether or not the coder is a Mechanical Turk worker")
 
-    def __repr__(self):
-        return "<Coder {0}, is_turk={1}>".format(self.name, self.is_mturk)
+    def __str__(self):
+        return "{} ({})".format(self.name, "MTurk" if self.is_mturk else "In-House")
 
     def is_qualified(self, qual_test):
 

@@ -10,7 +10,8 @@ from pewtils.django.sampling import SampleExtractor
 from tqdm import tqdm
 
 from django_commander.models import LoggedExtendedModel
-from django_learning.utils import sampling_frames, sampling_methods
+from django_learning.utils.sampling_frames import sampling_frames
+from django_learning.utils.sampling_methods import sampling_methods
 
 
 class SamplingFrame(LoggedExtendedModel):

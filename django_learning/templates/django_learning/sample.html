@@ -1,0 +1,123 @@
+{% extends "django_learning/_template.html" %}
+
+{% load staticfiles %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}{% endblock %}
+
+{% block body %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">{{ sample }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% if total_expert_hits.count == 0 and request.user.coder in sample.project.admins.all %}
+            <div class="col-md-6">
+                <div class="panel panel-danger">
+                    <div class="panel-heading">Create In-House HITs</div>
+                    <table class="panel-body table table-condensed">
+                        <tr><th>Num Coders</th><th></th></tr>
+                        <form class="form-inline" method="post" action="{% url 'django_learning:create_sample_hits_experts' sample.project.name %}">
+                            {% csrf_token %}
+                            <tr>
+                                <input type="hidden" name="sample_name" id="sample_name" value="{{ sample.name }}">
+                                <td>
+                                    <div class="form-group">
+                                        <input type="number" value="0" id="num_coders" name="num_coders">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-danger">Launch</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+        {% elif total_expert_hits.count > 0 %}
+            <div class="col-md-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">In-House HITs</div>
+                    <table class="panel-body table table-condensed">
+                        <tr>
+                            <th>Total HITs</th>
+                            <th>HITs Completed</th>
+                            <th>HITs Available</th>
+                            <th></th>
+                        </tr>
+                        <tr>
+                            <td>{{ total_expert_hits.count }}</td>
+                            <td>{{ completed_expert_hits.count }}</td>
+                            <td>{{ available_expert_hits.count }}</td>
+                            <td>
+                                {% if available_expert_hits.count > 0 and request.user.coder in sample.project.coders.all %}
+                                    <a class="btn btn-primary" href="{% url 'django_learning:code_random_assignment' sample.project.name sample.name %}">Start Coding</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+        {% if total_turk_hits.count == 0 and request.user.coder in sample.project.admins.all %}
+            <div class="col-md-6">
+                <div class="panel panel-danger">
+                    <div class="panel-heading">Create Mechanical Turk HITs</div>
+                    <table class="panel-body table table-condensed">
+                        <tr><th>Num Coders</th><th>Production</th><th></th></tr>
+                        <form class="form-inline" method="post" action="{% url 'django_learning:create_sample_hits_mturk' sample.project.name %}">
+                            {% csrf_token %}
+                            <tr>
+                                <input type="hidden" name="sample_name" id="sample_name" value="{{ sample.name }}">
+                                <td>
+                                    <div class="form-group">
+                                        <input type="number" value="0" id="num_coders" name="num_coders">
+                                    </div>
+                                </td>
+                                <td>
+                                    False<input type="hidden" value="0" id="prod" name="prod">
+                                </td>
+                                <td>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-danger">Launch</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </form>
+                    </table>
+                </div>
+            </div>
+        {% elif total_turk_hits.count > 0 %}
+            <div class="col-md-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">Mechanical Turk HITs</div>
+                    <table class="panel-body table table-condensed">
+                        <tr>
+                            <th>Total HITs</th>
+                            <th>HITs Completed</th>
+                            <th>Total Assignments</th>
+                            <th>Assignments Completed</th>
+                        </tr>
+                        <tr>
+                            <td>{{ total_turk_hits.count }}</td>
+                            <td>{{ completed_turk_hits.count }}</td>
+                            <td>{{ total_turk_assignments }}</td>
+                            <td>{{ completed_turk_assignments.count }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

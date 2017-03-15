@@ -166,7 +166,7 @@ class DocumentClassificationHandler(ClassificationHandler):
 
     def _get_training_data(self, validation=False, **kwargs):
 
-        from django_learning.utils import code_filters
+        from django_learning.utils.code_filters import code_filters
 
         expert_codes = None
         if self.use_expert_codes:
@@ -515,7 +515,7 @@ class DocumentClassificationHandler(ClassificationHandler):
 
     def _apply_document_filters(self, documents):
 
-        from django_learning.utils import document_filters
+        from django_learning.utils.document_filters import document_filters
         for filter_name, filter_params in self.parameters["documents"].get("filters", []):
             # print "Applying document filter: %s" % filter_name
             # filter_module = importlib.import_module("logos.learning.utils.document_filters.{0}".format(filter_name))
@@ -596,7 +596,7 @@ class DocumentClassificationHandler(ClassificationHandler):
 
     def _add_balancing_weights(self, training_data):
 
-        from django_learning.utils import balancing_variables
+        from django_learning.utils.balancing_variables import balancing_variables
 
         sample = copy.copy(training_data)
 

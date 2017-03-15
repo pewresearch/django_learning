@@ -97,11 +97,8 @@
     {% if hit.hit_type.title %}<h3>{{ hit.hit_type.title }}</h3>{% endif %}
     {% if project.instructions %}<p>{{ project.instructions }}</p>{% endif %}
     <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
-    {% if hit.hit_type.title %}<h3>{{ hit.hit_type.title }}</h3>{% endif %}
-    {% if project.instructions %}<p>{{ project.instructions }}</p>{% endif %}
-    <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
     {% if hit.turk %}<form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
-    {% else %}<form class="form" method="post" action="/code_random_assignment/{{ project.name }}/{{ sample.name }}">
+    {% else %}<form class="form" method="post" action="{% url 'django_learning:code_random_assignment' project.name sample.name %}">
     {% endif %}
         {% csrf_token %}
         {% if hit.turk %}<input type='hidden' value='' name='assignmentId' id='assignmentId'/>{% endif %}
@@ -110,10 +107,10 @@
             <div class="col-md-5">
                 <div class="panel panel-default">
                     <div class="panel-body" style="overflow: scroll; height: 450px;">
-                        <p>{{ hit.observation.decoded_content }}</p>
+                        <p>{{ hit.sample_unit.document.text|linebreaks }}</p>
                         <!--
-                        {% if hit.observation.external_link and hit.observation.external_link != 'nan' %}
-                            <iframe src="{{ hit.observation.external_link }}" width="500" height="600" style="border:none;overflow:scroll" scrolling="yes" frameborder="0" allowTransparency="true"></iframe>
+                        {% if hit.sample_unit.document.external_link and hit.sample_unit.document.external_link != 'nan' %}
+                            <iframe src="{{ hit.document.sample_unit.external_link }}" width="500" height="600" style="border:none;overflow:scroll" scrolling="yes" frameborder="0" allowTransparency="true"></iframe>
                         {% endif %}
                         -->
                     </div>

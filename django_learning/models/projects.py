@@ -7,7 +7,10 @@ from pewtils.django import get_model
 
 from django_learning.managers import QuestionManager
 from django_commander.models import LoggedExtendedModel
-from django_learning.utils import projects, project_hit_types, project_qualification_tests, project_qualification_scorers
+from django_learning.utils.projects import projects
+from django_learning.utils.project_hit_types import project_hit_types
+from django_learning.utils.project_qualification_tests import project_qualification_tests
+from django_learning.utils.project_qualification_scorers import project_qualification_scorers
 
 
 class Project(LoggedExtendedModel):

@@ -21,7 +21,9 @@ class MTurk(object):
         if sandbox:
             mturk_host = "mechanicalturk.sandbox.amazonaws.com"
         else:
-            mturk_host = "mechanicalturk.amazonaws.com"
+            print "WAHHHHH NOPE YOU'RE IN PRODUCTION"
+        # else:
+        #     mturk_host = "mechanicalturk.amazonaws.com"
 
         self.conn = MTurkConnection(
             aws_access_key_id=settings.DJANGO_LEARNING_AWS_ACCESS,

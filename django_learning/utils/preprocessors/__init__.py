@@ -1,14 +1,34 @@
-import importlib
+import importlib, re, os
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from pewtils import is_not_null, decode_text
+from pewtils import is_not_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
 from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
-from pewtils.django import CacheHandler
-from pewtils.django import reset_django_connection_wrapper
+from pewtils.django import CacheHandler, get_model, get_app_settings_folders, reset_django_connection_wrapper
 
 from django_learning.utils import get_param_repr
 
+
+for mod_category, attribute_name in [
+    ("preprocessors", "Preprocessor")
+]:
+    mods = extract_attributes_from_folder_modules(
+        os.path.join(__path__[0], mod_category),
+        attribute_name,
+        include_subdirs=True,
+        concat_subdir_names=True
+    )
+    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
+    for folder in get_app_settings_folders(conf_var):
+        mods.update(
+            extract_attributes_from_folder_modules(
+                folder,
+                attribute_name,
+                include_subdirs=True,
+                concat_subdir_names=True
+            )
+        )
+    globals()[mod_category] = mods
 
 
 class BasicPreprocessor(object):

@@ -11,14 +11,14 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.http import StreamingHttpResponse
 
-from django_commander.utils import run_command_async
+from django_commander.utils import run_command_task
 
 from django_learning.models import *
 from django_learning.functions import *
-from django_learning.utils import projects as project_configs
-from django_learning.utils import sampling_frames as sampling_frame_configs
-from django_learning.utils import sampling_methods as sampling_method_configs
-from django_learning.utils import project_hit_types as project_hit_type_configs
+from django_learning.utils.projects import projects as project_configs
+from django_learning.utils.sampling_frames import sampling_frames as sampling_frame_configs
+from django_learning.utils.sampling_methods import sampling_methods as sampling_method_configs
+from django_learning.utils.project_hit_types import project_hit_types as project_hit_type_configs
 
 from pewtils.django import get_model
 
@@ -54,27 +54,36 @@ def home(request):
 @login_required
 def view_project(request, project_name):
 
-    project = Project.objects.get(name=project_name)
+    try: project = Project.objects.get(name=project_name)
+    except Project.DoesNotExist: project = None
 
     samples = []
 
-    if request.user.coder in project.coders.all():
+    if project and request.user.coder in project.coders.all():
         for sample in project.samples.all():
 
             request.user.coder._clear_abandoned_sample_assignments(sample)
 
             total_expert_hits = filter_hits(sample=sample, experts_only=True)
-            available_expert_hits = filter_hits(sample=sample, finished=False, experts_only=True, exclude_coders=[request.user.coder])
-            completed_expert_hits = filter_hits(assignments=filter_assignments(sample=sample, experts_only=True, coder=request.user.coder, incomplete=False), experts_only=True)
+            available_expert_hits = filter_hits(sample=sample, finished=False, experts_only=True)
+            completed_expert_hits = filter_hits(sample=sample, finished=True, experts_only=True)
+            # completed_expert_hits = filter_hits(assignments=filter_assignments(sample=sample, experts_only=True, incomplete=False), finished=True, experts_only=True)
+
+            available_coder_hits = filter_hits(sample=sample, finished=False, experts_only=True, exclude_coders=[request.user.coder])
+            completed_coder_hits = filter_hits(assignments=filter_assignments(sample=sample, experts_only=True, coder=request.user.coder, incomplete=False), experts_only=True)
+
             total_turk_hits = filter_hits(sample=sample, turk_only=True)
             completed_turk_hits = filter_hits(sample=sample, unfinished=False, turk_only=True)
             total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
             completed_turk_assignments = filter_assignments(sample=sample, incomplete=False, turk_only=True)
+
             samples.append({
                 "sample": sample,
                 "total_expert_hits": total_expert_hits,
                 "available_expert_hits": available_expert_hits,
                 "completed_expert_hits": completed_expert_hits,
+                "available_coder_hits": available_coder_hits,
+                "completed_coder_hits": completed_coder_hits,
                 "total_turk_hits": total_turk_hits,
                 "completed_turk_hits": completed_turk_hits,
                 "total_turk_assignments": total_turk_assignments,
@@ -83,8 +92,9 @@ def view_project(request, project_name):
 
     return render(request, 'django_learning/project.html', {
         "project": project,
+        "project_name": project_name,
         "samples": samples,
-        "hit_types": project_hit_type_configs,
+        "hit_types": project_hit_type_configs, # TODO: shouldn't this be only HITTypes associated with the project?
         "sampling_methods": sampling_method_configs,
         "sampling_frames": SamplingFrame.objects.all()
         # "dataframes": dataframes.DATAFRAME_NAMES
@@ -94,7 +104,7 @@ def view_project(request, project_name):
 @login_required
 def create_project(request, project_name):
 
-    run_command_async("create_project", {
+    run_command_task.delay("create_project", {
         "project_name": project_name
     })
 
@@ -102,14 +112,24 @@ def create_project(request, project_name):
 
 
 @login_required
+def view_sampling_frame(request, sampling_frame_name):
+
+    return render(request, "django_learning/sampling_frame.html", {
+        "sampling_frame": SamplingFrame.objects.get_if_exists({"name": sampling_frame_name}),
+        "sampling_frame_name": sampling_frame_name,
+        "sampling_frame_config": sampling_frame_configs[sampling_frame_name]
+    })
+
+
+@login_required
 def extract_sampling_frame(request, sampling_frame_name):
 
-    run_command_async("extract_sampling_frame", {
+    run_command_task.delay("extract_sampling_frame", {
         "sampling_frame_name": sampling_frame_name,
         "refresh": True
     })
 
-    return home(request)
+    return view_sampling_frame(request, sampling_frame_name)
 
 
 @login_required
@@ -118,8 +138,7 @@ def extract_sample(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-
-        run_command_async("extract_sample", {
+        run_command_task.delay("extract_sample", {
             "project_name": project_name,
             "hit_type_name": request.POST.get("hit_type_name"),
             "sample_name": request.POST.get("sample_name"),
@@ -133,19 +152,47 @@ def extract_sample(request, project_name):
 
 
 @login_required
+def view_sample(request, project_name, sample_name):
+
+    project = Project.objects.get(name=project_name)
+    sample = project.samples.get(name=sample_name)
+
+    total_expert_hits = filter_hits(sample=sample, experts_only=True)
+    available_expert_hits = filter_hits(sample=sample, finished=False, experts_only=True,
+                                        exclude_coders=[request.user.coder])
+    completed_expert_hits = filter_hits(
+        assignments=filter_assignments(sample=sample, experts_only=True, coder=request.user.coder, incomplete=False),
+        experts_only=True)
+    total_turk_hits = filter_hits(sample=sample, turk_only=True)
+    completed_turk_hits = filter_hits(sample=sample, unfinished=False, turk_only=True)
+    total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
+    completed_turk_assignments = filter_assignments(sample=sample, incomplete=False, turk_only=True)
+
+    return render(request, "django_learning/sample.html", {
+        "sample": sample,
+        "total_expert_hits": total_expert_hits,
+        "available_expert_hits": available_expert_hits,
+        "completed_expert_hits": completed_expert_hits,
+        "total_turk_hits": total_turk_hits,
+        "completed_turk_hits": completed_turk_hits,
+        "total_turk_assignments": total_turk_assignments,
+        "completed_turk_assignments": completed_turk_assignments
+    })
+
+
+@login_required
 def create_sample_hits_experts(request, project_name):
 
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-
-        run_command_async("create_sample_hits_experts", {
+        run_command_task.delay("create_sample_hits_experts", {
             "project_name": project_name,
             "sample_name": request.POST.get("sample_name"),
             "num_coders": int(request.POST.get("num_coders"))
         })
 
-    return view_project(request, project_name)
+    return view_sample(request, project_name, request.POST.get("sample_name"))
 
 
 @login_required
@@ -154,14 +201,14 @@ def create_sample_hits_mturk(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_async("create_sample_hits_mturk", {
+        run_command_task.delay("create_sample_hits_mturk", {
             "project_name": project_name,
             "sample_name": request.POST.get("sample_name"),
             "num_coders": int(request.POST.get("num_coders")),
             "prod": bool(request.POST.get("prod"))
         })
 
-    return view_project(request, project_name)
+    return view_sample(request, project_name, request.POST.get("sample_name"))
 
 
 @login_required
@@ -185,7 +232,7 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
 
         else:
 
-            return home(request)
+            return view_sample(request, project_name, sample_name)
 
     qual_test = QualificationTest.objects.get(name=qualification_test_name)
     project = Project.objects.get(name=project_name)
@@ -285,7 +332,7 @@ def _render_hit(request, project, sample, hit, remaining_count=None):
     if hit.template_name:
         template = "custom_hits/{}.html".format(hit.template_name)
     else:
-        template = "hit.html"
+        template = "django_learning/hit.html"
 
     return render(request, template, {
         "remaining_count": remaining_count,
