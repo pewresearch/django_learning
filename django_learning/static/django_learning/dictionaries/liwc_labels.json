@@ -1,0 +1,90 @@
+{
+    "Linguistic Processes": {
+        "funct": "Total Function Words",
+        "pronoun": "Total Pronouns",
+        "ppron": "Personal Pronouns",
+        "Personal Pronouns": {
+            "i": "1st Person Singular",
+            "we": "1st Person Plural",
+            "you": "2nd Person",
+            "shehe": "3rd Person Singular",
+            "they": "3rd Person Plural"
+        },
+        "ipron": "Impersonal Pronouns",
+        "article": "Articles",
+        "verb": "Common Verbs",
+        "auxverb": "Auxiliary Verbs",
+        "past": "Past Tense",
+        "present": "Present Tense",
+        "future": "Future Tense",
+        "adverb": "Adverbs",
+        "preps": "Prepositions",
+        "conj": "Conjugations",
+        "negate": "Negations",
+        "quant": "Quantifiers",
+        "number": "Numbers",
+        "swear": "Swear Words"
+    },
+    "Psychological Processes": {
+        "social": "Social Processes",
+        "Social Processes": {
+            "family": "Family",
+            "friend": "Friends",
+            "humans": "Humans"
+        },
+        "affect": "Affective Processes",
+        "Affective Processes": {
+            "posemo": "Positive Emotion",
+            "negemo": "Negative Emotion",
+            "Negative Emotion": {
+                "anx": "Anxiety",
+                "anger": "Anger",
+                "sad": "Sadness"
+            }
+        },
+        "cogmech": "Cognitive Processes",
+        "Cognitive Processes": {
+            "insight": "Insight",
+            "cause": "Causation",
+            "discrep": "Discrepancy",
+            "tentat": "Tentative",
+            "certain": "Certainty",
+            "inhib": "Inhibition",
+            "incl": "Inclusive",
+            "excl": "Exclusive"
+        },
+        "percept": "Perceptual Processes",
+        "Perceptual Processes": {
+            "see": "See",
+            "hear": "Hear",
+            "feel": "Feel"
+        },
+        "bio": "Biological Processes",
+        "Biological Processes": {
+            "body": "Body",
+            "health": "Health",
+            "sexual": "Sexual",
+            "ingest": "Ingestion"
+        },
+        "relativ": "Relativity",
+        "Relativity": {
+            "motion": "Motion",
+            "space": "Space",
+            "time": "Time"
+        }
+    },
+    "Personal Concerns": {
+        "work": "Work",
+        "achieve": "Achievement",
+        "leisure": "Leisure",
+        "home": "Home",
+        "money": "Money",
+        "relig": "Religion",
+        "death": "Death"
+    },
+    "Spoken Categories": {
+        "assent": "Assent",
+        "nonfl": "Nonfluencies",
+        "filler": "Fillers"
+    }
+}

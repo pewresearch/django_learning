@@ -1,0 +1,252 @@
+{
+  "Valence": {
+    "positiv": "Positive Outlook (Expanded)",
+    "negativ": "Negative Outlook (Expanded"
+  },
+  "Osgood Semantic Dimensions": {
+
+    "pstv": "Positive Outlook",
+    "Positive Outlook": {
+      "affil": "Affiliation or Supportiveness"
+    },
+    "ngtv": "Negative Outlook",
+    "Negative Outlook": {
+      "hostile": "Hostility or Aggressiveness"
+    },
+    "strong": "Strength",
+    "Strength": {
+      "power": "Power, Control, or Authority"
+    },
+    "weak": "Weakness",
+    "Weakness": {
+      "submit": "Submission, Dependence, Vulnerability, or Withdrawal"
+    },
+    "active": "Active Orientation",
+    "passive": "Passive Orientation"
+  },
+  "Focused Semantics": {
+    "pleasur": "Pleasure, Confidence, or Engagement",
+    "pain": "Pain and Suffering",
+    "feel": "Feeling",
+    "arousal": "Arousal or Excitation",
+    "emot": "Emotion (Disambiguation)",
+    "virtue": "Virtue or Moral Approval",
+    "vice": "Vice or Moral Disapproval"
+  },
+  "ovrst": "Overstatement and Emphasis",
+  "undrst": "Understatement, De-Emphasis, and Caution",
+  "Institutional Orientation": {
+    "academ": "Academic, Educational, or Intellectual",
+    "Academic": {
+      "doctrin": "Doctrine, Belief, and Knowledge"
+    },
+    "econ@": "Economic, Commercial, or Industrial",
+    "Economic": {
+      "exch": "Exchange and Trade",
+      "econ": "Economic (Disambiguation)"
+    },
+    "Exprsv": "Self-Expression (Arts, Sports, etc.)",
+    "Expression": {
+      "sports": "Sports",
+      "arts": "Arts"
+    },
+    "legal": "Legal or Judicial",
+    "milit": "Military",
+    "polit@": "Political",
+    "polit": "Political (Disambiguation)",
+    "relig": "Religious or Metaphysical"
+  },
+  "Roles and Relationships": {
+    "role": "Roles and Human Behavior Patterns",
+    "coll": "Human Collectivities",
+    "work": "Work",
+    "ritual": "Rituals (Non-Work)",
+    "socrel": "Interpersonal Processes"
+  },
+  "Social Categories": {
+    "race": "Race and Ethnicity",
+    "kin@": "Kinship",
+    "male": "Masculinity",
+    "female": "Femininity",
+    "nonadit": "Infancy and Adolescence",
+    "hu": "Humans (General)",
+    "ani": "Animals"
+  },
+  "place": "Places and Locations",
+  "Places and Locations": {
+    "social": "Social",
+    "region": "Region",
+    "route": "Route",
+    "aquatic": "Aquatic",
+    "land": "Land",
+    "sky": "Sky"
+  },
+  "object": "Objects",
+  "Objects": {
+    "tool": "Tools",
+    "food": "Food",
+    "vehicle": "Vehicle",
+    "bldgpt": "Buildings",
+    "comnobj": "Communication Tools",
+    "natobj": "Natural Objects",
+    "bodypt": "Body Parts"
+  },
+  "comform": "Communication and Media",
+  "com": "Communication and Media (Disambiguation)",
+  "Communication and Media": {
+    "say": "Communicating Actions"
+  },
+  "Motivation": {
+    "need": "Need or Intent",
+    "goal": "Goals and Objectives",
+    "try": "Goal Achievement",
+    "means": "Means (Tools for Achieving Goals",
+    "persist": "Persistence and Endurance",
+    "complet": "Achievement",
+    "finish": "Completion",
+    "fail": "Failure or Non-Completion"
+  },
+  "natrpro": "Natural Processes",
+  "Change": {
+    "begin": "Begin",
+    "vary": "Change (Lateral)",
+    "increas": "Increase (Positive Change)",
+    "decreas": "Decrease (Negative Change)",
+    "finish": "Finish (Completion)"
+  },
+  "Movement": {
+    "stay": "Stay",
+    "rise": "Rise",
+    "exert": "Exert",
+    "fetch": "Fetch",
+    "travel": "Travel",
+    "fall": "Fall"
+  },
+  "Cognition": {
+    "think": "Thinking",
+    "know": "Knowing",
+    "causal": "Causality",
+    "ought": "Moral Imperative",
+    "perceiv": "Perception and Sensing",
+    "compare": "Comparison",
+    "eval@": "Judgment and Evaluation",
+    "eval": "Judgment and Evaluation (Disambiguation)",
+    "solve": "Problem Solving",
+    "abs@": "Abstract Vocabulary",
+    "abs": "Abstract Vocabulary (Marker)",
+    "quality": "Quality",
+    "quan": "Quantity",
+    "freq": "Frequency or Recurrence",
+    "dist": "Distance",
+    "time@": "Time and Velocity",
+    "time": "Time (Disambiguation)",
+    "space": "Space and Location",
+    "Space and Location": {
+      "pos": "Position",
+      "dim": "Dimension"
+    },
+    "rel": "Relationships",
+    "color": "Color"
+  },
+  "numb": "Numbers",
+  "Numbers": {
+    "ord": "Ordinal",
+    "card": "Cardinal"
+  },
+  "Pronouns": {
+    "self": "Self",
+    "our": "Our (Collective)",
+    "you": "You",
+    "name": "Names"
+  },
+  "Interjections": {
+    "yes": "Yes (Agreement)",
+    "no": "No (Disagreement)",
+    "negate": "Negation",
+    "intrj": "Exclamations and Interjections"
+  },
+  "Verb Types": {
+    "iav": "Interpretative Explanation",
+    "dav": "Descriptive",
+    "sv": "Mental or Emotional"
+  },
+  "Adjective Types": {
+    "ipadj": "Relational",
+    "indadj": "Non-Relational (Independent)"
+  },
+  "powtot": "Power",
+  "Power": {
+    "powgain": "Increasing Power",
+    "powloss": "Decreasing Power",
+    "powends": "Goals",
+    "powaren": "Political Places and Environments",
+    "powcon": "Conflict",
+    "powcoop": "Cooperation",
+    "powaupt": "Authoritative Participants",
+    "powpt": "Ordinary Participants",
+    "powdoct": "Doctrine and Practices",
+    "powauth": "Formal Authoritative Power"
+  },
+  "rctot": "Rectitude",
+  "Rectitude": {
+    "rcethic": "Ethics",
+    "rcrelig": "Religion",
+    "rcgain": "Rectitude Gain",
+    "rcloss": "Rectitude Loss",
+    "rcends": "Rectitude Ends"
+  },
+  "rsptot": "Respect",
+  "Respect": {
+    "rspgain": "Gaining Respect",
+    "rsploss": "Losing Respect"
+  },
+  "afftot": "Affection",
+  "Affection": {
+    "affgain": "Gaining Affect",
+    "affloss": "Losing Affect",
+    "affpt": "Affect Participants (Friends/Family)"
+  },
+  "wittot": "Wealth",
+  "Wealth": {
+    "witpt": "Participants",
+    "wittran": "Transactions"
+  },
+  "wlbtot": "Well-being",
+  "Well-being": {
+    "wlbgain": "Gaining Well-being",
+    "wlbloss": "Losing Well-being",
+    "wlbphys": "Physical",
+    "wlbpsyc": "Psychological",
+    "wlbpt": "Concern"
+  },
+  "enltot": "Enlightenment",
+  "Enlightenment": {
+    "enlgain": "Gaining Enlightenment",
+    "enlloss": "Losing Enlightenment",
+    "enlends": "Goals or Pursuit",
+    "enlpt": "Participants"
+  },
+  "skltot": "Skills",
+  "Skills": {
+    "sklasth": "Aesthetic",
+    "sklpt": "Participants"
+  },
+  "tranlw": "Transaction or Exchange",
+  "Transaction or Exchange": {
+    "trngain": "Gain",
+    "trnloss": "Loss"
+  },
+  "meanslw": "Means and Utility",
+  "endslw": "Ends and Goals",
+  "arenalw": "Settings",
+  "ptlw": "Actors",
+  "nation": "Nations",
+  "anomie": "Anomie",
+  "negaff": "Negative Affectivity",
+  "posaff": "Positive Affectivity",
+  "surelw": "Sureness and Certainty",
+  "if": "Uncertainty or Doubt",
+  "notlw": "Denial",
+  "timespc": "Space and Time",
+  "formlw": "Formats, Standards, and Conventions"
+}
