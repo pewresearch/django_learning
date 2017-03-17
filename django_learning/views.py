@@ -1,4 +1,4 @@
-import random, datetime
+import random, datetime, os
 
 from StringIO import StringIO
 
@@ -10,6 +10,7 @@ from django.db.models import Count, F
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.http import StreamingHttpResponse
+from django.conf import settings
 
 from django_commander.utils import run_command_task
 
@@ -330,7 +331,11 @@ def _render_qualification_test(request, project, sample, qual_test):
 def _render_hit(request, project, sample, hit, remaining_count=None):
 
     if hit.template_name:
-        template = "custom_hits/{}.html".format(hit.template_name)
+        for folder in settings.DJANGO_LEARNING_HIT_TEMPLATE_DIRS:
+            path = os.path.join(folder, "{}.html".format(hit.template_name))
+            if os.path.exists(path):
+                template = path
+        # template = "custom_hits/{}.html".format(hit.template_name)
     else:
         template = "django_learning/hit.html"
 
