@@ -9,26 +9,6 @@ from pewtils.django import CacheHandler, get_model, get_app_settings_folders, re
 from django_learning.utils import get_param_repr
 
 
-for mod_category, attribute_name in [
-    ("preprocessors", "Preprocessor")
-]:
-    mods = extract_attributes_from_folder_modules(
-        os.path.join(__path__[0]),
-        attribute_name,
-        include_subdirs=True,
-        concat_subdir_names=True
-    )
-    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
-    for folder in get_app_settings_folders(conf_var):
-        mods.update(
-            extract_attributes_from_folder_modules(
-                folder,
-                attribute_name,
-                include_subdirs=True,
-                concat_subdir_names=True
-            )
-        )
-    globals()[mod_category] = mods
 
 
 class BasicPreprocessor(object):
@@ -59,3 +39,25 @@ class BasicPreprocessor(object):
             cache_key = str(self.name) + self.param_repr + str(key)
             self.cache.write(cache_key, data)
             # set_disk_cache(cache_key, data, folders=["learning", "feature_extractors", self.params['cache_identifier']], use_s3=False)
+
+
+for mod_category, attribute_name in [
+    ("preprocessors", "Preprocessor")
+]:
+    mods = extract_attributes_from_folder_modules(
+        os.path.join(__path__[0]),
+        attribute_name,
+        include_subdirs=True,
+        concat_subdir_names=True
+    )
+    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
+    for folder in get_app_settings_folders(conf_var):
+        mods.update(
+            extract_attributes_from_folder_modules(
+                folder,
+                attribute_name,
+                include_subdirs=True,
+                concat_subdir_names=True
+            )
+        )
+    globals()[mod_category] = mods

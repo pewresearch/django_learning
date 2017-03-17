@@ -6,28 +6,6 @@ from django_learning.utils import get_param_repr
 from django_learning.utils.preprocessors import preprocessors
 
 
-for mod_category, attribute_name in [
-    ("feature_extractors", "Extractor")
-]:
-    mods = extract_attributes_from_folder_modules(
-        os.path.join(__path__[0]),
-        attribute_name,
-        include_subdirs=True,
-        concat_subdir_names=True
-    )
-    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
-    for folder in get_app_settings_folders(conf_var):
-        mods.update(
-            extract_attributes_from_folder_modules(
-                folder,
-                attribute_name,
-                include_subdirs=True,
-                concat_subdir_names=True
-            )
-        )
-    globals()[mod_category] = mods
-
-
 class BasicExtractor(BaseEstimator, TransformerMixin):
 
     """
@@ -94,3 +72,27 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
                 preprocessors.append(preprocessors[p](**params))
 
         return preprocessors
+
+
+for mod_category, attribute_name in [
+    ("feature_extractors", "Extractor")
+]:
+    mods = extract_attributes_from_folder_modules(
+        os.path.join(__path__[0]),
+        attribute_name,
+        include_subdirs=True,
+        concat_subdir_names=True
+    )
+    conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
+    for folder in get_app_settings_folders(conf_var):
+        mods.update(
+            extract_attributes_from_folder_modules(
+                folder,
+                attribute_name,
+                include_subdirs=True,
+                concat_subdir_names=True
+            )
+        )
+    globals()[mod_category] = mods
+
+
