@@ -1,0 +1,2 @@
+recursive-inside django_learning/templates *
+recursive-inside django_learning/static *
