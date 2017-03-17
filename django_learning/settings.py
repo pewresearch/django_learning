@@ -16,7 +16,7 @@ for setting, default in [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": globals()["DJANGO_LEARNING_HIT_TEMPLATE_DIRS"],
+        "DIRS": globals()["DJANGO_LEARNING_HIT_TEMPLATE_DIRS"] + [os.path.join(BASE_DIR, 'templates')],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
