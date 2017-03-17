@@ -47,7 +47,7 @@ class Document(LoggedExtendedModel):
 
     freeze_text = models.BooleanField(default=False)
 
-    external_link = models.URLField(null=True)
+    external_link = models.URLField(null=True, max_length=500)
 
     objects = DocumentManager().as_manager()
 
