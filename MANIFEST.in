@@ -1,5 +1,5 @@
 include README.md
 include requirements.txt
-recursive-inside django_learning/templates *
-recursive-inside django_learning/static *
+recursive-include django_learning/templates *
+recursive-include django_learning/static *
 recursive-exclude django_learning *.pyc
