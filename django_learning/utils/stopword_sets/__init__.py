@@ -8,7 +8,7 @@ for mod_category, attribute_name in [
     ("stopword_sets", "get_stopwords")
 ]:
     mods = extract_attributes_from_folder_modules(
-        os.path.join(__path__[0], mod_category),
+        os.path.join(__path__[0]),
         attribute_name,
         include_subdirs=True,
         concat_subdir_names=True
