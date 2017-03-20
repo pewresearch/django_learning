@@ -1,3 +1,5 @@
+import os
+
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from pewtils import is_not_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
