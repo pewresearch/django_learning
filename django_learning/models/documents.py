@@ -62,10 +62,9 @@ class Document(LoggedExtendedModel):
     def object(self):
 
         from django.db.models.fields.reverse_related import OneToOneRel
-        # for field, _ in self._meta.get_fields_with_model():
         for field, _ in get_fields_with_model(self):
-            if type(field) == OneToOneRel:
-                return getattr(self, re.sub(" ", "_", field.related_model._meta.verbose_name))
+            if type(field) == OneToOneRel and hasattr(self, field.name):
+                return getattr(self, field.name)
         return None
 
     def __str__(self):
