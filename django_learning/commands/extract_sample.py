@@ -5,18 +5,19 @@ from django_learning.models import Project, Sample, SamplingFrame, HITType
 
 class Command(BasicCommand):
 
-    parameter_defaults = [
-        {"name": "project_name", "type": str, "default": None},
-        {"name": "hit_type_name", "type": str, "default": None},
-        {"name": "sample_name", "type": str, "default": None}
-    ]
-    option_defaults = [
-        {"name": "sampling_frame_name", "default": "all_documents", "type": str},
-        {"name": "sampling_method", "default": "random", "type": str},
-        {"name": "size", "default": 0, "type": int},
-        {"name": "allow_overlap_with_existing_project_samples", "default": False, "type": bool}
-    ]
+    parameter_names = ["project_name", "hit_type_name", "sample_name"]
     dependencies = []
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument("project_name", type=str)
+        parser.add_argument("hit_type_name", type=str)
+        parser.add_argument("sample_name", type=str)
+        parser.add_argument("--sampling_frame_name", default="all_documents", type=str)
+        parser.add_argument("--sampling_method", default="random", type=str)
+        parser.add_argument("--size", default=0, type=int)
+        parser.add_argument("--allow_overlap_with_existing_project_samples", default=False, action="store_true")
+        return parser
 
     def run(self):
 

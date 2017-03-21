@@ -6,18 +6,19 @@ from django_learning.mturk import MTurk
 
 class Command(BasicCommand):
 
-    parameter_defaults = [
-        {"name": "project_name", "type": str, "default": None},
-        {"name": "sample_name", "type": str, "default": None}
-    ]
-    option_defaults = [
-        {"name": "num_coders", "default": 1, "type": int},
-        {"name": "template_name", "default": None, "type": str},
-        {"name": "prod", "default": False, "type": bool},
-        {"name": "force_hit_type_reset", "default": False, "type": bool},
-        {"name": "loop", "default": False, "type": bool}
-    ]
+    parameter_names = ["project_name", "sample_name"]
     dependencies = []
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument("project_name", type=str)
+        parser.add_argument("sample_name", type=str)
+        parser.add_argument("--num_coders", default=1, type=int)
+        parser.add_argument("--template_name", default=None, type=str)
+        parser.add_argument("--prod", default=False, action="store_true")
+        parser.add_argument("--force_hit_type_reset", default=False, action="store_true")
+        parser.add_argument("--loop", default=False, action="store_true")
+        return parser
 
     def run(self):
 

@@ -5,13 +5,14 @@ from django_learning.models import SamplingFrame
 
 class Command(BasicCommand):
 
-    option_defaults = [
-        {"name": "refresh", "default": False, "type": bool}
-    ]
-    parameter_defaults = [
-        {"name": "sampling_frame_name", "default": None, "type": str}
-    ]
+    parameter_names = ["sample_frame_name"]
     dependencies = []
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument("sample_frame_name", type=str)
+        parser.add_argument("--refresh", default=False, action="store_true")
+        return parser
 
     def run(self):
 

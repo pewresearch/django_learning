@@ -5,11 +5,13 @@ from django_learning.models import Project
 
 class Command(BasicCommand):
 
-    option_defaults = []
-    parameter_defaults = [
-        {"name": "project_name", "default": None, "type": str}
-    ]
+    parameter_names = ["project_name"]
     dependencies = []
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument("project_name", type=str)
+        return parser
 
     def run(self):
 

@@ -5,15 +5,16 @@ from django_learning.models import Project, Sample, HIT
 
 class Command(BasicCommand):
 
-    parameter_defaults = [
-        {"name": "project_name", "type": str, "default": None},
-        {"name": "sample_name", "type": str, "default": None}
-    ]
-    option_defaults = [
-        {"name": "num_coders", "default": 1, "type": int},
-        {"name": "template_name", "default": None, "type": str}
-    ]
+    parameter_names = ["project_name", "sample_name"]
     dependencies = []
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument("project_name", type=str)
+        parser.add_argument("sample_name", type=str)
+        parser.add_argument("--num_coders", default=1, type=int)
+        parser.add_argument("--template_name", default=None, type=str)
+        return parser
 
     def run(self):
 
