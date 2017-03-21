@@ -1,4 +1,4 @@
 Django>=1.10.6
 pewtils>=0.1.1
 pandas>=0.19.2
-django_commander>=0.0.3
+django_commander>=0.0.4
