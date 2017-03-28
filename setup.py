@@ -8,8 +8,10 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 with open('requirements.txt') as reqs:
     install_requires = [
-        line for line in reqs.read().split('\n') if (line and not
-                                                     line.startswith('--'))
+        line for line in reqs.read().split('\n') if line and not line.startswith(('--', 'git+ssh'))
+    ]
+    dependency_links = [
+        line for line in reqs.read().split('\n') if line and line.startswith(('--', 'git+ssh'))
     ]
 
 setup(
@@ -21,6 +23,7 @@ setup(
     author = 'Patrick van Kessel, Pew Research Center',
     author_email = 'pvankessel@pewresearch.tech',
     install_requires = install_requires,
+    dependency_links = dependency_links,
     packages = find_packages(exclude = ['contrib', 'docs', 'tests']),
     include_package_data=True,
     classifiers = [
