@@ -1,5 +1,6 @@
 import os
 from setuptools import setup, find_packages
+from django_learning import __version__
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
     README = readme.read()
@@ -16,7 +17,7 @@ with open('requirements.txt') as reqs:
 
 setup(
     name = 'django_learning',
-    version = '0.0.2',
+    version = __version__,
     description = 'Complete Django framework for manual and automated document classification, machine learning, and more',
     long_description = README, #'http://labs.pewresearch.tech/docs/libs/django_learning',
     url = 'https://github.com/pewresearch/django_learning',
