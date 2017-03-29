@@ -1,1 +1,2 @@
-__version__ = '0.0.2'
+with open("VERSION") as version_file:
+    __version__ = version_file.read().strip()
