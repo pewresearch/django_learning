@@ -7,6 +7,8 @@ from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_mo
 from django_learning.utils import get_param_repr
 from django_learning.utils.preprocessors import preprocessors
 
+from django.conf import settings
+
 
 class BasicExtractor(BaseEstimator, TransformerMixin):
 
@@ -19,7 +21,8 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
 
     """
 
-    @reset_django_connection_wrapper
+    # @reset_django_connection_wrapper(settings.SITE_NAME)
+    # TODO: this needs to be fixed to enable multiprocessing again
     def __init__(self, *args, **kwargs):
 
         self.params = {
@@ -42,7 +45,7 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
 
         self.param_repr = str(get_param_repr(self.params))
         if is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler("learning/feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name), use_s3=False)
+            self.cache = CacheHandler("django_learning/feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name), use_s3=False)
 
         return self
 
@@ -66,14 +69,14 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
 
     def get_preprocessors(self):
 
-        preprocessors = []
+        preprocessor_list = []
         if "preprocessors" in self.params.keys():
             for p, params in self.params["preprocessors"]:
                 if is_not_null(self.params["cache_identifier"]):
                     params["cache_identifier"] = self.params["cache_identifier"]
-                preprocessors.append(preprocessors[p](**params))
+                preprocessor_list.append(preprocessors[p](**params))
 
-        return preprocessors
+        return preprocessor_list
 
 
 for mod_category, attribute_name in [

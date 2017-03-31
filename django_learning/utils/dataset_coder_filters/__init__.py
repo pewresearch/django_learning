@@ -5,7 +5,7 @@ from pewtils.django import get_model, get_app_settings_folders
 
 
 for mod_category, attribute_name in [
-    ("document_filters", "filter")
+    ("dataset_coder_filters", "filter")
 ]:
     mods = extract_attributes_from_folder_modules(
         os.path.join(__path__[0]),
