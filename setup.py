@@ -1,10 +1,10 @@
 import os
 from setuptools import setup, find_packages
 
-with open(os.path.join(os.path.dirname(__file__), "django_learning", "VERSION")) as version_file:
+with open(os.path.join(os.path.dirname(__file__), "django_learning", "VERSION"), "rb") as version_file:
     __version__ = version_file.read().strip()
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), "rb") as readme:
     README = readme.read()
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
