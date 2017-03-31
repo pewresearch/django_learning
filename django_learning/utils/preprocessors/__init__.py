@@ -18,7 +18,7 @@ class BasicPreprocessor(object):
         self.params = kwargs
         self.param_repr = str(get_param_repr(self.params))
         if "cache_identifier" in self.params.keys() and is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler("learning/feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name), use_s3=False)
+            self.cache = CacheHandler("django_learning/feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name), use_s3=False)
         else:
             self.cache = None
 

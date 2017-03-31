@@ -7,79 +7,10 @@ from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
 from pewtils.django import CacheHandler
 
 from django_learning.utils.stopword_sets import stopword_sets
+from django_learning.utils.stopword_whitelists import stopword_whitelists
 from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.preprocessors import BasicPreprocessor
 
-
-WHITELIST = [
-    "state university",
-    "university",
-    "former",
-    "for president",
-    "call",
-    "bottom",
-    "cut off",
-    "fair",
-    "canada",
-    "market",
-    "bolivia",
-    "sincere",
-    "9/11",
-    "should",
-    "must",
-    "need",
-    "needs",
-    "onset",
-    "courage",
-    "new home",
-    "hometown",
-    "turkey",
-    "sudan",
-    "underage",
-    "isis",
-    "flint",
-    "new roads",
-    "wheat",
-    "gateway",
-    "patriot",
-    "israel",
-    "friendship",
-    "severance",
-    "system",
-    "together",
-    "vice",
-    "jesus",
-    "god",
-    "interest",
-	"iran",
-	"syria",
-	"interest",
-	"never",
-	"cannot",
-	"not",
-	"yucca",
-    "capitol",
-    "prosperity",
-    "homeland",
-    "bureau",
-    "student",
-    "serious",
-    "century",
-    "bedrock",
-    "republic",
-	"full",
-	"against",
-	"never",
-    "equality",
-    "fire",
-    "against",
-    "dairy",
-	"interests",
-	"hurricane",
-	"op-ed",
-	"cliff",
-	"against"
-]
 
 class Preprocessor(BasicPreprocessor):
 
@@ -88,6 +19,10 @@ class Preprocessor(BasicPreprocessor):
         self.name = "clean_text"
         super(Preprocessor, self).__init__(*args, **kwargs)
 
+        whitelist = []
+        if "stopword_whitelists" in self.params.keys():
+            for stopword_whitelist in self.params["stopword_whitelists"]:
+                whitelist.extend(stopword_whitelists[stopword_whitelist]())
         stopwords = []
         if "stopword_sets" in self.params.keys():
             for stopword_set in self.params['stopword_sets']:
@@ -100,7 +35,7 @@ class Preprocessor(BasicPreprocessor):
                     if stopword_set not in ["english", "misc_boilerplate"]:
                         final_slist = []
                         for s in slist:
-                            if s.lower() not in WHITELIST:
+                            if s.lower() not in whitelist:
                                 if len(s) > 3: final_slist.append(s)
                                 elif is_probable_stopword(s.lower()):
                                     final_slist.append(s)
