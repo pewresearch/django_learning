@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-with open(os.path.join(os.path.dirname(__file__), "django_learning", "VERSION"), "rb") as version_file:
+with open(os.path.join(os.path.dirname(__file__), "VERSION"), "rb") as version_file:
     __version__ = version_file.read().strip()
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md'), "rb") as readme:
@@ -29,17 +29,17 @@ setup(
     dependency_links = dependency_links,
     packages = find_packages(exclude = ['contrib', 'docs', 'tests']),
     include_package_data=True,
-    classifiers = [
+    classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
-# https://pypi.python.org/pypi?%3Aaction=list_classifiers
-#        'Development Status :: 1 - Planning',
+        # https://pypi.python.org/pypi?%3Aaction=list_classifiers
+        # 'Development Status :: 1 - Planning',
         'Development Status :: 2 - Pre-Alpha',
-#        'Development Status :: 3 - Alpha',
-#        'Development Status :: 4 - Beta',
-#        'Development Status :: 5 - Production/Stable',
-#        'Development Status :: 6 - Mature',
-#        'Development Status :: 7 - Inactive'
+        # 'Development Status :: 3 - Alpha',
+        # 'Development Status :: 4 - Beta',
+        # 'Development Status :: 5 - Production/Stable',
+        # 'Development Status :: 6 - Mature',
+        # 'Development Status :: 7 - Inactive'
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries :: Python Modules',
@@ -48,6 +48,6 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7'
     ],
-    keywords = 'pew pew pew',
-    license = 'MIT'
+    keywords='pew pew pew',
+    license='MIT'
 )

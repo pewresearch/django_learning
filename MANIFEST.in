@@ -1,6 +1,7 @@
-include django_learning/VERSION
 include README.md
 include requirements.txt
+include VERSION
 recursive-include django_learning/templates *
 recursive-include django_learning/static *
+recursive-include django_learning/utils *
 recursive-exclude django_learning *.pyc
