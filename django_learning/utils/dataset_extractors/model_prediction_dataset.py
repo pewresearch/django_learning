@@ -25,25 +25,26 @@ class Extractor(DatasetExtractor):
         **kwargs
     ):
 
-        super(ModelPredictionDatasetExtractor, self).__init__(**kwargs)
+        super(Extractor, self).__init__(**kwargs)
 
-        self.dataset = dataset
+        self.dataset = copy.deepcopy(dataset)
         self.learning_model = learning_model
         self.cache_key = cache_key
 
     def get_hash(self, **kwargs):
 
-        hash_key = super(ModelPredictionDatasetExtractor, self).get_hash(**kwargs)
-        hash_key += self.cache_key + self.learning_model.model_hash
+        hash_key = super(Extractor, self).get_hash(**kwargs)
+        hash_key += self.learning_model.cache_hash + self.cache_key
 
         return self.cache.file_handler.get_key_hash(hash_key)
 
     def _get_dataset(self, **kwargs):
 
-        self.learning_model.load_model()
+        if is_null(self.learning_model.model):
+            self.learning_model.load_model()
         dataset = self.dataset
         predictions = self.learning_model.apply_model(dataset)
-        dataset[self.learning_model.outcome_variable] = predictions[self.learning_model.outcome_variable]
+        dataset[self.learning_model.dataset_extractor.outcome_column] = predictions[self.learning_model.dataset_extractor.outcome_column]
         dataset["probability"] = predictions["probability"]
 
         return dataset

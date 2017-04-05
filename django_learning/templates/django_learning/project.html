@@ -35,58 +35,35 @@
     {% if project %}
 
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-8">
                 <div class="panel panel-primary">
                     <div class="panel-heading">Project: {{ project }}</div>
                     <table class="panel-body table table-condensed">
-                        <tr><td>Name</td><td>{{ project.name }}</td></tr>
-                        <tr><td>Admins</td><td><ul>{% for admin in project.admins.all %}<li>{{ admin }}</li>{% endfor %}</ul></td></tr>
-                        <tr><td>Coders</td><td><ul>{% for coder in project.coders.all %}<li>{{ coder }}</li>{% endfor %}</ul></td></tr>
-                        <tr><td>Questions</td><td><ul>{% for question in project.questions.all %}<li>{{ question }}</li>{% endfor %}</ul></td></tr>
-                        <tr><td>Qualification Tests</td><td><ul>{% for qual_test in project.qualification_tests.all %}<li>{{ qual_test }}</li>{% endfor %}</ul></td></tr>
+                        <tr><th>Admins</th><th>Coders</th><th>Questions</th><th>Qualification Tests</th></tr>
+                        <tr>
+                            <td><ul>{% for admin in project.admins.all %}<li>{{ admin }}</li>{% endfor %}</ul></td>
+                            <td><ul>{% for coder in project.coders.all %}<li>{{ coder }}</li>{% endfor %}</ul></td>
+                            <td><ul>{% for question in project.questions.all %}<li>{{ question.name }}</li>{% endfor %}</ul></td>
+                            <td><ul>{% for qual_test in project.qualification_tests.all %}<li>{{ qual_test }}</li>{% endfor %}</ul></td>
+                        </tr>
                     </table>
                 </div>
             </div>
-        </div>
-
-        {% if samples|length > 0 %}
-            <div class="row">
-                <div class="col-md-12">
+            {% if samples|length > 0 %}
+                <div class="col-md-4">
                     <div class="panel panel-primary">
                         <div class="panel-heading">{{ project.name }}: Samples</div>
                         <table class="panel-body table table-condensed">
-                            <col>
-                            <colgroup span="4"></colgroup>
-                            <colgroup span="3"></colgroup>
-                            <col>
                             <tr>
-                                <th rowspan="2">Sample</th>
-                                <th rowspan="2">Sample Units</th>
-                                <th colspan="4" scope="colgroup">Mechanical Turk</th>
-                                <th colspan="3" scope="colgroup">In-House</th>
-                                <th rowspan="2"></th>
-                            </tr>
-                            <tr>
-                                <th scope="col">Total HITs</th>
-                                <th scope="col">HITs Completed</th>
-                                <th scope="col">Total Assignments</th>
-                                <th scope="col">Assignments Completed</th>
-                                <th scope="col">Total HITs</th>
-                                <th scope="col">HITs Completed</th>
-                                <th scope="col">HITs Available</th>
+                                <th>Sample</th>
+                                <th>Sample Units</th>
+                                <th></th>
                             </tr>
                             {% for sample in samples %}
                                 <tr>
-                                    <td scope="row">{{ sample.sample.name }}</td>
-                                    <td scope="row">{{ sample.sample.document_units.count }}</td>
-                                    <td>{{ sample.total_turk_hits.count }}</td>
-                                    <td>{{ sample.completed_turk_hits.count }}</td>
-                                    <td>{{ sample.total_turk_assignments }}</td>
-                                    <td>{{ sample.completed_turk_assignments.count }}</td>
-                                    <td>{{ sample.total_expert_hits.count }}</td>
-                                    <td>{{ sample.completed_expert_hits.count }}</td>
-                                    <td>{{ sample.available_expert_hits.count }}</td>
-                                    <td scope="row">
+                                    <td>{{ sample.sample.name }}</td>
+                                    <td>{{ sample.sample_units }}</td>
+                                    <td>
                                         <a class="btn btn-primary" href="{% url 'django_learning:view_sample' project.name sample.sample.name %}">View Sample</a>
                                     </td>
                                 </tr>
@@ -94,12 +71,8 @@
                         </table>
                     </div>
                 </div>
-            </div>
-        {% else %}
-            <div class="row">
-                <p>No Samples Extracted</p>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
 
         {% if request.user.coder in project.admins.all %}
 
@@ -165,6 +138,7 @@
                 </div>
             </div>
 
+            <!--
             <div class="row">
                 <div class="col-md-12">
                     <div class="panel panel-danger">
@@ -179,7 +153,7 @@
                                     <td>
                                         <div class="form-group">
                                             <select class="form-control" name="sample_name" id="sample_name">
-                                                <!-- <option value="all" {% if sample_name == "all" %}selected{% endif %}>All samples</option> -->
+                                                <option value="all" {% if sample_name == "all" %}selected{% endif %}>All samples</option>
                                                 {% for b in project.samples.all %}
                                                     <option value="{{ b.name }}">{{ b.name }}</option>
                                                 {% endfor %}
@@ -214,6 +188,7 @@
                     </div>
                 </div>
             </div>
+            -->
 
         {% endif %}
 

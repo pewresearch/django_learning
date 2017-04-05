@@ -58,14 +58,28 @@ class Document(LoggedExtendedModel):
         super(Document, self).__init__(*args, **kwargs)
         self.__init_text = self.text
 
+    @classmethod
+    def get_parent_relations(cls):
+        obj_models = []
+        from django.db.models.fields.reverse_related import OneToOneRel
+        for field in cls._meta.get_fields():
+            if type(field) == OneToOneRel:
+                obj_models.append(field)
+        return obj_models
+
     @property
     def object(self):
 
-        from django.db.models.fields.reverse_related import OneToOneRel
-        for field, _ in get_fields_with_model(self):
-            if type(field) == OneToOneRel and hasattr(self, field.name):
-                return getattr(self, field.name)
+        for parent_field in self.get_parent_relations():
+            if hasattr(self, parent_field.name):
+                return getattr(self, parent_field.name)
         return None
+
+        # from django.db.models.fields.reverse_related import OneToOneRel
+        # for field, _ in get_fields_with_model(self):
+        #     if type(field) == OneToOneRel and hasattr(self, field.name):
+        #         return getattr(self, field.name)
+        # return None
 
     def __str__(self):
 

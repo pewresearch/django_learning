@@ -3,6 +3,7 @@ from django.db.models import Count
 from django.contrib.auth.models import User
 
 from django_commander.models import LoggedExtendedModel
+from django_learning.managers import CodeManager
 
 
 class HIT(LoggedExtendedModel):
@@ -65,6 +66,8 @@ class Code(LoggedExtendedModel):
     hit = models.ForeignKey("django_learning.HIT", related_name="codes", null=True)
     sample_unit = models.ForeignKey("django_learning.SampleUnit", related_name="codes", null=True)
     document = models.ForeignKey("django_learning.Document", related_name="codes", null=True)
+
+    objects = CodeManager().as_manager()
 
     def __str__(self):
         return "{}: {}".format(self.assignment if self.assignment else self.qualification_assignment, self.label)

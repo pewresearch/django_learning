@@ -12,6 +12,8 @@ from pewtils.nlp import TextCleaner, SentenceTokenizer
 from pewtils.django import CacheHandler, get_model
 from pewtils.django.managers import BasicExtendedManager
 
+from django_learning.utils.dataset_extractors import dataset_extractors
+
 
 class QuestionManager(BasicExtendedManager):
 
@@ -66,6 +68,10 @@ class QuestionManager(BasicExtendedManager):
 
 class DocumentManager(BasicExtendedManager):
 
+    def document_types(self):
+
+        return [f.name for f in self.model.get_parent_relations()]
+
     def reset_text_to_original(self):
         @transaction.atomic
         def reset_chunk(docs):
@@ -113,7 +119,7 @@ class DocumentManager(BasicExtendedManager):
         tokenizer = SentenceTokenizer()
         w2v_model = None
 
-        cache = CacheHandler("learning/word2vec")
+        cache = CacheHandler("django_learning/word2vec")
         if not refresh:
 
             w2v_model = cache.read("word2vec_{}_{}_{}_{}_{}".format(document_type, dimensions, use_sentences, window_size, use_skipgrams))
@@ -151,7 +157,7 @@ class DocumentManager(BasicExtendedManager):
         cleaner = TextCleaner(lemmatize=False)
         d2v_model = None
 
-        cache = CacheHandler("learning/doc2vec")
+        cache = CacheHandler("django_learning/doc2vec")
         if not refresh:
 
             d2v_model = cache.read("doc2vec_{0}_{1}".format(document_type, dimensions))
@@ -210,3 +216,8 @@ class NgramSetManager(BasicExtendedManager):
                     word_map[word].append(cat)
 
         return word_map
+
+
+class CodeManager(BasicExtendedManager):
+
+    pass

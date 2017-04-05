@@ -65,30 +65,9 @@ def view_project(request, project_name):
 
             request.user.coder._clear_abandoned_sample_assignments(sample)
 
-            total_expert_hits = filter_hits(sample=sample, experts_only=True)
-            available_expert_hits = filter_hits(sample=sample, finished=False, experts_only=True)
-            completed_expert_hits = filter_hits(sample=sample, finished=True, experts_only=True)
-            # completed_expert_hits = filter_hits(assignments=filter_assignments(sample=sample, experts_only=True, incomplete=False), finished=True, experts_only=True)
-
-            available_coder_hits = filter_hits(sample=sample, finished=False, experts_only=True, exclude_coders=[request.user.coder])
-            completed_coder_hits = filter_hits(assignments=filter_assignments(sample=sample, experts_only=True, coder=request.user.coder, incomplete=False), experts_only=True)
-
-            total_turk_hits = filter_hits(sample=sample, turk_only=True)
-            completed_turk_hits = filter_hits(sample=sample, unfinished=False, turk_only=True)
-            total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
-            completed_turk_assignments = filter_assignments(sample=sample, incomplete=False, turk_only=True)
-
             samples.append({
                 "sample": sample,
-                "total_expert_hits": total_expert_hits,
-                "available_expert_hits": available_expert_hits,
-                "completed_expert_hits": completed_expert_hits,
-                "available_coder_hits": available_coder_hits,
-                "completed_coder_hits": completed_coder_hits,
-                "total_turk_hits": total_turk_hits,
-                "completed_turk_hits": completed_turk_hits,
-                "total_turk_assignments": total_turk_assignments,
-                "completed_turk_assignments": completed_turk_assignments
+                "sample_units": sample.document_units.count()
             })
 
     return render(request, 'django_learning/project.html', {
@@ -159,15 +138,15 @@ def view_sample(request, project_name, sample_name):
     sample = project.samples.get(name=sample_name)
 
     total_expert_hits = filter_hits(sample=sample, experts_only=True)
-    available_expert_hits = filter_hits(sample=sample, finished=False, experts_only=True,
+    available_expert_hits = filter_hits(sample=sample, unfinished_only=True, experts_only=True,
                                         exclude_coders=[request.user.coder])
     completed_expert_hits = filter_hits(
-        assignments=filter_assignments(sample=sample, experts_only=True, coder=request.user.coder, incomplete=False),
+        assignments=filter_assignments(sample=sample, experts_only=True, coder=request.user.coder, completed_only=True),
         experts_only=True)
     total_turk_hits = filter_hits(sample=sample, turk_only=True)
-    completed_turk_hits = filter_hits(sample=sample, unfinished=False, turk_only=True)
+    completed_turk_hits = filter_hits(sample=sample, finished_only=True, turk_only=True)
     total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
-    completed_turk_assignments = filter_assignments(sample=sample, incomplete=False, turk_only=True)
+    completed_turk_assignments = filter_assignments(sample=sample, completed_only=True, turk_only=True)
 
     return render(request, "django_learning/sample.html", {
         "sample": sample,
@@ -300,7 +279,7 @@ def code_random_assignment(request, project_name, sample_name, skip_post=False):
 
         if sample.hit_type.is_qualified(request.user.coder):
 
-            hits_available = filter_hits(sample=sample, finished=False, experts_only=True, exclude_coders=[request.user.coder])\
+            hits_available = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[request.user.coder])\
                 .annotate(c=Count("assignments"))\
                 .order_by("-c")\
                 .distinct()

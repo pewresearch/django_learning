@@ -46,9 +46,10 @@ class DatasetExtractor(object):
             if not self.cache_hash:
                 self.cache_hash = self.get_hash(**kwargs)
             cache_data = self.cache.read(self.cache_hash)
-            for k, v in cache_data.iteritems():
-                if k != "dataset":
-                    setattr(self, k, v)
+            if is_not_null(cache_data):
+                for k, v in cache_data.iteritems():
+                    if k != "dataset":
+                        setattr(self, k, v)
 
         if is_null(cache_data) and not only_get_existing:
             updated_hashstr = self.get_hash(**kwargs)

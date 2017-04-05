@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericRelation
 
 from pewtils import is_not_null
 from pewtils.django import get_model
@@ -11,7 +12,7 @@ from django_learning.utils.projects import projects
 from django_learning.utils.project_hit_types import project_hit_types
 from django_learning.utils.project_qualification_tests import project_qualification_tests
 from django_learning.utils.project_qualification_scorers import project_qualification_scorers
-
+from django_learning.utils.dataset_extractors import dataset_extractors
 
 class Project(LoggedExtendedModel):
 
@@ -21,6 +22,9 @@ class Project(LoggedExtendedModel):
     blacklist = models.ManyToManyField("django_learning.Coder", related_name="blacklisted_projects")
     instructions = models.TextField(null=True)
     qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="projects")
+
+    classification_models = GenericRelation("django_learning.ClassificationModel")
+    # regression_models = GenericRelation("django_learning.RegressionModel")
 
     def __str__(self):
         return self.name
@@ -61,6 +65,36 @@ class Project(LoggedExtendedModel):
     def is_qualified(self, coder):
 
         return all([qual_test.is_qualified(coder) for qual_test in self.qualification_tests.all()])
+
+    def extract_document_coder_label_dataset(self, sample_names, question_names, code_filters=None, **kwargs):
+
+        e = dataset_extractors["document_coder_label_dataset"](
+            project_name=self.name,
+            sample_names=sample_names,
+            question_names=question_names,
+            **kwargs
+        )
+        return e.extract(refresh=kwargs.get("refresh", False))
+
+    def extract_document_coder_dataset(self, sample_names, question_names, **kwargs):
+
+        e = dataset_extractors["document_coder_dataset"](
+            project_name=self.name,
+            sample_names=sample_names,
+            question_names=question_names,
+            **kwargs
+        )
+        return e.extract(refresh=kwargs.get("refresh", False))
+
+    def extract_document_dataset(self, sample_names, question_names, **kwargs):
+
+        e = dataset_extractors["document_dataset"](
+            project_name=self.name,
+            sample_names=sample_names,
+            question_names=question_names,
+            **kwargs
+        )
+        return e.extract(refresh=kwargs.get("refresh", False))
 
 
 class Question(LoggedExtendedModel):
@@ -111,7 +145,7 @@ class Question(LoggedExtendedModel):
                 ) for l in labels
             ]
         else:
-            labels = self.labels.filter(pk__in=labels)
+            labels = self.labels.filter(pk__in=[int(l) for l in labels])
 
         if "qualification" in assignment._meta.verbose_name: fk = "qualification_assignment"
         else: fk = "assignment"
