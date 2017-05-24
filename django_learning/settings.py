@@ -8,7 +8,8 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 for setting, default in [
     ("DJANGO_LEARNING_HIT_TEMPLATE_DIRS", []),
     ("DJANGO_LEARNING_AWS_ACCESS", ""),
-    ("DJANGO_LEARNING_AWS_SECRET", "")
+    ("DJANGO_LEARNING_AWS_SECRET", ""),
+    ("DJANGO_LEARNING_BASE_TEMPLATE", "django_learning/_template.html")
 ]:
     if not getattr(settings, setting, None):
         globals()[setting] = default
@@ -25,7 +26,8 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages'
+                'django.contrib.messages.context_processors.messages',
+                'django_learning.context_processors.identify_template'
             ]
         }
     }
