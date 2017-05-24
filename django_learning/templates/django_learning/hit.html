@@ -1,4 +1,4 @@
-{% extends "django_learning/_template.html" %}
+{% extends django_learning_template %}
 
 {% load staticfiles %}
 
@@ -92,7 +92,7 @@
 
 {% endblock %}
 
-{% block body %}
+{% block content %}
 
     {% if hit.hit_type.title %}<h3>{{ hit.hit_type.title }}</h3>{% endif %}
     {% if project.instructions %}<p>{{ project.instructions }}</p>{% endif %}

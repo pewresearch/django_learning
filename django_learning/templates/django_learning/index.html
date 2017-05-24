@@ -1,4 +1,4 @@
-{% extends "django_learning/_template.html" %}
+{% extends django_learning_template %}
 
 {% load staticfiles %}
 
@@ -6,26 +6,19 @@
 
 {% block modals %}{% endblock %}
 
-{% block body %}
+{% block content %}
 
     <div class="row">
         <div class="col-md-5">
             <div class="panel panel-primary">
                 <div class="panel-heading">Projects</div>
                 <table class="panel-body table table-condensed">
-                    <tr><th>Project</th><th>Status</th><th></th></tr>
+                    <tr><th>Project</th><!--<th>Status</th>--><th></th></tr>
                     {% for project in projects %}
                         <tr>
                             <td>{{ project.name }}</td>
-                            <td>Created</td>
+                            <!--<td>Created</td>-->
                             <td><a class="btn btn-primary" href="{% url 'django_learning:view_project' project.name %}">View Project</a></td>
-                        </tr>
-                    {% endfor %}
-                    {% for project in uncreated_projects %}
-                        <tr>
-                            <td>{{ project }}</td>
-                            <td>Not Yet Created</td>
-                            <td><a class="btn btn-danger" href="{% url 'django_learning:view_project' project %}">View Project</a></td>
                         </tr>
                     {% endfor %}
                 </table>
@@ -41,13 +34,6 @@
                             <td>{{ sampling_frame.name }}</td>
                             <td>{{ sampling_frame.documents.count }}</td>
                             <td><a class="btn btn-primary" href="{% url 'django_learning:view_sampling_frame' sampling_frame.name %}">View Sampling Frame</a></td>
-                        </tr>
-                    {% endfor %}
-                    {% for sampling_frame in uncreated_sampling_frames %}
-                        <tr>
-                            <td>{{ sampling_frame }}</td>
-                            <td></td>
-                            <td><a class="btn btn-primary" href="{% url 'django_learning:view_sampling_frame' sampling_frame %}">View Sampling Frame</a></td>
                         </tr>
                     {% endfor %}
                 </table>

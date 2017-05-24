@@ -9,6 +9,7 @@ urlpatterns = [
     url(r'^project/(?P<project_name>[\w\_]+)/extract_sample', views.extract_sample, name="extract_sample"),
     url(r'^project/(?P<project_name>[\w\_]+)/create_mturk_hits', views.create_sample_hits_mturk, name="create_sample_hits_mturk"),
     url(r'^project/(?P<project_name>[\w\_]+)/create_expert_hits', views.create_sample_hits_experts, name="create_sample_hits_experts"),
+    url(r'^project/(?P<project_name>[\w\_]+)/edit_project_coders/(?P<mode>expert|mturk)', views.edit_project_coders, name="edit_project_coders"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/code_random_assignment$', views.code_random_assignment, name="code_random_assignment"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/complete_qualification/(?P<qualification_test_name>[\w\_]+)$', views.complete_qualification, name="complete_qualification"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)', views.view_sample, name="view_sample"),

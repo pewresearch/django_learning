@@ -74,9 +74,9 @@ def view_project(request, project_name):
         "project": project,
         "project_name": project_name,
         "samples": samples,
-        "hit_types": project_hit_type_configs, # TODO: shouldn't this be only HITTypes associated with the project?
-        "sampling_methods": sampling_method_configs,
-        "sampling_frames": SamplingFrame.objects.all()
+        # "hit_types": project_hit_type_configs, # TODO: shouldn't this be only HITTypes associated with the project?
+        # "sampling_methods": sampling_method_configs,
+        # "sampling_frames": SamplingFrame.objects.all()
         # "dataframes": dataframes.DATAFRAME_NAMES
     })
 
@@ -89,6 +89,80 @@ def create_project(request, project_name):
     })
 
     return home(request)
+
+
+@login_required
+def edit_project_coders(request, project_name, mode):
+
+    try: project = Project.objects.get(name=project_name)
+    except Project.DoesNotExist: project = None
+
+    if project:
+
+        if request.method == "POST":
+
+            active_coders = []
+            inactive_coders = []
+            new_name = request.POST.get("new_name")
+            if new_name:
+                try:
+                    user = User.objects.get(username=new_name)
+                except User.DoesNotExist:
+                    user = User.objects.create_user(
+                        new_name,
+                        "{}@pewresearch.org".format(new_name),
+                        "pass"
+                    )
+                coder = get_model("Coder").objects.create_or_update(
+                    {"name": new_name},
+                    {"is_mturk": False, "user": user}
+                )
+                status = request.POST.get("new")
+                if status == "active": active_coders.append(coder.pk)
+                else: inactive_coders.append(coder.pk)
+
+            for coder_id, status in request.POST.iteritems():
+                if not coder_id.startswith("new") and not coder_id.startswith("csrf"):
+                    coder = Coder.objects.get(pk=coder_id)
+                    if status == "active": active_coders.append(coder.pk)
+                    else: inactive_coders.append(coder.pk)
+
+            project.coders = Coder.objects.filter(pk__in=active_coders)
+            project.inactive_coders = Coder.objects.filter(pk__in=inactive_coders)
+            project.save()
+
+        coders = []
+        for coder in project.coders.filter(is_mturk=True if mode == 'mturk' else False):
+            coders.append({
+                "name": str(coder),
+                "pk": coder.pk,
+                "status": "active"
+            })
+        for coder in project.inactive_coders.filter(is_mturk=True if mode == 'mturk' else False):
+            coders.append({
+                "name": str(coder),
+                "pk": coder.pk,
+                "status": "inactive"
+            })
+        nonproject_coders = get_model("Coder").objects.filter(is_mturk=True if mode == 'mturk' else False)\
+            .exclude(pk__in=project.coders.all())\
+            .exclude(pk__in=project.inactive_coders.all())
+        for coder in nonproject_coders:
+            coders.append({
+                "name": str(coder),
+                "pk": coder.pk,
+                "status": "---"
+            })
+
+        return render(request, "django_learning/edit_coders.html", {
+            "project": project,
+            "coders": coders,
+            "mode": mode
+        })
+
+    else:
+
+        return home(request)
 
 
 @login_required
@@ -148,6 +222,23 @@ def view_sample(request, project_name, sample_name):
     total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
     completed_turk_assignments = filter_assignments(sample=sample, completed_only=True, turk_only=True)
 
+    coder_completion = []
+    if request.user.coder in project.admins.all():
+        for coder in project.coders.exclude(pk=request.user.coder.pk):
+            assignments = sample.assignments.filter(coder=coder).count()
+            if assignments > 0:
+                coder_available_expert_hits = filter_hits(sample=sample, unfinished_only=True, experts_only=True,
+                                                    exclude_coders=[coder])
+                coder_completed_expert_hits = filter_hits(
+                    assignments=filter_assignments(sample=sample, experts_only=True, coder=coder,
+                                                   completed_only=True),
+                    experts_only=True)
+                coder_completion.append({
+                    "coder": coder,
+                    "completed_expert_hits": coder_completed_expert_hits,
+                    "available_expert_hits": coder_available_expert_hits
+                })
+
     return render(request, "django_learning/sample.html", {
         "sample": sample,
         "total_expert_hits": total_expert_hits,
@@ -156,7 +247,8 @@ def view_sample(request, project_name, sample_name):
         "total_turk_hits": total_turk_hits,
         "completed_turk_hits": completed_turk_hits,
         "total_turk_assignments": total_turk_assignments,
-        "completed_turk_assignments": completed_turk_assignments
+        "completed_turk_assignments": completed_turk_assignments,
+        "coder_completion": coder_completion
     })
 
 
@@ -279,10 +371,11 @@ def code_random_assignment(request, project_name, sample_name, skip_post=False):
 
         if sample.hit_type.is_qualified(request.user.coder):
 
+            queue_ordering = request.GET.getlist("order_queue_by", ["?"])
+            # queue_ordering.reverse()
             hits_available = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[request.user.coder])\
-                .annotate(c=Count("assignments"))\
-                .order_by("-c")\
-                .distinct()
+                .distinct() # .annotate(c=Count("assignments"))
+            hits_available = hits_available.order_by(*queue_ordering)
 
             if hits_available.count() > 0:
 
@@ -291,11 +384,14 @@ def code_random_assignment(request, project_name, sample_name, skip_post=False):
                 return _render_hit(request, project, sample, hit, remaining_count=len(hits_available))
 
             else:
-                return view_project(request, project_name)
+                return render(request, "django_learning/alert.html", {"message": "No available assignments for this sample!"})
+                # return view_project(request, project_name)
         else:
-            return view_project(request, project_name)
+            # return view_project(request, project_name)
+            return render(request, "django_learning/alert.html", {"message": "You're not qualified to work on these assignments."})
     else:
-        return view_project(request, project_name)
+        # return view_project(request, project_name)
+        return render(request, "django_learning/alert.html", {"message": "You're not currently registered as an active coder on this project."})
 
 
 def _render_qualification_test(request, project, sample, qual_test):
