@@ -19,11 +19,11 @@ class Project(LoggedExtendedModel):
     name = models.CharField(max_length=250, unique=True)
     coders = models.ManyToManyField("django_learning.Coder", related_name="projects")
     admins = models.ManyToManyField("django_learning.Coder", related_name="admin_projects")
-    blacklist = models.ManyToManyField("django_learning.Coder", related_name="blacklisted_projects")
+    inactive_coders = models.ManyToManyField("django_learning.Coder", related_name="inactive_projects")
     instructions = models.TextField(null=True)
     qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="projects")
 
-    classification_models = GenericRelation("django_learning.ClassificationModel")
+    # classification_models = GenericRelation("django_learning.ClassificationModel")
     # regression_models = GenericRelation("django_learning.RegressionModel")
 
     def __str__(self):
@@ -46,21 +46,29 @@ class Project(LoggedExtendedModel):
 
         for i, q in enumerate(config["questions"]):
             Question.objects.create_from_config("project", self, q, i)
-        for c in config["coders"]:
-            try: user = User.objects.get(username=c["name"])
+        admins = []
+        for c in config["admins"]:
+            try: user = User.objects.get(username=c)
             except User.DoesNotExist:
                 user = User.objects.create_user(
-                    c["name"],
-                    "{}@pewresearch.org".format(c["name"]),
+                    c,
+                    "{}@pewresearch.org".format(c),
                     "pass"
                 )
             coder = get_model("Coder").objects.create_or_update(
-                {"name": c["name"]},
+                {"name": c},
                 {"is_mturk": False, "user": user}
             )
-            self.coders.add(coder)
-            if c["is_admin"]:
-                self.admins.add(coder)
+            admins.append(coder.pk)
+        self.admins = get_model("Coder").objects.filter(pk__in=admins)
+
+    def expert_coders(self):
+
+        return self.coders.filter(is_mturk=False)
+
+    def mturk_coders(self):
+
+        return self.coders.filter(is_mturk=True)
 
     def is_qualified(self, coder):
 
