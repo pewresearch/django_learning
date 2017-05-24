@@ -47,11 +47,9 @@ class Preprocessor(BasicPreprocessor):
         stopwords = sorted(list(set(stopwords)), key=lambda x: len(x), reverse=True)
         self.stopwords = stopwords
 
-        self.cleaner = TextCleaner(
-            skip_decode=True,
-            stopwords=stopwords,
-            **{k: v for k, v in self.params.items() if k not in ["stopword_sets", "regex_filters", "cache_identifier"]}
-        )
+        kwargs = {"decode_text": False, "stopwords": stopwords, "strip_html": True}
+        kwargs.update({k: v for k, v in self.params.items() if k not in ["stopword_sets", "regex_filters", "cache_identifier"]})
+        self.cleaner = TextCleaner(**kwargs)
         self.tokenizer = SentenceTokenizer()
 
         self.regex_filters = []
