@@ -115,7 +115,7 @@ class DocumentManager(BasicExtendedManager):
 
     def word2vec(self, document_type, refresh=False, window_size=5, use_skipgrams=False, chunk_size=20000, workers=2, use_sentences=False, dimensions=300):
 
-        cleaner = TextCleaner(lemmatize=False)
+        cleaner = TextCleaner(lemmatize=False, strip_html=True)
         tokenizer = SentenceTokenizer()
         w2v_model = None
 
@@ -154,7 +154,7 @@ class DocumentManager(BasicExtendedManager):
                 self.words = words
                 self.tags = []
 
-        cleaner = TextCleaner(lemmatize=False)
+        cleaner = TextCleaner(lemmatize=False, strip_html=True)
         d2v_model = None
 
         cache = CacheHandler("django_learning/doc2vec")
