@@ -47,7 +47,7 @@ class Word2VecModel(LoggedExtendedModel):
 
         if not self.finalized:
 
-            cleaner = TextCleaner(lemmatize=False)
+            cleaner = TextCleaner(lemmatize=False, strip_html=True)
             tokenizer = SentenceTokenizer()
             w2v_model = self.model
 
