@@ -11,6 +11,7 @@ from pewtils import chunker, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer
 from pewtils.django import CacheHandler, get_model
 from pewtils.django.managers import BasicExtendedManager
+from django_queries.managers import QueryModelManager
 
 from django_learning.utils.dataset_extractors import dataset_extractors
 
@@ -66,7 +67,7 @@ class QuestionManager(BasicExtendedManager):
         owner.questions.add(question)
 
 
-class DocumentManager(BasicExtendedManager):
+class DocumentManager(QueryModelManager):
 
     def document_types(self):
 

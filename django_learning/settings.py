@@ -38,3 +38,11 @@ APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__)).decode('utf-8
 DJANGO_COMMANDER_COMMAND_FOLDERS = [
     os.path.abspath(os.path.join(APP_ROOT, "commands").decode('utf-8')).replace('\\', '/')
 ]
+
+#### DJANGO_QUERIES SETTINGS
+
+DJANGO_QUERIES_QUERY_FOLDERS = [
+    os.path.abspath(os.path.join(APP_ROOT, "queries", "dataframes").decode("utf-8")).replace('\\', '/'),
+    os.path.abspath(os.path.join(APP_ROOT, "queries", "records").decode("utf-8")).replace('\\', '/'),
+    os.path.abspath(os.path.join(APP_ROOT, "queries", "networks").decode("utf-8")).replace('\\', '/')
+]

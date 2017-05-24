@@ -13,9 +13,10 @@ from pewtils.django import get_fields_with_model
 
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import DocumentManager
+from django_queries.models import QueryModel
 
 
-class Document(LoggedExtendedModel):
+class Document(LoggedExtendedModel, QueryModel):
 
     text = models.TextField(help_text="The text content of the document")
     original_text = models.TextField(null=True)
