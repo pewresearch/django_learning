@@ -281,7 +281,7 @@ class MTurk(object):
                         code_ids = code_ids[0]
                     q.update_assignment_response(assignment, code_ids)
 
-            if coder.is_qualified(qual_test):  # and coder not in sample.project.blacklist.all():
+            if coder.is_qualified(qual_test):  # and coder not in sample.project.inactive_coders.all():
                 self.conn.grant_qualification(a.QualificationRequestId)
 
     def print_account_balance(self):
@@ -356,7 +356,7 @@ class MTurk(object):
     # def sync_qualification_test(self, qual_test):
     #
     #     for c in tqdm(hit_type.project.coders.filter(turk=True), desc="Updating qualification for all existing coders"):
-    #         if c.is_qualified(hit_type.project) and c not in hit_type.project.blacklist.all():
+    #         if c.is_qualified(hit_type.project) and c not in hit_type.project.inactive_coders.all():
     #             try: self.conn.assign_qualification(hit_type.qualification_turk_id, c.name, 1)
     #             except: self.conn.update_qualification_score(hit_type.qualification_turk_id, c.name, 1)
     #         else:
