@@ -13,6 +13,7 @@ from django_learning.utils.dataset_document_filters import dataset_document_filt
 from django_learning.utils.dataset_coder_filters import dataset_coder_filters
 from django_learning.utils.balancing_variables import balancing_variables
 from django_learning.utils.dataset_extractors import DatasetExtractor
+from django_learning.utils.scoring import compute_scores_from_dataset, compute_overall_scores_from_dataset
 
 
 class Extractor(DatasetExtractor):
@@ -235,3 +236,17 @@ class Extractor(DatasetExtractor):
             dataset['balancing_weight'] = compute_balanced_sample_weights(sample, weight_vars).fillna(1.0) #, weight_column="sampling_weight") # DocumentClassificationModel should do this now
 
         return dataset
+
+    def compute_overall_scores(self, refresh=False):
+
+        dataset = self.extract(refresh=refresh)
+        return compute_overall_scores_from_dataset(
+            dataset,
+            "document_id",
+            "label_value",
+            "coder_id"
+        )
+    def compute_scores(self, refresh=False, min_overlap=10, discrete_classes=True):
+
+        dataset = self.extract(refresh=refresh)
+        return compute_scores_from_dataset(dataset, "document_id", "label_value", "coder_id", "sampling_weight", min_overlap=min_overlap, discrete_classes=discrete_classes)
