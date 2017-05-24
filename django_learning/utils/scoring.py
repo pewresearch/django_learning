@@ -2,7 +2,7 @@ import itertools, numpy, pandas, copy
 
 from collections import defaultdict
 from nltk.metrics.agreement import AnnotationTask
-from statsmodels.stats.inter_rater import cohens_kappa
+from statsmodels.stats.inter_rater import cohens_kappa, fleiss_kappa
 from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score, brier_score_loss
 from scipy.stats import ttest_ind
 
@@ -121,6 +121,25 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
     return pandas.DataFrame(scores)
 
 
+def compute_overall_scores_from_dataset(dataset, document_column, outcome_column, coder_column):
+
+    alpha = AnnotationTask(data=dataset[[coder_column, document_column, outcome_column]].as_matrix())
+    try:
+        alpha = alpha.alpha()
+    except ZeroDivisionError:
+        alpha = None
+
+    df = dataset.groupby([outcome_column, document_column]).count()[[coder_column]]
+    df = df.unstack(outcome_column).fillna(0)
+    kappa = fleiss_kappa(df)
+
+    return {
+        "alpha": alpha,
+        "fleiss_kappa": kappa
+    }
+
+
+
 def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None):
 
     coder1_df = coder_df[coder_df[coder_column] == coder1]
@@ -138,6 +157,7 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     row = {
         "coder1": coder1,
         "coder2": coder2,
+        "n": len(coder1_df),
         "outcome_column": outcome_column,
         "pos_label": pos_label,
         "alpha": alpha
@@ -224,11 +244,11 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
                 [result_dict[0][0], result_dict[0][1]],
                 [result_dict[1][0], result_dict[1][1]]
             ])
-            row["kappa"] = kappa["kappa"]
-            row["kappa_err"] = kappa["std_kappa"]
+            row["cohens_kappa"] = kappa["kappa"]
+            row["cohens_kappa_err"] = kappa["std_kappa"]
     else:
-        row["kappa"] = None
-        row["kappa_err"] = None
+        row["cohens_kappa"] = None
+        row["cohens_kappa_err"] = None
 
     for k, v in row.iteritems():
         if type(v) == tuple:
