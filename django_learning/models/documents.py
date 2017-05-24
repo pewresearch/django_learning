@@ -170,7 +170,7 @@ class Document(LoggedExtendedModel):
                 print "Warning: text for document {} was modified, clearing out coded labels".format(self.pk)
                 import pdb
                 pdb.set_trace()
-                self.coded_labels.through.delete()
+                self.codes.all().delete()
             # TODO: reenable
             # if self.classified_labels.count() > 0:
             #     print "Warning: text for document {} was modified, clearing out classified labels".format(self.pk)
