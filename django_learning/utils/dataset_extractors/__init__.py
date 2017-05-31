@@ -18,12 +18,13 @@ class DatasetExtractor(object):
 
         self.outcome_column = outcome_column
         self.cache_hash = None
-        self.cache = CacheHandler("django_learning/datasets",
-                                  hash=False,
-                                  use_s3=True,
-                                  aws_access=settings.DJANGO_LEARNING_AWS_ACCESS,
-                                  aws_secret=settings.DJANGO_LEARNING_AWS_SECRET
-                                  )
+        self.cache = CacheHandler(os.path.join(settings.CACHE_PATH, "datasets"),
+            hash=False,
+            use_s3=True,
+            bucket=settings.S3_BUCKET,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY
+        )
         self.dataset = None
 
         self.kwargs = kwargs

@@ -45,7 +45,7 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
 
         self.param_repr = str(get_param_repr(self.params))
         if is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler("django_learning/feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name), use_s3=False)
+            self.cache = CacheHandler(os.path.join(settings.CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
 
         return self
 
