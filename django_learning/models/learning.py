@@ -1,4 +1,4 @@
-import importlib, copy, pandas, numpy
+import importlib, copy, pandas, numpy, os
 
 from django.db import models
 from django.db.models import Q
@@ -86,13 +86,14 @@ class LearningModel(LoggedExtendedModel):
         # self.test_ids = None
         # self.predict_y = None
 
-        self.cache = CacheHandler("django_learning/learning_models/{}".format(self.cache_identifier),
+        self.cache = CacheHandler(os.path.join(settings.CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
             hash = False,
             use_s3=True,
-            aws_access=settings.DJANGO_LEARNING_AWS_ACCESS,
-            aws_secret=settings.DJANGO_LEARNING_AWS_SECRET
+            aws_access=settings.AWS_ACCESS,
+            aws_secret=settings.AWS_SECRET,
+            bucket=settings.S3_BUCKET
         )
-        self.temp_cache = CacheHandler("django_learning/feature_extractors/{}".format(self.cache_identifier),
+        self.temp_cache = CacheHandler(os.path.join(settings.CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
             hash=False,
             use_s3=False
         )
