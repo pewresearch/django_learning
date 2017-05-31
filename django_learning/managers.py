@@ -1,4 +1,4 @@
-import gensim, random, pandas
+import gensim, random, pandas, os
 
 from collections import defaultdict
 from tqdm import tqdm
@@ -6,6 +6,7 @@ from gensim.models import Word2Vec, Doc2Vec
 
 from django.db import transaction
 from django.db.models import Count, F
+from django.conf import settings
 
 from pewtils import chunker, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer
@@ -120,7 +121,12 @@ class DocumentManager(QueryModelManager):
         tokenizer = SentenceTokenizer()
         w2v_model = None
 
-        cache = CacheHandler("django_learning/word2vec")
+        cache = CacheHandler(os.path.join(settings.CACHE_PATH, "word2vec"),
+            use_s3=True,
+            bucket=settings.S3_BUCKET,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY
+        )
         if not refresh:
 
             w2v_model = cache.read("word2vec_{}_{}_{}_{}_{}".format(document_type, dimensions, use_sentences, window_size, use_skipgrams))
@@ -158,7 +164,12 @@ class DocumentManager(QueryModelManager):
         cleaner = TextCleaner(lemmatize=False, strip_html=True)
         d2v_model = None
 
-        cache = CacheHandler("django_learning/doc2vec")
+        cache = CacheHandler(os.path.join(settings.CACHE_PATH, "doc2vec"),
+            use_s3=True,
+            bucket=settings.S3_BUCKET,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY
+        )
         if not refresh:
 
             d2v_model = cache.read("doc2vec_{0}_{1}".format(document_type, dimensions))
