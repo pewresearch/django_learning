@@ -7,14 +7,18 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 for setting, default in [
     ("DJANGO_LEARNING_HIT_TEMPLATE_DIRS", []),
-    ("DJANGO_LEARNING_AWS_ACCESS", ""),
-    ("DJANGO_LEARNING_AWS_SECRET", ""),
-    ("DJANGO_LEARNING_BASE_TEMPLATE", "django_learning/_template.html")
+    ("AWS_ACCESS_KEY_ID", None),
+    ("AWS_SECRET_ACCESS_KEY", None),
+    ("DJANGO_LEARNING_BASE_TEMPLATE", "django_learning/_template.html"),
+    ("S3_BUCKET", ""),
+    ("CACHE_ROOT", "")
 ]:
     if not getattr(settings, setting, None):
         globals()[setting] = default
     else:
         globals()[setting] = getattr(settings, setting)
+
+CACHE_PATH = os.path.join(globals()["CACHE_ROOT"], "django_learning")
 
 TEMPLATES = [
     {
