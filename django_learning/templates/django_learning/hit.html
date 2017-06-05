@@ -49,7 +49,7 @@
 {% block modals %}
 
     {% for q in hit.sample.project.questions.all %}
-        {% if q.examples.count > 0 or q.pointers|length > 0 %}
+        {% if q.examples.count > 0 or q.has_pointers > 0 %}
             <div class="modal fade" id="{{ q.name }}_modal" tabindex="-1" role="dialog">
               <div class="modal-dialog">
                 <div class="modal-content">
@@ -98,11 +98,17 @@
     {% if project.instructions %}<p>{{ project.instructions }}</p>{% endif %}
     <p>Hover over each prompt to view detailed explanations of each question, and click to view specific examples and pointers.</p>
     {% if hit.turk %}<form name='mturk_form' method='post' id='mturk_form' action='https://www.mturk.com/mturk/externalSubmit'>
-    {% else %}<form class="form" method="post" action="{% url 'django_learning:code_random_assignment' project.name sample.name %}">
+    {% else %}
+        {% if form_post_path %}
+            <form class="form" method="post" action="{{ form_post_path }}">
+        {% else %}
+            <form class="form" method="post" action="{% url 'django_learning:code_assignment' project.name sample.name %}">
+        {% endif %}
     {% endif %}
         {% csrf_token %}
         {% if hit.turk %}<input type='hidden' value='' name='assignmentId' id='assignmentId'/>{% endif %}
         <input type="hidden" name="hit_id" value="{{ hit.pk }}">
+        <input type="hidden" name="assignment_id" value="{{ assignment.pk }}">
         <div class="row">
             <div class="col-md-5">
                 <div class="panel panel-default">
@@ -116,19 +122,22 @@
                     </div>
                 </div>
                 <fieldset class="form-group">
-                    <textarea name="notes" class="form-control" rows="3" placeholder="Notes"></textarea>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Notes">{% if assignment.notes %}{{ assignment.notes }}{% endif %}</textarea>
                 </fieldset>
                 <label class="form-group">
                     <label class="checkbox-inline">
-                        <input class="zoom" type="checkbox" name="uncodeable" value="1">
-                        Uncodeable
+                        <input class="zoom" type="checkbox" name="uncodeable" value="1"
+                            {% if assignment.uncodeable %}checked="checked"
+                            {% endif %}
+                        >
+                        Needs Review / Uncodeable
                     </label>
                 </label>
             </div>
             <div class="col-md-7">
                 <div class="panel panel-default">
                     <table class="panel-body table table-condensed">
-                        {% for q in hit.sample.project.questions.all %}
+                        {% for q in questions %}
                             <tr>
                                 {% if q.display == 'header' %}
                                     <th colspan="2">
@@ -139,7 +148,7 @@
                                 {% else %}
                                     <td>
                                         {% if q.tooltip %}<span title="{{ q.tooltip }}" data-toggle="tooltip" data-placement="bottom">{% endif %}
-                                            {% if q.examples.count > 0 or q.pointers|length > 0 %}<a href="#" data-toggle="modal" data-target="#{{ q.name }}_modal">{{ q.prompt }}</a>
+                                            {% if q.examples.count > 0 or q.has_pointers %}<a href="#" data-toggle="modal" data-target="#{{ q.name }}_modal">{{ q.prompt }}</a>
                                             {% else %}<a>{{ q.prompt }}</a>
                                             {% endif %}
                                         {% if q.tooltip %}</span>{% endif %}
@@ -148,14 +157,47 @@
                                         <td class="form-group col-md-{{ q.codes.count }}">
                                             {% for label in q.labels.all %}
                                                 <label class="radio-inline">
-                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}" {% if label.select_as_default %}checked="checked"{% endif %}>
+                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}"
+                                                           {% if label.select_as_default and not assignment.time_finished %}checked="checked"
+                                                           {% elif label.pk in q.existing_label_ids %}checked="checked"
+                                                           {% endif %}
+                                                           {% if not q.optional %}required{% endif %}
+                                                    >
                                                     {{ label.label }}
                                                 </label>
                                             {% endfor %}
                                         </td>
                                     {% elif q.display == 'number' %}
                                         <td class="form-group">
-                                            <input class="zoom" type="number" name="{{ q.name }}">
+                                            <input class="zoom" type="number" name="{{ q.name }}"
+                                                   {% if q.existing_value %}value="{{ q.existing_value }}"{% endif %}
+                                                   {% if not q.optional %}required{% endif %}
+                                            >
+                                        </td>
+                                    {% elif q.display == 'dropdown' %}
+                                        <td class="form-group">
+                                            <select class="form-control" name="{{ q.name }}" {% if not q.optional %}required{% endif %}>
+                                                <option value="" disabled {% if q.existing_label_ids|length == 0 %}selected{% endif %}>---</option>
+                                                {% for label in q.labels.all %}
+                                                    <option value="{{ label.pk }}"
+                                                            {% if label.select_as_default and not assignment.time_finished %}checked="checked"
+                                                            {% elif label.pk in q.existing_label_ids %}checked="checked"
+                                                            {% endif %}
+                                                    >{{ label.label }}<!--: {{ q.existing_label_ids }}--></option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                    {% elif q.display == "checkbox" %}
+                                        <td class="form-group">
+                                            {% for label in q.labels.all %}
+                                                {% if not label.select_as_default %}
+                                                    <label><input name="{{ q.name }}" type="checkbox" value="{{ label.pk }}" class="zoom"
+                                                                  {% if label.select_as_default and not assignment.time_finished %}checked="checked"
+                                                                  {% elif label.pk in q.existing_label_ids %}checked="checked"
+                                                                  {% endif %}
+                                                    ></label> <!-- {{ q.existing_label_ids }} -->
+                                                {% endif %}
+                                            {% endfor %}
                                         </td>
                                     {% endif %}
                                 {% endif %}
