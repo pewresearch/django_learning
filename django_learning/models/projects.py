@@ -6,13 +6,16 @@ from django.contrib.contenttypes.fields import GenericRelation
 from pewtils import is_not_null
 from pewtils.django import get_model
 
-from django_learning.managers import QuestionManager
 from django_commander.models import LoggedExtendedModel
+
+from django_learning.managers import QuestionManager
+from django_learning.exceptions import RequiredResponseException
 from django_learning.utils.projects import projects
 from django_learning.utils.project_hit_types import project_hit_types
 from django_learning.utils.project_qualification_tests import project_qualification_tests
 from django_learning.utils.project_qualification_scorers import project_qualification_scorers
 from django_learning.utils.dataset_extractors import dataset_extractors
+
 
 class Project(LoggedExtendedModel):
 
@@ -124,6 +127,7 @@ class Question(LoggedExtendedModel):
     multiple = models.BooleanField(default=False)
     tooltip = models.TextField(null=True)
     priority = models.IntegerField(default=1)
+    optional = models.BooleanField(default=False)
 
     objects = QuestionManager().as_manager()
 
@@ -137,6 +141,13 @@ class Question(LoggedExtendedModel):
     def labels_reversed(self):
         return self.labels.order_by("-priority")
 
+    @property
+    def has_pointers(self):
+        if any(len(l.pointers) > 0 for l in self.labels.all()):
+            return True
+        else:
+            return False
+
     def update_assignment_response(self, assignment, label_values):
 
         existing = assignment.codes.filter(label__question=self)
@@ -144,16 +155,21 @@ class Question(LoggedExtendedModel):
         current = []
         if not self.multiple: labels = [label_values]
         else: labels = label_values
-
-        if self.display == "number":
+        if self.display == "checkbox" and len(labels) == 0:
+            labels = self.labels.filter(select_as_default=True)
+            # if none of the other options were checked, choose the select_as_default option
+        elif self.display == "number":
             labels = [
                 Label.objects.create_or_update(
                     {"question": self, "value": l},
                     {"label": l}
                 ) for l in labels
             ]
+            labels = self.labels.filter(pk__in=[l.pk for l in labels])
         else:
             labels = self.labels.filter(pk__in=[int(l) for l in labels])
+        if labels.count() == 0 and not self.optional:
+            raise RequiredResponseException()
 
         if "qualification" in assignment._meta.verbose_name: fk = "qualification_assignment"
         else: fk = "assignment"
