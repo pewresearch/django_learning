@@ -23,6 +23,7 @@ from scipy.stats import ttest_ind
 
 from django_commander.models import LoggedExtendedModel
 
+from django_learning.settings import CACHE_PATH
 from django_learning.utils import get_document_types, get_pipeline_repr, get_param_repr
 from django_learning.utils.pipelines import pipelines
 from django_learning.utils.dataset_extractors import dataset_extractors
@@ -86,14 +87,14 @@ class LearningModel(LoggedExtendedModel):
         # self.test_ids = None
         # self.predict_y = None
 
-        self.cache = CacheHandler(os.path.join(settings.CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
+        self.cache = CacheHandler(os.path.join(CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
             hash = False,
             use_s3=True,
             aws_access=settings.AWS_ACCESS,
             aws_secret=settings.AWS_SECRET,
             bucket=settings.S3_BUCKET
         )
-        self.temp_cache = CacheHandler(os.path.join(settings.CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
+        self.temp_cache = CacheHandler(os.path.join(CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
             hash=False,
             use_s3=False
         )
