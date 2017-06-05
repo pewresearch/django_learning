@@ -432,7 +432,6 @@ def _render_assignment(request, project, sample, assignment, remaining_count=Non
 
 def _save_response(request, overwrite=False):
 
-    print request.POST
     incomplete = False
     hit = HIT.objects.get(pk=request.POST.get("hit_id"))
     if hit.sample and request.user.coder in hit.sample.project.coders.all() \
@@ -464,7 +463,9 @@ def _save_response(request, overwrite=False):
                         q.update_assignment_resposne(assignment, list(default_labels.values_list("pk", flat=True)))
                     elif default_labels.count() == 1:
                         q.update_assignment_response(assignment, default_labels[0].pk)
-
+            if "uncodeable" not in request.POST.keys():
+                assignment.uncodeable = False
+                assignment.save()
             if not overwrite and not incomplete:
                 assignment.time_finished = datetime.datetime.now()
                 assignment.save()
