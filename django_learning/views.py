@@ -14,6 +14,7 @@ from django.conf import settings
 
 from django_commander.utils import run_command_task
 
+from django_learning.exceptions import RequiredResponseException
 from django_learning.models import *
 from django_learning.functions import *
 from django_learning.utils.projects import projects as project_configs
@@ -314,7 +315,7 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
         request.user.coder._clear_abandoned_sample_assignments(sample)
 
         if sample.hit_type.is_qualified(request.user.coder):
-            return code_random_assignment(request, project.name, sample.name, skip_post=True)
+            return code_assignment(request, project.name, sample.name, skip_post=True)
         else:
             QualificationAssignment.objects.create_or_update({"test": qual_test, "coder": request.user.coder}, return_object=False)
             return _render_qualification_test(request, project, sample, qual_test)
@@ -325,39 +326,20 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
 
 
 @login_required
-def code_random_assignment(request, project_name, sample_name, skip_post=False):
+def code_assignment(request, project_name, sample_name, assignment_id=None, skip_post=False):
 
     if request.method == "POST" and not skip_post:
 
-        hit = HIT.objects.get(pk=request.POST.get("hit_id"))
-        if hit.sample and request.user.coder in hit.sample.project.coders.all():
-
-            assignment = Assignment.objects.get(hit=hit, coder=request.user.coder)
-            if not assignment.time_finished:
-
-                assignment.time_finished = datetime.datetime.now()
-                assignment.save()
-
-                for field in request.POST.keys():
-                    try:
-                        question = hit.sample.project.questions.get(name=field)
-                        question.update_assignment_response(assignment, request.POST.get(field))
-                    except Question.DoesNotExist:
-                        if field == "notes":
-                            assignment.notes = request.POST.get(field)
-                            assignment.save()
-                        elif field == "uncodeable":
-                            if int(request.POST.get(field)) == 1:
-                                assignment.uncodeable = True
-                                assignment.save()
-
-            else:
-
+        try:
+            saved = _save_response(request)
+            if not saved:
                 return view_project(request, project_name)
+        except RequiredResponseException:
+            return render(request, "django_learning/alert.html", {"message": "You didn't fill out all of the required responses"})
 
     project = Project.objects.get(name=project_name)
 
-    if request.user.coder in project.coders.all():
+    if request.user.coder in project.coders.all() or request.user.coder in project.admins.all():
 
         sample = Sample.objects.get(project=project, name=sample_name)
         request.user.coder._clear_abandoned_sample_assignments(sample)
@@ -371,21 +353,29 @@ def code_random_assignment(request, project_name, sample_name, skip_post=False):
 
         if sample.hit_type.is_qualified(request.user.coder):
 
-            queue_ordering = request.GET.getlist("order_queue_by", ["?"])
-            # queue_ordering.reverse()
-            hits_available = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[request.user.coder])\
-                .distinct() # .annotate(c=Count("assignments"))
-            hits_available = hits_available.order_by(*queue_ordering)
+            if assignment_id:
 
-            if hits_available.count() > 0:
-
-                hit = hits_available[0]
-                Assignment.objects.create_or_update({"hit": hit, "coder": request.user.coder}, return_object=False)
-                return _render_hit(request, project, sample, hit, remaining_count=len(hits_available))
+                assignment = Assignment.objects.get(pk=assignment_id)
+                return _render_assignment(request, project, sample, assignment)
 
             else:
-                return render(request, "django_learning/alert.html", {"message": "No available assignments for this sample!"})
-                # return view_project(request, project_name)
+
+                queue_ordering = request.GET.getlist("order_queue_by", ["?"])
+                # queue_ordering.reverse()
+                hits_available = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[request.user.coder])\
+                    .distinct() # .annotate(c=Count("assignments"))
+                hits_available = hits_available.order_by(*queue_ordering)
+
+                if hits_available.count() > 0:
+
+                    hit = hits_available[0]
+                    assignment = Assignment.objects.create_or_update({"hit": hit, "coder": request.user.coder})
+                    return _render_assignment(request, project, sample, assignment, remaining_count=len(hits_available))
+
+                else:
+                    return render(request, "django_learning/alert.html", {"message": "No available assignments for this sample!"})
+                    # return view_project(request, project_name)
+
         else:
             # return view_project(request, project_name)
             return render(request, "django_learning/alert.html", {"message": "You're not qualified to work on these assignments."})
@@ -403,10 +393,10 @@ def _render_qualification_test(request, project, sample, qual_test):
     })
 
 
-def _render_hit(request, project, sample, hit, remaining_count=None):
+def _render_assignment(request, project, sample, assignment, remaining_count=None, form_post_path=None, additional_context=None):
 
-    if hit.template_name:
-        template = "{}.html".format(hit.template_name)
+    if assignment.hit.template_name:
+        template = "{}.html".format(assignment.hit.template_name)
         # for folder in settings.DJANGO_LEARNING_HIT_TEMPLATE_DIRS:
         #     path = os.path.join(folder, "{}.html".format(hit.template_name))
         #     if os.path.exists(path):
@@ -415,13 +405,78 @@ def _render_hit(request, project, sample, hit, remaining_count=None):
     else:
         template = "django_learning/hit.html"
 
-    return render(request, template, {
+    questions = []
+    for q in project.questions.all():
+        if assignment.codes.count() > 0:
+            if q.display in ["radio", "dropdown", "checkbox"]:
+                q.existing_label_ids = list(assignment.codes.filter(label__question=q).values_list("label_id", flat=True))
+            elif q.display == "number":
+                existing = assignment.codes.get_if_exists({"label__question": q})
+                if existing: q.existing_value = existing.label.value
+        questions.append(q)
+
+    context = {
         "remaining_count": remaining_count,
         "project": project,
         "sample": sample,
-        "hit": hit
-    })
+        "assignment": assignment,
+        "hit": assignment.hit,
+        "questions": questions,
+        "form_post_path": form_post_path,
+        "existing_labels": assignment.codes.values_list("label_id", flat=True)
+    }
+    if additional_context:
+        context.update(additional_context)
+    return render(request, template, context)
 
+
+def _save_response(request, overwrite=False):
+
+    print request.POST
+    incomplete = False
+    hit = HIT.objects.get(pk=request.POST.get("hit_id"))
+    if hit.sample and request.user.coder in hit.sample.project.coders.all() \
+            or request.user.coder in hit.sample.project.admins.all():
+
+        assignment = Assignment.objects.get_if_exists({"pk": request.POST.get("assignment_id")})
+        if not assignment:
+            assignment = Assignment.objects.get(hit=hit, coder=request.user.coder)
+        if not assignment.time_finished or overwrite:
+
+            for field in request.POST.keys():
+                try:
+                    question = hit.sample.project.questions.get(name=field)
+                    question.update_assignment_response(assignment, request.POST.get(field))
+                except Question.DoesNotExist:
+                    if field == "notes":
+                        assignment.notes = request.POST.get(field)
+                        assignment.save()
+                    elif field == "uncodeable":
+                        if int(request.POST.get(field)) == 1:
+                            assignment.uncodeable = True
+                            assignment.save()
+                except RequiredResponseException:
+                    incomplete = True
+            for q in hit.sample.project.questions.exclude(name__in=request.POST.keys()):
+                default_labels = q.labels.filter(select_as_default=True)
+                if default_labels.count() > 0:
+                    if q.multiple:
+                        q.update_assignment_resposne(assignment, list(default_labels.values_list("pk", flat=True)))
+                    elif default_labels.count() == 1:
+                        q.update_assignment_response(assignment, default_labels[0].pk)
+
+            if not overwrite and not incomplete:
+                assignment.time_finished = datetime.datetime.now()
+                assignment.save()
+
+        if incomplete:
+            raise RequiredResponseException()
+
+        return True
+
+    else:
+
+        return False
 
 # @login_required
 # def get_dataframe(request, project_name):
