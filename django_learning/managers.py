@@ -22,8 +22,8 @@ class QuestionManager(BasicExtendedManager):
 
     def create_from_config(self, owner_model_name, owner, q, i):
 
-        labels = q.pop("labels", [])
-        examples = q.pop("examples", [])
+        labels = q.get("labels", [])
+        examples = q.get("examples", [])
         question = self.create_or_update(
             {owner_model_name: owner, "name": q["name"]},
             {
