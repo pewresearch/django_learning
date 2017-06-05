@@ -27,11 +27,12 @@ class Command(BasicCommand):
 
         for su in sample.document_units.all():
 
-            HIT.objects.create(
-                sample_unit=su,
-                turk=False,
-                template_name=self.options["template_name"],
-                num_coders=self.options["num_coders"]
+            HIT.objects.create_or_update(
+                {"sample_unit": su, "turk": False},
+                {
+                    "template_name": self.options["template_name"],
+                    "num_coders": self.options["num_coders"]
+                }
             )
 
     def cleanup(self):
