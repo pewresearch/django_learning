@@ -62,7 +62,7 @@
                         <td>{{ available_expert_hits.count }}</td>
                         <td>
                             {% if available_expert_hits.count > 0 and request.user.coder in sample.project.coders.all %}
-                                <a class="btn btn-primary" href="{% url 'django_learning:code_random_assignment' sample.project.name sample.name %}">Start Coding</a>
+                                <a class="btn btn-primary" href="{% url 'django_learning:code_assignment' sample.project.name sample.name %}">Start Coding</a>
                             {% endif %}
                         </td>
                     </tr>
