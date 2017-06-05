@@ -9,7 +9,7 @@ from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
 from pewtils.django import CacheHandler, get_model, get_app_settings_folders, reset_django_connection_wrapper
 
 from django_learning.utils import get_param_repr
-
+from django_learning.settings import CACHE_PATH
 
 
 
@@ -20,7 +20,7 @@ class BasicPreprocessor(object):
         self.params = kwargs
         self.param_repr = str(get_param_repr(self.params))
         if "cache_identifier" in self.params.keys() and is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler(os.path.join(settings.CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
+            self.cache = CacheHandler(os.path.join(CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
         else:
             self.cache = None
 

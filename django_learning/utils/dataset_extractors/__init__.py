@@ -7,6 +7,7 @@ from django.conf import settings
 from pewtils import classproperty, is_not_null, is_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
 from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
 
+from django_learning.settings import CACHE_PATH
 from django_learning.utils.dataset_code_filters import dataset_code_filters
 from django_learning.utils.dataset_coder_filters import dataset_coder_filters
 from django_learning.utils.dataset_document_filters import dataset_document_filters
@@ -18,7 +19,7 @@ class DatasetExtractor(object):
 
         self.outcome_column = outcome_column
         self.cache_hash = None
-        self.cache = CacheHandler(os.path.join(settings.CACHE_PATH, "datasets"),
+        self.cache = CacheHandler(os.path.join(CACHE_PATH, "datasets"),
             hash=False,
             use_s3=True,
             bucket=settings.S3_BUCKET,
