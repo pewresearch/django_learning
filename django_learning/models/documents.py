@@ -169,9 +169,13 @@ class Document(LoggedExtendedModel, QueryModel):
             #     # if not ignore:
             if self.coded_labels.count() > 0:
                 print "Warning: text for document {} was modified, clearing out coded labels".format(self.pk)
+                delete = True
                 import pdb
                 pdb.set_trace()
-                self.codes.all().delete()
+                if delete:
+                    self.codes.all().delete()
+                else:
+                    print "Manual override, skipping"
             # TODO: reenable
             # if self.classified_labels.count() > 0:
             #     print "Warning: text for document {} was modified, clearing out classified labels".format(self.pk)
