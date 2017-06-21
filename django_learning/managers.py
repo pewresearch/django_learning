@@ -36,6 +36,13 @@ class QuestionManager(BasicExtendedManager):
             },
             save_nulls=True
         )
+        if q.get("dependency", None):
+            dep = q.get("dependency", None)
+            other_question = self.model.objects.filter(**{"owner_model_name": owner})\
+                .get(name=dep['question_name'])
+            label = other_question.labels.get(value=dep['label_value'])
+            question.dependency = label
+            question.save()
 
         label_ids = []
         for j, l in enumerate(labels):

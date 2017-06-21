@@ -129,6 +129,8 @@ class Question(LoggedExtendedModel):
     priority = models.IntegerField(default=1)
     optional = models.BooleanField(default=False)
 
+    dependency = models.ForeignKey("django_learning.Label", related_name="dependencies", null=True)
+
     objects = QuestionManager().as_manager()
 
     class Meta:
