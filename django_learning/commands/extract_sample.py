@@ -17,6 +17,7 @@ class Command(BasicCommand):
         parser.add_argument("--sampling_method", default="random", type=str)
         parser.add_argument("--size", default=0, type=int)
         parser.add_argument("--allow_overlap_with_existing_project_samples", default=False, action="store_true")
+        parser.add_argument("--refresh", default=False, action="store_true")
         return parser
 
     def run(self):
@@ -34,7 +35,7 @@ class Command(BasicCommand):
         existing = Sample.objects.get_if_exists(
             {"project": project, "name": self.parameters["sample_name"]}
         )
-        if existing:
+        if existing and not self.options["refresh"]:
             print "Sample '{}' already exists for project '{}'".format(
                 existing,
                 project
