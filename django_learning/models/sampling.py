@@ -165,7 +165,11 @@ class Sample(LoggedExtendedModel):
                 if not use_keyword_searches:
 
                     sample_chunks.append(
-                        SampleExtractor(sampling_strategy=params["sampling_strategy"], id_col="pk").extract(
+                        SampleExtractor(
+                            sampling_strategy=params["sampling_strategy"],
+                            id_col="pk",
+                            stratify_by=params.get("stratify_by", None)
+                        ).extract(
                             frame,
                             sample_size=int(size)
                         )
@@ -176,7 +180,11 @@ class Sample(LoggedExtendedModel):
                     sample_chunks = []
                     non_search_sample_size = 1.0 - sum([s['proportion'] for s in params["sampling_searches"].values()])
                     sample_chunks.append(
-                        SampleExtractor(sampling_strategy=params["sampling_strategy"], id_col="pk").extract(
+                        SampleExtractor(
+                            sampling_strategy=params["sampling_strategy"],
+                            id_col="pk",
+                            stratify_by=params.get("stratify_by", None)
+                        ).extract(
                             frame[frame['none'] == 1],
                             sample_size=int(math.ceil(size * non_search_sample_size))
                         )
@@ -184,7 +192,11 @@ class Sample(LoggedExtendedModel):
 
                     for search, p in params["sampling_searches"].iteritems():
                         sample_chunks.append(
-                            SampleExtractor(sampling_strategy=params["sampling_strategy"], id_col="pk").extract(
+                            SampleExtractor(
+                                sampling_strategy=params["sampling_strategy"],
+                                id_col="pk",
+                                stratify_by=params.get("stratify_by", None)
+                            ).extract(
                                 frame[frame[search] == 1],
                                 sample_size=int(math.ceil(size * p["proportion"]))
                             )
