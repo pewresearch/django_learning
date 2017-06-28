@@ -1,4 +1,6 @@
 import pandas, datetime
+
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from logos.models import *
@@ -19,7 +21,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         from logos.utils.io import FileHandler
-        h = FileHandler("output/queries/partisan_antipathy", use_s3=True)
+        h = FileHandler("output/queries/partisan_antipathy",
+            use_s3=True,
+            bucket=settings.S3_BUCKET,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY
+        )
 
         print "Processing Facebook Posts"
 

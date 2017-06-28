@@ -1,4 +1,6 @@
 import pandas, datetime
+
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from logos.models import *
@@ -46,7 +48,12 @@ class Command(BaseCommand):
                     })
             from logos.utils.io import FileHandler
             df = pandas.DataFrame(rows)
-            h = FileHandler("output/queries/partisan_antipathy", use_s3=True)
+            h = FileHandler("output/queries/partisan_antipathy",
+                use_s3=True,
+                bucket=settings.S3_BUCKET,
+                aws_access=settings.AWS_ACCESS_KEY_ID,
+                aws_secret=settings.AWS_SECRET_ACCESS_KEY
+            )
             h.write("classifier_precision_recall_scores", df, format="csv")
 
         elif filename.startswith("politician_"):

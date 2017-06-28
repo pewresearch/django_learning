@@ -1,5 +1,7 @@
 import pandas, math, re, numpy, cPickle, copy
 
+from django.conf import settings
+
 from logos.learning.supervised import DocumentClassificationHandler
 from logos.models import *
 from logos.utils import is_not_null, is_null
@@ -336,5 +338,10 @@ class Command(BaseCommand):
         else:
             suffix = ""
 
-        h = FileHandler("output/queries/partisan_antipathy", use_s3=True)
+        h = FileHandler("output/queries/partisan_antipathy",
+            use_s3=True,
+            bucket=settings.S3_BUCKET,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY
+        )
         h.write("model_scores_final{}".format(suffix), scores_output_df[ordered_cols], format="csv")
