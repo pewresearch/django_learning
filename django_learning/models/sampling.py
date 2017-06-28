@@ -131,6 +131,8 @@ class Sample(LoggedExtendedModel):
             print "Extracting sampling frame"
 
             docs = self.frame.documents.all()
+            if size and size < 1 and size > 0:
+                size = int(len(docs)*size)
             if not allow_overlap_with_existing_project_samples and not recompute_weights:
                 existing_doc_ids = SampleUnit.objects.filter(sample__project=self.project).values_list("document_id", flat=True)
                 docs = docs.exclude(pk__in=existing_doc_ids)
