@@ -31,14 +31,14 @@ class Command(BaseCommand):
 
         mturk = MTurk(sandbox=(not options["prod"]))
 
-        # print "Applying latest project blacklist"
+        # print "Applying latest project inactive_coders"
         # blacklist_path = os.path.join(PROJECT_ROOT, "limecoder", "coders.txt")
         # if os.path.exists(blacklist_path):
         #     with closing(open(blacklist_path, "r")) as input:
         #         for coder_id in input.readlines():
         #             for b in project.batches.all():
         #                 bad_coder = Coder.objects.get(pk=coder_id.strip())
-        #                 project.blacklist.add(bad_coder)
+        #                 project.inactive_coders.add(bad_coder)
         #                 mturk.revoke_user_qualification(b, bad_coder)
 
         if options["loop"]:
