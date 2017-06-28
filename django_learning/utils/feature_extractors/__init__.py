@@ -6,7 +6,7 @@ from pewtils import is_not_null, decode_text, extract_attributes_from_folder_mod
 from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
 from django_learning.utils import get_param_repr
 from django_learning.utils.preprocessors import preprocessors
-from django_learning.settings import CACHE_PATH
+from django_learning.settings import LOCAL_CACHE_PATH
 
 from django.conf import settings
 
@@ -46,7 +46,7 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
 
         self.param_repr = str(get_param_repr(self.params))
         if is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler(os.path.join(CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
+            self.cache = CacheHandler(os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
 
         return self
 

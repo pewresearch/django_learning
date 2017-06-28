@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.core.management.base import BaseCommand, CommandError
 
 from logos.models import Coder, CodeVariable
-from logos.settings import CACHE_ROOT
+from logos.settings import LOCAL_CACHE_ROOT
 from logos.utils import get_model_by_document_type
 
 class Command(BaseCommand):
@@ -34,14 +34,14 @@ class Command(BaseCommand):
 
         keyname = options["filename"]
         filename = keyname.replace("/", "_")
-        if not os.path.exists(os.path.join(CACHE_ROOT, filename)):
+        if not os.path.exists(os.path.join(LOCAL_CACHE_ROOT, filename)):
 
             conn = boto.connect_s3()
             bucket = conn.get_bucket("pew-lab-internal")
             key = bucket.get_key(keyname)
-            key.get_contents_to_filename(os.path.join(CACHE_ROOT, filename))
+            key.get_contents_to_filename(os.path.join(LOCAL_CACHE_ROOT, filename))
 
-        df = pandas.read_csv(os.path.join(CACHE_ROOT, filename))
+        df = pandas.read_csv(os.path.join(LOCAL_CACHE_ROOT, filename))
         del df["Answer.comment"]
         answer_cols = [answer for answer in df.columns if answer.split('.')[0] == 'Answer']
         doc_model, doc_col = None, None

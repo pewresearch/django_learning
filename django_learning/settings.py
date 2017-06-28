@@ -11,15 +11,19 @@ for setting, default in [
     ("AWS_SECRET_ACCESS_KEY", None),
     ("DJANGO_LEARNING_BASE_TEMPLATE", "django_learning/_template.html"),
     ("S3_BUCKET", ""),
-    ("CACHE_ROOT", "")
+    ("LOCAL_CACHE_ROOT", ""),
+    ("S3_CACHE_ROOT", "")
 ]:
     if not getattr(settings, setting, None):
         globals()[setting] = default
     else:
         globals()[setting] = getattr(settings, setting)
 
-CACHE_PATH = os.path.join(globals()["CACHE_ROOT"], "django_learning")
-globals()["CACHE_PATH"] = CACHE_PATH
+LOCAL_CACHE_PATH = os.path.join(globals()["LOCAL_CACHE_ROOT"], "django_learning")
+globals()["LOCAL_CACHE_PATH"] = LOCAL_CACHE_PATH
+
+S3_CACHE_PATH = os.path.join(globals()["S3_CACHE_ROOT"], "django_learning")
+globals()["S3_CACHE_PATH"] = S3_CACHE_PATH
 
 TEMPLATES = [
     {

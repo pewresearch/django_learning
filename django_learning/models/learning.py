@@ -23,7 +23,7 @@ from scipy.stats import ttest_ind
 
 from django_commander.models import LoggedExtendedModel
 
-from django_learning.settings import CACHE_PATH
+from django_learning.settings import S3_CACHE_PATH, LOCAL_CACHE_PATH
 from django_learning.utils import get_document_types, get_pipeline_repr, get_param_repr
 from django_learning.utils.pipelines import pipelines
 from django_learning.utils.dataset_extractors import dataset_extractors
@@ -57,6 +57,9 @@ class LearningModel(LoggedExtendedModel):
 
         abstract = True
 
+    def __str__(self):
+        return self.name
+
     def __init__(self, *args, **kwargs):
 
         super(LearningModel, self).__init__(*args, **kwargs)
@@ -87,14 +90,14 @@ class LearningModel(LoggedExtendedModel):
         # self.test_ids = None
         # self.predict_y = None
 
-        self.cache = CacheHandler(os.path.join(CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
+        self.cache = CacheHandler(os.path.join(S3_CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
             hash = False,
             use_s3=True,
-            aws_access=settings.AWS_ACCESS,
-            aws_secret=settings.AWS_SECRET,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
             bucket=settings.S3_BUCKET
         )
-        self.temp_cache = CacheHandler(os.path.join(CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
+        self.temp_cache = CacheHandler(os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
             hash=False,
             use_s3=False
         )
