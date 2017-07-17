@@ -186,7 +186,7 @@ class Sample(LoggedExtendedModel):
                             stratify_by=params.get("stratify_by", None)
                         ).extract(
                             frame[frame['none'] == 1],
-                            sample_size=int(math.ceil(size * non_search_sample_size))
+                            sample_size=int(math.ceil(float(size) * non_search_sample_size))
                         )
                     )
 
