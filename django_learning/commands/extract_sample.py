@@ -15,7 +15,7 @@ class Command(BasicCommand):
         parser.add_argument("sample_name", type=str)
         parser.add_argument("--sampling_frame_name", default="all_documents", type=str)
         parser.add_argument("--sampling_method", default="random", type=str)
-        parser.add_argument("--size", default=0)
+        parser.add_argument("--size", default=0, type=int)
         parser.add_argument("--allow_overlap_with_existing_project_samples", default=False, action="store_true")
         parser.add_argument("--refresh", default=False, action="store_true")
         return parser
