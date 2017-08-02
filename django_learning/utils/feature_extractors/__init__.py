@@ -2,7 +2,7 @@ import os
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from pewtils import is_not_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
+from pewtils import is_not_null, is_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
 from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
 from django_learning.utils import get_param_repr
 from django_learning.utils.preprocessors import preprocessors
@@ -34,6 +34,14 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
         self.param_repr = str(get_param_repr(self.params))
         self.cache = None
         self.set_params(*args, **kwargs)
+
+    # TODO: auto-feature-fill code below needs to be tested
+    # def transform(self, *args, **kwargs):
+    #
+    #     results = super(BasicExtractor, self).transform(*args, **kwargs)
+    #     if hasattr(self, "features") and is_null(self.features) and hasattr(results, "columns"):
+    #         self.features = results.columns
+    #     return results
 
     def get_params(self, *args, **kwargs):
 
