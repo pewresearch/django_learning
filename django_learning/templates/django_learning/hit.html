@@ -44,6 +44,8 @@
         <script type='text/javascript' src='https://s3.amazonaws.com/mturk-public/externalHIT_v1.js'></script>
     {% endif %}
 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
 {% endblock %}
 
 {% block modals %}
@@ -75,10 +77,12 @@
                           </tr>
                       </table>
 
-                      <h4>Examples</h4>
-                      <table class="table table-condensed">
-                          {% for e in q.examples.all %}<tr><td class="col-md-6">"{{ e.quote }}"</td><td class="col-md-6">{{ e.explanation }}</td></tr>{% endfor %}
-                      </table>
+                      {% if q.examples.count > 0 %}
+                          <h4>Examples</h4>
+                          <table class="table table-condensed">
+                              {% for e in q.examples.all %}<tr><td class="col-md-6">"{{ e.quote }}"</td><td class="col-md-6">{{ e.explanation }}</td></tr>{% endfor %}
+                          </table>
+                      {% endif %}
 
                   </div>
                   <div class="modal-footer">
@@ -138,7 +142,7 @@
                 <div class="panel panel-default">
                     <table class="panel-body table table-condensed">
                         {% for q in questions %}
-                            <tr>
+                            <tr id="tr_{{ q.name }}" data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}">
                                 {% if q.display == 'header' %}
                                     <th colspan="2">
                                         {% if q.tooltip %}<a href="#" data-toggle="tooltip" title="{{ q.tooltip }}">{{ q.prompt }}</a>
@@ -157,11 +161,11 @@
                                         <td class="form-group col-md-{{ q.codes.count }}">
                                             {% for label in q.labels.all %}
                                                 <label class="radio-inline">
-                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}"
+                                                    <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}" id="{{ q.name }}_{{ label.value }}"
                                                            {% if label.select_as_default and not assignment.time_finished %}checked="checked"
                                                            {% elif label.pk in q.existing_label_ids %}checked="checked"
                                                            {% endif %}
-                                                           {% if not q.optional %}required{% endif %}
+                                                           {% if not q.optional %}required data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                                     >
                                                     {{ label.label }}
                                                 </label>
@@ -171,12 +175,12 @@
                                         <td class="form-group">
                                             <input class="zoom" type="number" name="{{ q.name }}"
                                                    {% if q.existing_value %}value="{{ q.existing_value }}"{% endif %}
-                                                   {% if not q.optional %}required{% endif %}
+                                                   {% if not q.optional %}required data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                             >
                                         </td>
                                     {% elif q.display == 'dropdown' %}
                                         <td class="form-group">
-                                            <select class="form-control" name="{{ q.name }}" {% if not q.optional %}required{% endif %}>
+                                            <select class="form-control" name="{{ q.name }}" {% if not q.optional %}required data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}>
                                                 <option value="" disabled {% if q.existing_label_ids|length == 0 %}selected{% endif %}>---</option>
                                                 {% for label in q.labels.all %}
                                                     <option value="{{ label.pk }}"
@@ -195,7 +199,7 @@
                                                                   {% if label.select_as_default and not assignment.time_finished %}checked="checked"
                                                                   {% elif label.pk in q.existing_label_ids %}checked="checked"
                                                                   {% endif %}
-                                                    ></label> <!-- {{ q.existing_label_ids }} -->
+                                                    > {{ label.label }}</label> <!-- {{ q.existing_label_ids }} -->
                                                 {% endif %}
                                             {% endfor %}
                                         </td>
@@ -235,9 +239,39 @@
 
     <script>
         $(document).ready(function(){
+
             $('[data-toggle="tooltip"]').tooltip();
+
+            {% for q in questions %}
+                {% if q.dependency %}
+                    // hide everything
+                    $('tr[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
+                    // remove required
+                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',false);
+
+                    {% for opt in q.dependency.question.labels.all %}
+                        {% if opt.value != q.dependency.value %}
+                            $("#{{ opt.question.name }}_{{ opt.value }}").on("click", function(){
+                                $("tr[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                                // remove required
+                                $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',false);
+                                //$("#tr_topic").hide();
+                            });
+                        {% endif %}
+                    {% endfor %}
+
+                    $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").on("click", function(){
+                        //$("#tr_topic").show();
+                        $('tr[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').show();
+                        // remove required
+                        $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',true);
+                    });
+                {% endif %}
+            {% endfor %}
+
         });
     </script>
+
     {% if hit.turk %}<script language='Javascript'>turkSetAssignmentID();</script>{% endif %}
 
 {% endblock %}
