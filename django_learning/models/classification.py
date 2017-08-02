@@ -117,19 +117,59 @@ class ClassificationModel(LearningModel):
                     print "Error: {}, {}".format(c, f)
 
     @require_model
-    def print_report(self):
+    def describe_model(self):
 
-        super(ClassificationModel, self).print_report()
-
-        print "Detailed classification report:"
-        print classification_report(self.test_y, self.predict_y,
-                                    sample_weight=self.test_x['sampling_weight'] if self.parameters["model"].get(
-                                        "use_sample_weights", False) else None)
-
-        print "Confusion matrix:"
-        print confusion_matrix(self.test_y, self.predict_y)
-
+        super(ClassificationModel, self).describe_model()
         self.show_top_features()
+
+    @require_model
+    def get_test_prediction_results(self, refresh=False, parse_report=False):
+
+        results = super(ClassificationModel, self).get_test_prediction_results(refresh=refresh)
+
+        report = classification_report(
+            self.test_dataset[self.dataset_extractor.outcome_column],
+            self.predict_dataset[self.dataset_extractor.outcome_column],
+            sample_weight=self.test_dataset["sampling_weight"] if "sampling_weight" in self.test_dataset.columns and
+                                                                  self.parameters["model"].get("use_sample_weights",
+                                                                                               False) else None
+        )
+
+        matrix = confusion_matrix(
+            self.test_dataset[self.dataset_extractor.outcome_column],
+            self.predict_dataset[self.dataset_extractor.outcome_column]
+        )
+
+        if parse_report:
+            rows = []
+            for row in report.split("\n"):
+                row = row.strip().split()
+                if len(row) == 7:
+                    row = row[2:]
+                if len(row) == 5:
+                    rows.append({
+                        "class": row[0],
+                        "precision": row[1],
+                        "recall": row[2],
+                        "f1-score": row[3],
+                        "support": row[4]
+                    })
+            report = pandas.DataFrame(rows)
+
+        return {
+            "results": results,
+            "classification_report": report,
+            "confusion_matrix": matrix
+        }
+
+    def print_test_prediction_report(self):
+
+        results = self.get_test_prediction_results()
+        print "Results: {}".format(results['results'])
+        print "Classification report: "
+        print results['classification_report']
+        print "Confusion matrix: "
+        print results['confusion_matrix']
 
     @require_model
     def get_incorrect_predictions(self, actual_code=None):
@@ -140,27 +180,6 @@ class ClassificationModel(LearningModel):
         if actual_code:
             df = df[df[self.outcome_column] == actual_code]
         return df
-
-    @require_model
-    def get_report_results(self):
-
-        rows = []
-        report = classification_report(self.test_y, self.predict_y,
-                                       sample_weight=self.test_x['sampling_weight'] if self.parameters["model"].get(
-                                           "use_sample_weights", False) else None)
-        for row in report.split("\n"):
-            row = row.strip().split()
-            if len(row) == 7:
-                row = row[2:]
-            if len(row) == 5:
-                rows.append({
-                    "class": row[0],
-                    "precision": row[1],
-                    "recall": row[2],
-                    "f1-score": row[3],
-                    "support": row[4]
-                })
-        return rows
 
 
 class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):

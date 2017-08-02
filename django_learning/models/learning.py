@@ -31,6 +31,7 @@ from django_learning.utils.decorators import require_training_data, require_mode
 from django_learning.utils.feature_extractors import BasicExtractor
 from django_learning.utils.models import models as learning_models
 from django_learning.utils.scoring import compute_scores_from_datasets_as_coders
+from django_learning.utils.scoring_functions import scoring_functions
 
 from pewtils import is_not_null, is_null, decode_text, recursive_update
 from pewtils.django import get_model, CacheHandler
@@ -67,13 +68,18 @@ class LearningModel(LoggedExtendedModel):
         params = {}
         if self.pipeline_name:
             params.update(pipelines[self.pipeline_name]())
-        self.parameters = recursive_update(params, self.parameters if self.parameters else {})
+        try: self.parameters = recursive_update(params, self.parameters if self.parameters else {})
+        except AttributeError:
+            print "WARNING: couldn't update parameters from pipeline, it may not exist anymore!"
 
         self.cache_identifier = "{}_{}".format(self.name, self.pipeline_name)
 
-        self.dataset_extractor = dataset_extractors[self.parameters["dataset_extractor"]["name"]](
-            **self.parameters["dataset_extractor"]["parameters"]
-        )
+        try:
+            self.dataset_extractor = dataset_extractors[self.parameters["dataset_extractor"]["name"]](
+                **self.parameters["dataset_extractor"]["parameters"]
+            )
+        except TypeError:
+            print "WARNING: couldn't identify dataset extractor, it may not exist anymore!"
         self.dataset = None
 
         self.model = None
@@ -114,9 +120,9 @@ class LearningModel(LoggedExtendedModel):
 
         super(LearningModel, self).save(*args, **kwargs)
 
-    def extract_dataset(self, refresh=False):
+    def extract_dataset(self, refresh=False, **kwargs):
 
-        self.dataset = self.dataset_extractor.extract(refresh=refresh)
+        self.dataset = self.dataset_extractor.extract(refresh=refresh, **kwargs)
         if hasattr(self.dataset_extractor, "project") and self.dataset_extractor.project:
             self.project = get_model("Project", app_name="django_learning").objects.get(name=self.dataset_extractor.project.name)
             self.save()
@@ -140,6 +146,9 @@ class LearningModel(LoggedExtendedModel):
 
         if not refresh and self.cache_hash:
             cache_data = self.cache.read(self.cache_hash)
+            # note: if you hit an ImportError when loading the pickle, you probably need to
+            # scroll up to the top and load a utils module in this file
+            # (e.g. from django_learning.utils.scoring_functions import scoring_functions)
 
         if is_null(cache_data) and not only_load_existing:
 
@@ -171,6 +180,7 @@ class LearningModel(LoggedExtendedModel):
             cache_data = self._train_model(pipeline_steps, params, **kwargs)
             self.cache.write(updated_hashstr, cache_data)
             self.cache_hash = updated_hashstr
+            self.cv_folds = None
             self.save()
 
         if is_not_null(cache_data):
@@ -257,21 +267,47 @@ class LearningModel(LoggedExtendedModel):
 
         return cache_data
 
+    @require_model
+    def describe_model(self):
+
+        print "'{}' results".format(self.dataset_extractor.outcome_column)
+
+        print "Best score: {} ({} std.)".format(self.model.best_score_,
+                                                getattr(self.model, "best_score_std_", None))
+
+        # print "Best parameters:"
+        # params = self.model.best_params_
+        # for p in params.keys():
+        #     if p.endswith("__stop_words"):
+        #         del params[p]
+        # print params
 
     @require_model
-    def evaluate_model(self, refresh=False):
+    def get_test_prediction_results(self, refresh=False):
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
-            print "Predicting hold-out data"
             self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main", refresh=refresh)
             scores = self.compute_prediction_scores(self.test_dataset, cache_key="predict_main", refresh=False)
-            print scores
+            return scores
 
+    def print_test_prediction_report(self):
+
+        print self.get_test_prediction_results()
+
+    @require_model
+    def get_cv_prediction_results(self, refresh=False):
+
+        print "Computing cross-fold predictions"
         _final_model = self.model
         _final_model_best_estimator = self.model.best_estimator_
         all_fold_scores = []
-        for i, folds in enumerate(KFold(n_splits=self.parameters["model"].get("cv", 5), shuffle=True).split(self.dataset.index)):
+        if not refresh and self.cv_folds:
+            cv_folds = self.cv_folds
+        else:
+            self.cv_folds = [f for f in KFold(n_splits=self.parameters["model"].get("cv", 5), shuffle=True).split(self.dataset.index)]
+            self.save()
+        for i, folds in enumerate(self.cv_folds):
             fold_train_index, fold_test_index = folds
             fold_train_dataset = self.dataset.ix[fold_train_index]
             fold_test_dataset = self.dataset.ix[fold_test_index]
@@ -281,11 +317,14 @@ class LearningModel(LoggedExtendedModel):
             all_fold_scores.append(fold_scores)
         self.model = _final_model
         fold_score_df = pandas.concat(all_fold_scores)
-        print pandas.concat([
+        return pandas.concat([
             all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
             fold_score_df.groupby(fold_score_df.index).mean()
         ], axis=1)
 
+    def print_cv_prediction_report(self):
+
+        print self.get_cv_prediction_results()
 
     def _get_scoring_function(self, func_name, binary_base_code=None):
 
@@ -381,21 +420,6 @@ class LearningModel(LoggedExtendedModel):
         return [f for sublist in features for f in sublist]
 
     @require_model
-    def print_report(self):
-
-        print "'{}' results".format(self.dataset.outcome_column)
-
-        print "Best score: {} ({} std.)".format(self.model.best_score_,
-                                                getattr(self.model, "best_score_std_", None))
-
-        # print "Best parameters:"
-        # params = self.model.best_params_
-        # for p in params.keys():
-        #     if p.endswith("__stop_words"):
-        #         del params[p]
-        # print params
-
-    @require_model
     @temp_cache_wrapper
     def apply_model(self, data, keep_cols=None, clear_temp_cache=True):
 
@@ -433,7 +457,7 @@ class LearningModel(LoggedExtendedModel):
         if "sampling_weight" in df_to_predict.columns: weight_col = "sampling_weight"
         else: weight_col = None
         predicted_df = self.produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh)
-        return compute_scores_from_datasets_as_coders(df_to_predict, predicted_df, "index", self.outcome_column, weight_column=weight_col)
+        return compute_scores_from_datasets_as_coders(df_to_predict, predicted_df, "index", self.dataset_extractor.outcome_column, weight_column=weight_col)
 
 
 class DocumentLearningModel(LearningModel):
