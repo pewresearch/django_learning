@@ -115,17 +115,30 @@
                 <div class="panel-heading">Mechanical Turk HITs</div>
                 <table class="panel-body table table-condensed">
                     <tr>
+                        <th>Coder</th>
                         <th>Total HITs</th>
                         <th>HITs Completed</th>
                         <th>Total Assignments</th>
                         <th>Assignments Completed</th>
                     </tr>
                     <tr>
+                        <td>ALL</td>
                         <td>{{ total_turk_hits.count }}</td>
                         <td>{{ completed_turk_hits.count }}</td>
                         <td>{{ total_turk_assignments }}</td>
                         <td>{{ completed_turk_assignments.count }}</td>
                     </tr>
+                    {% if request.user.coder in sample.project.admins.all %}
+                        {% for coder in mturk_coder_completion %}
+                            <tr>
+                                <td>{{ coder.coder.name }}</td>
+                                <td></td>
+                                <td></td>
+                                <td>{{ coder.total_turk_assignments.count }}</td>
+                                <td>{{ coder.completed_turk_assignments.count }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
                 </table>
             </div>
         </div>

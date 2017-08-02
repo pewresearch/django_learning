@@ -223,22 +223,35 @@ def view_sample(request, project_name, sample_name):
     total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
     completed_turk_assignments = filter_assignments(sample=sample, completed_only=True, turk_only=True)
 
-    coder_completion = []
+    expert_coder_completion = []
+    mturk_coder_completion = []
     if request.user.coder in project.admins.all():
-        for coder in project.coders.exclude(pk=request.user.coder.pk):
+
+        for coder in project.coders.exclude(pk=request.user.coder.pk).filter(is_mturk=False):
             assignments = sample.assignments.filter(coder=coder).count()
             if assignments > 0:
-                coder_available_expert_hits = filter_hits(sample=sample, unfinished_only=True, experts_only=True,
-                                                    exclude_coders=[coder])
+                coder_available_expert_hits = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[coder])
                 coder_completed_expert_hits = filter_hits(
-                    assignments=filter_assignments(sample=sample, experts_only=True, coder=coder,
-                                                   completed_only=True),
-                    experts_only=True)
-                coder_completion.append({
+                    assignments=filter_assignments(sample=sample, experts_only=True, coder=coder, completed_only=True),
+                    experts_only=True
+                )
+                expert_coder_completion.append({
                     "coder": coder,
                     "completed_expert_hits": coder_completed_expert_hits,
                     "available_expert_hits": coder_available_expert_hits
                 })
+
+        for coder in project.coders.exclude(pk=request.user.coder.pk).filter(is_mturk=True):
+            assignments = sample.assignments.filter(coder=coder).count()
+            if assignments > 0:
+                coder_completed_turk_assignments = filter_assignments(sample=sample, turk_only=True, coder=coder, completed_only=True)
+                coder_total_turk_assignments = filter_assignments(sample=sample, turk_only=True, coder=coder)
+                mturk_coder_completion.append({
+                    "coder": coder,
+                    "completed_turk_assignments": coder_completed_turk_assignments,
+                    "total_turk_assignments": coder_total_turk_assignments
+                })
+        mturk_coder_completion = sorted(mturk_coder_completion, key=lambda x: x["completed_turk_assignments"], reverse=True)
 
     return render(request, "django_learning/sample.html", {
         "sample": sample,
@@ -249,7 +262,8 @@ def view_sample(request, project_name, sample_name):
         "completed_turk_hits": completed_turk_hits,
         "total_turk_assignments": total_turk_assignments,
         "completed_turk_assignments": completed_turk_assignments,
-        "coder_completion": coder_completion
+        "expert_coder_completion": expert_coder_completion,
+        "mturk_coder_completion": mturk_coder_completion
     })
 
 
