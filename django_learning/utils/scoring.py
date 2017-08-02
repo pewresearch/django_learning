@@ -92,10 +92,10 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
 
     pos_labels = []
     if discrete_classes:
-        if len(outcome_values) == 2:
-            pos_labels = [dataset[outcome_column].value_counts().index[0]]
-        else:
-            pos_labels = outcome_values
+        # if len(outcome_values) == 2:
+        #     pos_labels = [dataset[outcome_column].value_counts().index[-1]]
+        # else:
+        pos_labels = outcome_values
 
     scores = []
     combo_count = 0
@@ -129,8 +129,16 @@ def compute_overall_scores_from_dataset(dataset, document_column, outcome_column
     except ZeroDivisionError:
         alpha = None
 
+    # min_coder = dataset.groupby(coder_column).count()[document_column].sort_values().index[0]
+    # doc_subset = dataset[dataset[coder_column]==min_coder][document_column].unique()
+    # dataset = dataset[dataset[document_column].isin(doc_subset)]
+
+    grouped = dataset.groupby(document_column).count()
+    complete_docs = grouped[grouped[coder_column]==len(dataset[coder_column].unique())].index
+    dataset = dataset[dataset[document_column].isin(complete_docs)]
     df = dataset.groupby([outcome_column, document_column]).count()[[coder_column]]
     df = df.unstack(outcome_column).fillna(0)
+
     kappa = fleiss_kappa(df)
 
     return {
