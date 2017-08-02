@@ -1,3 +1,5 @@
+import re
+
 from tqdm import tqdm
 
 from django.template.loader import render_to_string
@@ -18,16 +20,15 @@ class MTurk(object):
 
     def __init__(self, sandbox=True):
 
+        self.sandbox = sandbox
         if sandbox:
             mturk_host = "mechanicalturk.sandbox.amazonaws.com"
         else:
-            print "WAHHHHH NOPE YOU'RE IN PRODUCTION"
-        # else:
-        #     mturk_host = "mechanicalturk.amazonaws.com"
+            mturk_host = "mechanicalturk.amazonaws.com"
 
         self.conn = MTurkConnection(
-            aws_access_key_id=settings.DJANGO_LEARNING_AWS_ACCESS,
-            aws_secret_access_key=settings.DJANGO_LEARNING_AWS_SECRET,
+            aws_access_key_id=settings.MTURK_API_ACCESS,
+            aws_secret_access_key=settings.MTURK_API_SECRET,
             host=mturk_host
         )
 
@@ -37,27 +38,31 @@ class MTurk(object):
 
         quals = Qualifications()
 
-        quals.add(
-            PercentAssignmentsApprovedRequirement(
-                comparator="GreaterThan",
-                integer_value=str(int(hit_type.min_approve_pct * 100)),
-                required_to_preview=True
+        if not self.sandbox:
+
+            quals.add(MasterRequirement(sandbox=False))
+
+            quals.add(
+                PercentAssignmentsApprovedRequirement(
+                    comparator="GreaterThan",
+                    integer_value=str(int(hit_type.min_approve_pct * 100)),
+                    required_to_preview=True
+                )
             )
-        )
-        quals.add(
-            NumberHitsApprovedRequirement(
-                comparator="GreaterThan",
-                integer_value=str(hit_type.min_approve_cnt),
-                required_to_preview=True
+            quals.add(
+                NumberHitsApprovedRequirement(
+                    comparator="GreaterThan",
+                    integer_value=str(hit_type.min_approve_cnt),
+                    required_to_preview=True
+                )
             )
-        )
-        quals.add(
-            LocaleRequirement(
-                "EqualTo",
-                "US",
-                required_to_preview=True
+            quals.add(
+                LocaleRequirement(
+                    "EqualTo",
+                    "US",
+                    required_to_preview=True
+                )
             )
-        )
 
         hit_type_qual_tests = hit_type.project.qualification_tests.all() | hit_type.qualification_tests.all()
 
@@ -121,7 +126,7 @@ class MTurk(object):
                     qualification_test.name,
                     "You must answer a few quick questions before qualifying for these HITs.",
                     "Active",
-                    # TODO: reenable for postgres; keywords=qualification_test.keywords,
+                    keywords=qualification_test.keywords,
                     retry_delay=None,
                     test_duration=qualification_test.duration_minutes * 60,
                     auto_granted=False,
@@ -144,7 +149,7 @@ class MTurk(object):
             decode_text(hit_type.description),
             hit_type.price,
             hit_type.duration_minutes * 60,
-            # TODO: reenable for postgres; keywords=hit_type.keywords,
+            keywords=hit_type.keywords,
             approval_delay=hit_type.approval_wait_hours * 60 * 60,
             qual_req=quals
         )[0].HITTypeId
@@ -175,35 +180,45 @@ class MTurk(object):
 
         for su in tqdm(sample.document_units.all(), desc="Creating HITs", total=sample.document_units.count()):
 
-            hit = HIT.objects.create(
-                sample=sample,
-                sample_unit=su,
-                num_coders=num_coders,
-                template_name=template_name,
-                turk=True
-            )
+            existing = HIT.objects.get_if_exists({
+                "sample_unit": su, "turk": False
+            })
+            if existing and existing.turk_id:
+                print "Skipping existing HIT: {}".format(existing)
+            else:
 
-            try:
-                html = render_to_string(template_path, {
-                    "project": sample.project,
-                    "sample": sample,
-                    "hit": hit,
-                    "questions": hit.sample.project.questions.order_by("priority")
-                })
-                turk_hit = HTMLQuestion(html, "1000")
+                hit = HIT.objects.create_or_update(
+                    {"sample_unit": su, "turk": True},
+                    {
+                        "template_name": template_name,
+                        "num_coders": num_coders
+                    }
+                )
 
-                hit.turk_id = self.conn.create_hit(
-                    question=turk_hit,
-                    max_assignments=num_coders,
-                    lifetime=sample.hit_type.lifetime_days * 60 * 60 * 24,
-                    hit_type=sample.hit_type.turk_id
-                )[0].HITId
-
-                hit.save()
-
-            except Exception as e:
-                import pdb
-                pdb.set_trace()
+                try:
+                    html = render_to_string(template_path, {
+                        "project": sample.project,
+                        "sample": sample,
+                        "hit": hit,
+                        "questions": hit.sample.project.questions.order_by("priority"),
+                        "django_learning_template": "django_learning/_template.html" # settings.DJANGO_LEARNING_BASE_TEMPLATE
+                    })
+                    # html = re.sub("\t{2,}", " ", html)
+                    # html = re.sub("\n{2,}", "\n\n", html)
+                    # html = re.sub("\r{2,}", "\r\r", html)
+                    html = re.sub("[^\S\r\n]{2,}", " ", html)
+                    turk_hit = HTMLQuestion(html, "1000")
+                    response = self.conn.create_hit(
+                        question=turk_hit,
+                        max_assignments=num_coders,
+                        lifetime=sample.hit_type.lifetime_days * 60 * 60 * 24,
+                        hit_type=sample.hit_type.turk_id
+                    )
+                    hit.turk_id = response[0].HITId
+                    hit.save()
+                except Exception as e:
+                    import pdb
+                    pdb.set_trace()
 
     def sync_sample_hits(self, sample):
 
@@ -217,7 +232,7 @@ class MTurk(object):
 
                 for a in self._get_hit_assignments(str(hit.turk_id)):
 
-                    coder = Coder.objects.create_or_update({"name": a.WorkerId}, {"turk": True})
+                    coder = Coder.objects.create_or_update({"name": a.WorkerId}, {"is_mturk": True})
                     sample.project.coders.add(coder)
                     # time_spent = (datetime.datetime.strptime(a.SubmitTime, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(a.AcceptTime, "%Y-%m-%dT%H:%M:%SZ")).seconds
                     # if time_spent >= 10:
@@ -254,14 +269,13 @@ class MTurk(object):
 
                         assignment.time_finished = a.SubmitTime
                         assignment.save()
-
-                        # else:
+                        self.conn.approve_assignment(a.AssignmentId)
 
     def sync_qualification_test(self, qual_test):
 
         for a in self._get_qualification_requests(qual_test):
 
-            coder = Coder.objects.create_or_update({"name": a.SubjectId}, {"turk": True})
+            coder = Coder.objects.create_or_update({"name": a.SubjectId}, {"is_mturk": True})
             assignment = QualificationAssignment.objects.create_or_update(
                 {"test": qual_test, "coder": coder},
                 {
@@ -363,3 +377,12 @@ class MTurk(object):
     #             try: self.conn.assign_qualification(hit_type.qualification_turk_id, c.name, 0)
     #             except: self.conn.update_qualification_score(hit_type.qualification_turk_id, c.name, 0)
 
+
+class MasterRequirement(Requirement):
+
+    def __init__(self, sandbox=False, required_to_preview=False):
+        comparator = "Exists"
+        sandbox_qualification_type_id = "2ARFPLSP75KLA8M8DH1HTEQVJT3SY6"
+        production_qualification_type_id = "2F1QJWKUDD8XADTFD2Q0G6UTO95ALH"
+        qualification_type_id = production_qualification_type_id if not sandbox else sandbox_qualification_type_id
+        super(MasterRequirement, self).__init__(qualification_type_id=qualification_type_id, comparator=comparator, required_to_preview=required_to_preview)
