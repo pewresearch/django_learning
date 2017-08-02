@@ -13,10 +13,7 @@ class Command(BasicCommand):
     def add_arguments(parser):
         parser.add_argument("project_name", type=str)
         parser.add_argument("sample_name", type=str)
-        parser.add_argument("--num_coders", default=1, type=int)
-        parser.add_argument("--template_name", default=None, type=str)
         parser.add_argument("--prod", default=False, action="store_true")
-        parser.add_argument("--force_hit_type_reset", default=False, action="store_true")
         parser.add_argument("--loop", default=False, action="store_true")
         return parser
 
@@ -31,21 +28,11 @@ class Command(BasicCommand):
 
         mturk = MTurk(sandbox=(not self.options["prod"]))
 
-        if not sample.hit_type.turk_id or self.options["force_hit_type_reset"]:
-            mturk.sync_hit_type(sample.hit_type)
-
-        mturk.create_sample_hits(sample, num_coders=self.options["num_coders"], template_name=self.options["template_name"])
-
         if self.options["loop"]:
             while True:
                 mturk.sync_sample_hits(sample)
         else:
             mturk.sync_sample_hits(sample)
-
-        # Create a new hit type with the new code for mturk.create_batch_hit_type(batch)
-        # That will also create a new qualification and link it up to the hit type
-        # Iterate over all existing HITs and update their HITType to the new one
-        # AND iterate over all coders and pending qualification requests, and grant them the new/final hit type's qualification
 
     def cleanup(self):
 

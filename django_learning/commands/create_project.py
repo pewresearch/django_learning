@@ -16,7 +16,8 @@ class Command(BasicCommand):
     def run(self):
 
         project = Project.objects.create_or_update({"name": self.parameters["project_name"]})
-        print project
+        project.save()
+        print "Created/updated project '{}'".format(project)
 
     def cleanup(self):
 

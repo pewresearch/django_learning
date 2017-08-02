@@ -17,7 +17,8 @@ class Command(BasicCommand):
         parser.add_argument("--sampling_method", default="random", type=str)
         parser.add_argument("--size", default=0, type=int)
         parser.add_argument("--allow_overlap_with_existing_project_samples", default=False, action="store_true")
-        parser.add_argument("--refresh", default=False, action="store_true")
+        parser.add_argument("--recompute_weights", default=False, action="store_true")
+        parser.add_argument("--clear_existing_documents", default=False, action="store_true")
         return parser
 
     def run(self):
@@ -25,8 +26,8 @@ class Command(BasicCommand):
         project = Project.objects.get(name=self.parameters["project_name"])
         hit_type = HITType.objects.create_or_update({
             "project": project,
-            "name": self.parameters["hit_type_name"]}
-        )
+            "name": self.parameters["hit_type_name"]
+        })
 
         frame, created = SamplingFrame.objects.get_or_create(name=self.options['sampling_frame_name'])
         if frame.documents.count() == 0:
@@ -35,12 +36,13 @@ class Command(BasicCommand):
         existing = Sample.objects.get_if_exists(
             {"project": project, "name": self.parameters["sample_name"]}
         )
-        if existing and not self.options["refresh"]:
+        if existing and (not self.options["clear_existing_documents"] and not self.options["recompute_weights"]):
             print "Sample '{}' already exists for project '{}'".format(
                 existing,
                 project
             )
         else:
+
             sample = Sample.objects.create_or_update(
                 {"project": project, "name": self.parameters["sample_name"]},
                 {
@@ -51,7 +53,9 @@ class Command(BasicCommand):
             )
             sample.extract_documents(
                 size=self.options["size"],
-                allow_overlap_with_existing_project_samples=self.options["allow_overlap_with_existing_project_samples"]
+                allow_overlap_with_existing_project_samples=self.options["allow_overlap_with_existing_project_samples"],
+                recompute_weights=self.options["recompute_weights"],
+                clear_existing_documents=self.options["clear_existing_documents"]
             )
 
     def cleanup(self):
