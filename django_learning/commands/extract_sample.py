@@ -19,6 +19,7 @@ class Command(BasicCommand):
         parser.add_argument("--allow_overlap_with_existing_project_samples", default=False, action="store_true")
         parser.add_argument("--recompute_weights", default=False, action="store_true")
         parser.add_argument("--clear_existing_documents", default=False, action="store_true")
+        parser.add_argument("--force_rerun", default=False, action="store_true")
         return parser
 
     def run(self):
@@ -36,8 +37,8 @@ class Command(BasicCommand):
         existing = Sample.objects.get_if_exists(
             {"project": project, "name": self.parameters["sample_name"]}
         )
-        if existing and (not self.options["clear_existing_documents"] and not self.options["recompute_weights"]):
-            print "Sample '{}' already exists for project '{}'".format(
+        if existing and (not self.options["clear_existing_documents"] and not self.options["recompute_weights"] and not self.options["force_rerun"]):
+            print "Sample '{}' already exists for project '{}' (you need to pass --force_rerun, --clear_existing_documents, or --recompute_weights)".format(
                 existing,
                 project
             )
