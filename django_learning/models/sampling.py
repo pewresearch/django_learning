@@ -21,7 +21,8 @@ class SamplingFrame(LoggedExtendedModel):
 
     def __str__(self):
 
-        return "{}, {} documents".format(self.name, self.documents.count())
+        # return "{}, {} documents".format(self.name, self.documents.count())
+        return self.name
 
     def save(self, *args, **kwargs):
 
@@ -35,6 +36,7 @@ class SamplingFrame(LoggedExtendedModel):
 
     def extract_documents(self, refresh=False):
 
+        print "Extracting sample frame '{}'".format(self.name)
         if self.documents.count() == 0 or refresh:
 
             params = self.config
@@ -110,8 +112,17 @@ class Sample(LoggedExtendedModel):
 
         return sampling_methods.get(self.sampling_method, None)()
 
-    def extract_documents(self, size=None, recompute_weights=False, override_doc_ids=None,
-                          allow_overlap_with_existing_project_samples=False):
+    def extract_documents(self,
+        size=None,
+        recompute_weights=False,
+        override_doc_ids=None,
+        allow_overlap_with_existing_project_samples=False,
+        clear_existing_documents=False
+    ):
+
+        if clear_existing_documents:
+            print "Clearing out existing documents"
+            self.document_units.all().delete()
 
         if recompute_weights:
             override_doc_ids = list(self.documents.values_list("pk", flat=True))
@@ -139,10 +150,15 @@ class Sample(LoggedExtendedModel):
                 # for s in self.frame.samples.filter(project=self.project):
                 #     docs = docs.exclude(pk__in=s.documents.values_list("pk", flat=True))
 
+            # print "Sampling frame: {} documents".format(docs.count())
+            vals = ["pk"] # + [f[0] for f in params.get("filter_by", [])] + [f[0] for f in params.get("exclude_by", [])]
+            if "sampling_searches" in params.keys() and len(params["sampling_searches"].keys()) > 0:
+                vals.append("text")
             if not "stratify_by" in params.keys() or not params["stratify_by"]:
-                frame = pandas.DataFrame.from_records(docs.values("text", "pk"))
+                frame = pandas.DataFrame.from_records(docs.values(*vals))
             else:
-                frame = pandas.DataFrame.from_records(docs.values("text", "pk", params["stratify_by"]))
+                vals.append(params["stratify_by"])
+                frame = pandas.DataFrame.from_records(docs.values(*vals))
 
             weight_vars = []
             use_keyword_searches = False
@@ -160,6 +176,12 @@ class Sample(LoggedExtendedModel):
             if is_null(override_doc_ids):
 
                 print "Extracting sample"
+
+                # subframe = frame
+                # for filter_by, val in params["filter_by"]:
+                #     subframe = subframe[subframe[filter_by] == val]
+                # for exclude_by, val in params["exclude_by"]:
+                #     subframe = subframe[subframe[exclude_by] != val]
 
                 sample_chunks = []
                 if not use_keyword_searches:
@@ -204,11 +226,14 @@ class Sample(LoggedExtendedModel):
 
                 sample_ids = list(set(list(itertools.chain(*sample_chunks))))
                 if len(sample_ids) < size:
+                    # fill_ids = list(frame[~frame["pk"].isin(sample_ids)]["pk"].values)
                     fill_ids = list(self.frame.documents.values_list("pk", flat=True))
                     random.shuffle(fill_ids)
                     while len(sample_ids) < size:
-                        sample_ids.append(fill_ids.pop())
-                        sample_ids = list(set(sample_ids))
+                        try:
+                            sample_ids.append(fill_ids.pop())
+                            sample_ids = list(set(sample_ids))
+                        except IndexError: break
 
             else:
 
@@ -217,10 +242,26 @@ class Sample(LoggedExtendedModel):
 
             print "Computing weights"
 
+            if params.get("stratify_by", None):
+                dummies = pandas.get_dummies(frame[params.get("stratify_by")], prefix="fbid")
+                weight_vars.extend(dummies.columns)
+                frame = frame.join(dummies)
+
             df = frame[frame['pk'].isin(sample_ids)]
             df['weight'] = compute_sample_weights_from_frame(frame, df, weight_vars)
 
             print "Saving documents"
+
+            if self.documents.count() > 0:
+                new_docs = set(df["pk"].values).difference(set(list(self.documents.values_list("pk", flat=True))))
+                if len(new_docs) > 0:
+                    print "Warning: you're going to add {} additional documents to a sample that already has {} documents".format(
+                        len(list(new_docs)),
+                        self.documents.count()
+                    )
+                    print "Please press 'c' to continue, or 'q' to cancel the operation"
+                    import pdb
+                    pdb.set_trace()
 
             for index, row in tqdm(df.iterrows(), desc="Updating sample documents"):
                 SampleUnit.objects.create_or_update(
