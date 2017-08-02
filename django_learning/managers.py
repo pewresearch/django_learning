@@ -38,7 +38,7 @@ class QuestionManager(BasicExtendedManager):
         )
         if q.get("dependency", None):
             dep = q.get("dependency", None)
-            other_question = self.model.objects.filter(**{"owner_model_name": owner})\
+            other_question = self.model.objects.filter(**{owner_model_name: owner})\
                 .get(name=dep['question_name'])
             label = other_question.labels.get(value=dep['label_value'])
             question.dependency = label
@@ -46,17 +46,18 @@ class QuestionManager(BasicExtendedManager):
 
         label_ids = []
         for j, l in enumerate(labels):
-            label_ids.append(
-                get_model("Label").objects.create_or_update(
-                    {"question": question, "value": decode_text(l['value'])},
-                    {
-                        "label": decode_text(l["label"]),
-                        "priority": j,
-                        "pointers": [decode_text(p) for p in l["pointers"]],
-                        "select_as_default": l.get("select_as_default", False)
-                    }
-                ).pk
+            label = get_model("Label").objects.create_or_update(
+                {"question": question, "value": decode_text(l['value'])},
+                {
+                    "label": decode_text(l["label"]),
+                    "priority": j,
+                    "pointers": [decode_text(p) for p in l.get("pointers", [])],
+                    "select_as_default": l.get("select_as_default", False)
+                }
             )
+            label_ids.append(label.pk)
+            label.pointers = [decode_text(p) for p in l.get("pointers", [])]
+            label.save()
         for l in question.labels.all():
             if l.pk not in label_ids:
                 l.delete()
