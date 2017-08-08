@@ -31,8 +31,11 @@ class Assignment(LoggedExtendedModel):
 
     time_started = models.DateTimeField(null=True, auto_now_add=True)
     time_finished = models.DateTimeField(null=True)
+
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
+    turk_approved = models.BooleanField(default=False)
+
     notes = models.TextField(null=True)
     uncodeable = models.BooleanField(default=False)
 
