@@ -53,7 +53,7 @@ from pewtils.stats import wmom
 #         return scoring_function
 
 
-def compute_scores_from_datasets_as_coders(dataset1, dataset2, document_column, outcome_column, weight_column=None, min_overlap=10, discrete_classes=True):
+def compute_scores_from_datasets_as_coders(dataset1, dataset2, document_column, outcome_column, weight_column=None, min_overlap=10, discrete_classes=True, pos_label=None):
 
     dataset1 = copy.deepcopy(dataset1)
     dataset2 = copy.deepcopy(dataset2)
@@ -67,10 +67,10 @@ def compute_scores_from_datasets_as_coders(dataset1, dataset2, document_column, 
 
     dataset = pandas.concat([dataset1, dataset2])
 
-    return compute_scores_from_dataset(dataset, document_column, outcome_column, "coder_id", weight_column=weight_column, min_overlap=min_overlap, discrete_classes=discrete_classes)
+    return compute_scores_from_dataset(dataset, document_column, outcome_column, "coder_id", weight_column=weight_column, min_overlap=min_overlap, discrete_classes=discrete_classes, pos_label=pos_label)
 
 
-def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_column, weight_column=None, min_overlap=10, discrete_classes=True):
+def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_column, weight_column=None, min_overlap=10, discrete_classes=True, pos_label=None):
 
     dataset = copy.deepcopy(dataset)
 
@@ -103,18 +103,21 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
     else: itercoders = itertools.permutations(dataset[coder_column].unique(), 2)
     for coder1, coder2 in itercoders:
 
-        doc_ids = dataset[dataset[coder_column] == coder1][document_column].unique()
+        doc_ids = set(dataset[dataset[coder_column] == coder1][document_column].unique()).intersection(
+            set(dataset[dataset[coder_column]==coder2][document_column].unique())
+        )
         code_subset = dataset[(dataset[coder_column].isin([coder1, coder2])) & (dataset[document_column].isin(doc_ids))]
 
-        if len(code_subset) >= min_overlap:
+        if len(doc_ids) >= min_overlap:
 
             coder_df = code_subset[[coder_column, document_column, outcome_column, weight_column]]
+            if not pos_label:
+                scores.append(_get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None))
 
-            scores.append(_get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None))
-
-            for pos_label in pos_labels:
-                coder_df["{}__{}".format(outcome_column, pos_label)] = (coder_df[outcome_column] == pos_label).astype(int)
-                scores.append(_get_scores(coder_df, coder1, coder2, "{}__{}".format(outcome_column, pos_label), document_column, coder_column, weight_column, pos_label=1))
+            for pos in pos_labels:
+                if not pos_label or pos == pos_label:
+                    coder_df["{}__{}".format(outcome_column, pos)] = (coder_df[outcome_column] == pos).astype(int)
+                    scores.append(_get_scores(coder_df, coder1, coder2, "{}__{}".format(outcome_column, pos), document_column, coder_column, weight_column, pos_label=1))
 
         combo_count += 1
 
@@ -126,7 +129,7 @@ def compute_overall_scores_from_dataset(dataset, document_column, outcome_column
     alpha = AnnotationTask(data=dataset[[coder_column, document_column, outcome_column]].as_matrix())
     try:
         alpha = alpha.alpha()
-    except ZeroDivisionError:
+    except (ZeroDivisionError, ValueError):
         alpha = None
 
     # min_coder = dataset.groupby(coder_column).count()[document_column].sort_values().index[0]
@@ -139,13 +142,15 @@ def compute_overall_scores_from_dataset(dataset, document_column, outcome_column
     df = dataset.groupby([outcome_column, document_column]).count()[[coder_column]]
     df = df.unstack(outcome_column).fillna(0)
 
-    kappa = fleiss_kappa(df)
+    if len(df) > 0:
+        kappa = fleiss_kappa(df)
+    else:
+        kappa = None
 
     return {
         "alpha": alpha,
         "fleiss_kappa": kappa
     }
-
 
 
 def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None):
@@ -154,12 +159,14 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     coder1_df.index = coder1_df[document_column]
     coder2_df = coder_df[coder_df[coder_column] == coder2]
     coder2_df.index = coder2_df[document_column]
-    coder2_df = coder2_df.ix[coder1_df.index]
+    # coder2_df = coder2_df.ix[coder1_df.index]
+    coder1_df = coder1_df[coder1_df.index.isin(coder2_df.index)]
+    coder2_df = coder2_df[coder2_df.index.isin(coder1_df.index)]
 
     alpha = AnnotationTask(data=coder_df[[coder_column, document_column, outcome_column]].as_matrix())
     try:
         alpha = alpha.alpha()
-    except ZeroDivisionError:
+    except (ZeroDivisionError, ValueError):
         alpha = None
 
     row = {
@@ -172,40 +179,34 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     }
 
     try:
-        row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column],
-                                         sample_weight=coder1_df[weight_column]),
+        row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
     except ValueError:
         row["accuracy"] = None
 
     try:
-        row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label,
-                             sample_weight=coder1_df[weight_column])
+        row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
     except ValueError:
         row["f1"] = None
 
     try:
-        row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label,
-                                           sample_weight=coder1_df[weight_column])
+        row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
     except ValueError:
         row["precision"] = None
 
     try:
-        row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label,
-                                     sample_weight=coder1_df[weight_column]),
+        row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column]),
     except ValueError:
         row["recall"] = None
 
     try:
-        row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column],
-                                                     sample_weight=coder1_df[weight_column])
+        row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
     except ValueError:
         row["matthews_corrcoef"] = None
 
     try:
-        row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column],
-                                       sample_weight=coder1_df[weight_column]) if len(
-            numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
-    except  ValueError:
+        row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
+            if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
+    except ValueError:
         row["roc_auc"] = None
 
     for labelsetname, labelset in [
@@ -240,8 +241,7 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
         else:
             row["ttest_pass"] = 0
 
-    row["pct_agree"] = numpy.average(
-        [1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
+    row["pct_agree"] = numpy.average([1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
 
     if len(numpy.unique(coder_df[outcome_column])) == 2 and pos_label == 1:
         if sum(coder1_df[outcome_column]) > 0 and sum(coder2_df[outcome_column]) > 0:

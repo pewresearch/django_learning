@@ -246,7 +246,7 @@ class Extractor(DatasetExtractor):
             "label_value",
             "coder_id"
         )
-    def compute_scores(self, refresh=False, min_overlap=10, discrete_classes=True):
+    def compute_scores(self, refresh=False, min_overlap=10, discrete_classes=True, pos_label=None):
 
         dataset = self.extract(refresh=refresh)
-        return compute_scores_from_dataset(dataset, "document_id", "label_value", "coder_id", "sampling_weight", min_overlap=min_overlap, discrete_classes=discrete_classes)
+        return compute_scores_from_dataset(dataset, "document_id", "label_value", "coder_id", "sampling_weight", min_overlap=min_overlap, discrete_classes=discrete_classes, pos_label=pos_label)
