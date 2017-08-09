@@ -251,7 +251,7 @@ def view_sample(request, project_name, sample_name):
                     "completed_turk_assignments": coder_completed_turk_assignments,
                     "total_turk_assignments": coder_total_turk_assignments
                 })
-        mturk_coder_completion = sorted(mturk_coder_completion, key=lambda x: x["completed_turk_assignments"], reverse=True)
+        # mturk_coder_completion = sorted(mturk_coder_completion, key=lambda x: x["completed_turk_assignments"], reverse=True)
 
     return render(request, "django_learning/sample.html", {
         "sample": sample,

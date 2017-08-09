@@ -67,7 +67,7 @@
                         </td>
                     </tr>
                     {% if request.user.coder in sample.project.admins.all %}
-                        {% for coder in coder_completion %}
+                        {% for coder in expert_coder_completion %}
                             <tr>
                                 <td>{{ coder.coder.name }}</td>
                                 <td>{{ total_expert_hits.count }}</td>
