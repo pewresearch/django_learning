@@ -87,19 +87,21 @@ class ClassificationModel(LearningModel):
 
         top_features = {}
         if hasattr(steps['model'], "coef_"):
+            try: coefs = list(steps['model'].coef_.todense().tolist())
+            except AttributeError: coefs = list(steps['model'].coef_)
             if len(class_labels) == 2:
                 top_features[0] = sorted(zip(
-                    steps['model'].coef_[0],
+                    coefs[0],
                     feature_names
                 ))[:n]
                 top_features[1] = sorted(zip(
-                    steps['model'].coef_[0],
+                    coefs[0],
                     feature_names
                 ))[:-(n + 1):-1]
             else:
                 for i, class_label in enumerate(class_labels):
                     top_features[class_label] = sorted(zip(
-                        steps['model'].coef_[i],
+                        coefs[i],
                         feature_names
                     ))[-n:]
         elif hasattr(steps['model'], "feature_importances_"):

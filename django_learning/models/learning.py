@@ -74,27 +74,13 @@ class LearningModel(LoggedExtendedModel):
 
         self.cache_identifier = "{}_{}".format(self.name, self.pipeline_name)
 
-        try:
-            self.dataset_extractor = dataset_extractors[self.parameters["dataset_extractor"]["name"]](
-                **self.parameters["dataset_extractor"]["parameters"]
-            )
-        except TypeError:
-            print "WARNING: couldn't identify dataset extractor, it may not exist anymore!"
+        self.dataset_extractor = self._get_dataset_extractor()
         self.dataset = None
 
         self.model = None
         self.train_dataset = None
         self.test_dataset = None
         self.predict_dataset = None
-        # self.X = None
-        # self.Y = None
-        # self.train_x = None
-        # self.train_y = None
-        # self.train_ids = None
-        # self.test_x = None
-        # self.test_y = None
-        # self.test_ids = None
-        # self.predict_y = None
 
         self.cache = CacheHandler(os.path.join(S3_CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
             hash = False,
@@ -107,6 +93,18 @@ class LearningModel(LoggedExtendedModel):
             hash=False,
             use_s3=False
         )
+
+    def _get_dataset_extractor(self):
+
+        dataset_extractor = None
+        try:
+            dataset_extractor = dataset_extractors[self.parameters["dataset_extractor"]["name"]](
+                **self.parameters["dataset_extractor"]["parameters"]
+            )
+        except TypeError:
+            print "WARNING: couldn't identify dataset extractor, it may not exist anymore!"
+
+        return dataset_extractor
 
     def save(self, *args, **kwargs):
 
@@ -457,6 +455,7 @@ class LearningModel(LoggedExtendedModel):
         if "sampling_weight" in df_to_predict.columns: weight_col = "sampling_weight"
         else: weight_col = None
         predicted_df = self.produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh)
+
         return compute_scores_from_datasets_as_coders(df_to_predict, predicted_df, "index", self.dataset_extractor.outcome_column, weight_column=weight_col)
 
 
@@ -482,6 +481,12 @@ class DocumentLearningModel(LearningModel):
     class Meta:
 
         abstract = True
+
+    def save(self, *args, **kwargs):
+
+        if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
+            self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+        super(DocumentLearningModel, self).save(*args, **kwargs)
 
     def extract_dataset(self, refresh=False):
 

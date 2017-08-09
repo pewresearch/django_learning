@@ -152,7 +152,8 @@ class Extractor(DatasetExtractor):
             "label_id",
             "label__value",
             "label__question_id",
-            "label__question__name"
+            "label__question__name",
+            "document__text" # some filters (filter_by_other_model_prediction) may need document text as a field, but only some - we probably want to make this optional at some point
         ]
         dataset = pandas.DataFrame.from_records(
             self.raw_codes.values(*columns)
@@ -164,16 +165,18 @@ class Extractor(DatasetExtractor):
             "sample_unit__weight": "sampling_weight",
             "label__value": "label_value",
             "label__question_id": "question_id",
-            "label__question_name": "question_name"
+            "label__question_name": "question_name",
+            "document__text": "text"
         })
 
         self.outcome_column = "label_id"
         self.discrete_classes = True
+        dataset['label_id'] = dataset['label_id'].astype(int)
+        dataset['label_value'] = dataset['label_value'].astype(str)
 
         return dataset
 
     def _apply_filters(self, dataset):
-
 
         for filter_name, filter_args, filter_kwargs in self.code_filters:
             dataset = dataset_code_filters[filter_name](self, dataset, *filter_args, **filter_kwargs)
