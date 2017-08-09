@@ -157,6 +157,7 @@ class Question(LoggedExtendedModel):
         current = []
         if not self.multiple: labels = [label_values]
         else: labels = label_values
+        labels = [l for l in labels if l]
         if self.display == "checkbox" and len(labels) == 0:
             labels = self.labels.filter(select_as_default=True)
             # if none of the other options were checked, choose the select_as_default option
