@@ -20,6 +20,7 @@ class Command(BasicCommand):
         parser.add_argument("--recompute_weights", default=False, action="store_true")
         parser.add_argument("--clear_existing_documents", default=False, action="store_true")
         parser.add_argument("--force_rerun", default=False, action="store_true")
+        parser.add_argument("--skip_weighting", default=False, action="store_true")
         return parser
 
     def run(self):
@@ -56,7 +57,8 @@ class Command(BasicCommand):
                 size=self.options["size"],
                 allow_overlap_with_existing_project_samples=self.options["allow_overlap_with_existing_project_samples"],
                 recompute_weights=self.options["recompute_weights"],
-                clear_existing_documents=self.options["clear_existing_documents"]
+                clear_existing_documents=self.options["clear_existing_documents"],
+                skip_weighting=self.options['skip_weighting']
             )
 
     def cleanup(self):
