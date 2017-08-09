@@ -117,7 +117,8 @@ class Sample(LoggedExtendedModel):
         recompute_weights=False,
         override_doc_ids=None,
         allow_overlap_with_existing_project_samples=False,
-        clear_existing_documents=False
+        clear_existing_documents=False,
+        skip_weighting=False
     ):
 
         if clear_existing_documents:
@@ -134,6 +135,8 @@ class Sample(LoggedExtendedModel):
                 override_doc_ids = [id for id in override_doc_ids if id in frame_ids]
                 print "{} documents will remain in the sample".format(len(override_doc_ids))
                 print "Press 'c' to continue and remove them from the sample, otherwise 'q' to quit"
+                import pdb
+                pdb.set_trace()
                 SampleUnit.objects.filter(sample=self, document_id__in=bad_ids).delete()
 
         params = self.get_params()
@@ -248,7 +251,10 @@ class Sample(LoggedExtendedModel):
                 frame = frame.join(dummies)
 
             df = frame[frame['pk'].isin(sample_ids)]
-            df['weight'] = compute_sample_weights_from_frame(frame, df, weight_vars)
+            if not skip_weighting:
+                df['weight'] = compute_sample_weights_from_frame(frame, df, weight_vars)
+            else:
+                df['weight'] = 1.0
 
             print "Saving documents"
 
