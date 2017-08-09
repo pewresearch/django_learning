@@ -1,3 +1,5 @@
+import time
+
 from django_commander.commands import BasicCommand
 
 from django_learning.models import Project, Sample
@@ -17,7 +19,6 @@ class Command(BasicCommand):
         parser.add_argument("--template_name", default=None, type=str)
         parser.add_argument("--prod", default=False, action="store_true")
         parser.add_argument("--force_hit_type_reset", default=False, action="store_true")
-        parser.add_argument("--loop", default=False, action="store_true")
         return parser
 
     def run(self):
@@ -35,12 +36,6 @@ class Command(BasicCommand):
             mturk.sync_hit_type(sample.hit_type)
 
         mturk.create_sample_hits(sample, num_coders=self.options["num_coders"], template_name=self.options["template_name"])
-
-        if self.options["loop"]:
-            while True:
-                mturk.sync_sample_hits(sample)
-        else:
-            mturk.sync_sample_hits(sample)
 
         # Create a new hit type with the new code for mturk.create_batch_hit_type(batch)
         # That will also create a new qualification and link it up to the hit type

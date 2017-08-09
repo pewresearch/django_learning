@@ -220,7 +220,7 @@ class MTurk(object):
                     import pdb
                     pdb.set_trace()
 
-    def sync_sample_hits(self, sample):
+    def sync_sample_hits(self, sample, resync=False, approve=True):
 
         sample_qual_tests = sample.project.qualification_tests.all() | sample.hit_type.qualification_tests.all()
         for qual_test in sample_qual_tests.distinct():
@@ -228,7 +228,7 @@ class MTurk(object):
 
         for hit in tqdm(self._update_and_yield_sample_hits(sample), desc="Syncing HITs"):
 
-            if hit.turk_id and hit.assignments.filter(time_finished__isnull=False).count() < hit.num_coders:
+            if hit.turk_id and (hit.assignments.filter(time_finished__isnull=False).count() < hit.num_coders or resync):
 
                 for a in self._get_hit_assignments(str(hit.turk_id)):
 
@@ -237,7 +237,7 @@ class MTurk(object):
                     # time_spent = (datetime.datetime.strptime(a.SubmitTime, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(a.AcceptTime, "%Y-%m-%dT%H:%M:%SZ")).seconds
                     # if time_spent >= 10:
                     assignment = Assignment.objects.get_if_exists({"hit": hit, "coder": coder})
-                    if not assignment or not assignment.time_finished:
+                    if not assignment or not assignment.time_finished or resync:
                         assignment = Assignment.objects.create_or_update(
                             {"hit": hit, "coder": coder},
                             {
@@ -267,9 +267,21 @@ class MTurk(object):
                                         code_ids = code_ids[0]
                                     q.update_assignment_response(assignment, code_ids)
 
-                        assignment.time_finished = a.SubmitTime
-                        assignment.save()
-                        self.conn.approve_assignment(a.AssignmentId)
+                        form_questions = [ans.qid for ans in a.answers[0]]
+                        for q in hit.sample.project.questions\
+                                .exclude(name__in=form_questions)\
+                                .exclude(display="header"):
+                            q.update_assignment_response(assignment, None)
+
+                        if not assignment.time_finished:
+                            assignment.time_finished = a.SubmitTime
+                            assignment.save()
+                            if approve and not assignment.turk_approved:
+                                self.conn.approve_assignment(a.AssignmentId)
+                                assignment.turk_approved = True
+                                assignment.save()
+                        else:
+                            assignment.save()
 
     def sync_qualification_test(self, qual_test):
 
