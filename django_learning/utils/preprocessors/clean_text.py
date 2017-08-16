@@ -27,24 +27,25 @@ class Preprocessor(BasicPreprocessor):
         if "stopword_sets" in self.params.keys():
             for stopword_set in self.params['stopword_sets']:
                 slist = None
-                if self.cache:
+                if self.cache and not self.params.get("refresh_stopwords", False):
                     slist = self.cache.read(stopword_set)
                 if not slist:
                     slist = stopword_sets[stopword_set]()
-                    slist = [decode_text(s) for s in slist if len(s) > 2 or stopword_set in ["english", "misc_boilerplate"]]
-                    if stopword_set not in ["english", "misc_boilerplate"]:
+                    slist = [decode_text(s) for s in slist if len(s) > 2 or stopword_set in ["english", "months", "misc_boilerplate"]]
+                    if stopword_set not in ["english", "months", "misc_boilerplate"]:
                         final_slist = []
                         for s in slist:
-                            if s.lower() not in whitelist:
-                                if len(s) > 3: final_slist.append(s)
-                                elif is_probable_stopword(s.lower()):
-                                    final_slist.append(s)
+                            s = s.lower()
+                            if len(s) > 3 or is_probable_stopword(s):
+                                final_slist.append(s)
                         slist = final_slist
                     if self.cache:
-                        # print "Recomputed stopword set {}, saving to local cache".format(stopword_set)
+                        print "Recomputed stopword set {}, saving to local cache".format(stopword_set)
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
-        stopwords = sorted(list(set(stopwords)), key=lambda x: len(x), reverse=True)
+        stopwords = list(set(stopwords))
+        stopwords = [s for s in stopwords if s not in whitelist]
+        stopwords = sorted(stopwords, key=lambda x: len(x), reverse=True)
         self.stopwords = stopwords
 
         kwargs = {"decode_text": True, "stopwords": stopwords, "strip_html": True}
