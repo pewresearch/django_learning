@@ -38,7 +38,7 @@ class Command(BasicCommand):
         existing = Sample.objects.get_if_exists(
             {"project": project, "name": self.parameters["sample_name"]}
         )
-        if existing and (not self.options["clear_existing_documents"] and not self.options["recompute_weights"] and not self.options["force_rerun"]):
+        if existing and existing.documents.count() > 0 and (not self.options["clear_existing_documents"] and not self.options["recompute_weights"] and not self.options["force_rerun"]):
             print "Sample '{}' already exists for project '{}' (you need to pass --force_rerun, --clear_existing_documents, or --recompute_weights)".format(
                 existing,
                 project
