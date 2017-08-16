@@ -1,6 +1,9 @@
+import pandas
+
 from django.db.models import Q
 
-from django_learning.models import *
+from pewtils.sampling import compute_sample_weights_from_frame
+from pewtils.django import get_model
 
 
 def filter_hits(
@@ -15,15 +18,15 @@ def filter_hits(
     documents=None
 ):
 
-    hits = HIT.objects.all()
+    hits = get_model("HIT", app_name="django_learning").objects.all()
     if project: hits = hits.filter(sample__project=project)
     if sample: hits = hits.filter(sample=sample)
     if turk_only: hits = hits.filter(turk=True)
     elif experts_only: hits = hits.filter(turk=False)
     if finished_only:
-        hits = HIT.objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() >= h.num_coders])
+        hits = get_model("HIT", app_name="django_learning").objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() >= h.num_coders])
     elif unfinished_only:
-        hits = HIT.objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() < h.num_coders])
+        hits = get_model("HIT", app_name="django_learning").objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() < h.num_coders])
     if exclude_coders != None: hits = hits.exclude(assignments__coder__in=exclude_coders)
     if assignments != None: hits = hits.filter(assignments__in=assignments)
     if documents != None: hits = hits.filter(sample_unit__document__in=documents)
@@ -45,7 +48,7 @@ def filter_assignments(
     documents=None
 ):
 
-    assignments = Assignment.objects.all()
+    assignments = get_model("Assignment", app_name="django_learning").objects.all()
     if project: assignments = assignments.filter(hit__sample__project=project)
     if sample: assignments = assignments.filter(hit__sample=sample)
     if turk_only: assignments = assignments.filter(hit__turk=True)
@@ -94,7 +97,7 @@ def filter_assignments(
 def filter_coders(project=None, sample=None, min_hit_count=None):
 
     good_coder_ids = []
-    coders = Coder.objects.all()
+    coders = get_model("Coder", app_name="django_learning").objects.all()
     if project: coders = project.coders.all()
     if sample: coders = coders.filter(assignments__hit__sample=sample)
     for c in coders:
@@ -105,7 +108,41 @@ def filter_coders(project=None, sample=None, min_hit_count=None):
         if not min_hit_count or a.count() >= min_hit_count:
             good_coder_ids.append(c.pk)
 
-    return Coder.objects.filter(pk__in=good_coder_ids).distinct()
+    return get_model("Coder", app_name="django_learning").objects.filter(pk__in=good_coder_ids).distinct()
+
+
+def get_sampling_weights(samples, refresh_flags=False):
+
+    frame_ids = set(list(samples.values_list("frame_id", flat=True)))
+    if len(frame_ids) == 1:
+        sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(pk__in=frame_ids)
+    else:
+        raise Exception("All of your samples must be belong to the same sampling frame")
+
+    frame = sampling_frame.get_sampling_flags(refresh=refresh_flags)
+
+    weight_vars = []
+    stratification_variables = []
+    for sample in samples:
+        params = sample.get_params()
+        stratify_by = params.get("stratify_by", None)
+        if stratify_by not in stratification_variables:
+            stratification_variables.append(stratify_by)
+        sampling_searches = params.get("sampling_searches", {})
+        if len(sampling_searches) > 0:
+            weight_vars.append("search_none")
+            weight_vars.extend(["search_{}".format(name) for name in sampling_searches.values()])
+    weight_vars = list(set(weight_vars))
+
+    for stratify_by in stratification_variables:
+        dummies = pandas.get_dummies(frame[stratify_by], prefix=stratify_by)
+        weight_vars.extend(dummies.columns)
+        frame = frame.join(dummies)
+
+    full_sample = frame[frame['pk'].isin(list(get_model("SampleUnit", app_name="django_learning").objects.filter(sample__in=samples).values_list("document_id", flat=True)))]
+    full_sample['weight'] = compute_sample_weights_from_frame(frame, full_sample, weight_vars)
+
+    return full_sample
 
 
 # # def compute_median_assignment_time(assignments):

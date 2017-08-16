@@ -14,6 +14,7 @@ from django_learning.utils.dataset_coder_filters import dataset_coder_filters
 from django_learning.utils.balancing_variables import balancing_variables
 from django_learning.utils.dataset_extractors import DatasetExtractor
 from django_learning.utils.scoring import compute_scores_from_dataset, compute_overall_scores_from_dataset
+from django_learning.functions import get_sampling_weights
 
 
 class Extractor(DatasetExtractor):
@@ -173,6 +174,13 @@ class Extractor(DatasetExtractor):
         self.discrete_classes = True
         dataset['label_id'] = dataset['label_id'].astype(int)
         dataset['label_value'] = dataset['label_value'].astype(str)
+
+        if self.samples.count() > 1:
+            del dataset["sampling_weight"]
+            weights = get_sampling_weights(self.samples)
+            dataset = pandas.merge(dataset, weights[["pk", "weight"]], how="left", left_on="document_id", right_on="pk")
+            del dataset["pk_y"]
+            dataset = dataset.rename(columns={"weight": "sampling_weight"})
 
         return dataset
 

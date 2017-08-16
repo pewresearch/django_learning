@@ -1,17 +1,21 @@
-import pandas, math, random, itertools
+import pandas, math, random, itertools, os
 
 from django.db import models
+from django.conf import settings
 
-from pewtils import is_null, decode_text
+from pewtils import is_null, decode_text, is_not_null
+from pewtils.nlp import get_hash
 from pewtils.sampling import compute_sample_weights_from_frame
-from pewtils.django import get_model
+from pewtils.django import get_model, CacheHandler
 from pewtils.django.sampling import SampleExtractor
 
 from tqdm import tqdm
 
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils.sampling_frames import sampling_frames
+from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.sampling_methods import sampling_methods
+from django_learning.settings import S3_CACHE_PATH, LOCAL_CACHE_PATH
 
 
 class SamplingFrame(LoggedExtendedModel):
@@ -55,6 +59,50 @@ class SamplingFrame(LoggedExtendedModel):
         else:
 
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
+
+
+    def get_sampling_flags(self, refresh=True):
+
+        cache = CacheHandler(os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
+            hash=False,
+            use_s3=True,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
+            bucket=settings.S3_BUCKET
+        )
+
+        frame = None
+        if not refresh:
+            frame = cache.read(self.name)
+            if is_not_null(frame):
+                print "Loaded frame sampling flags from cache"
+
+        if is_null(frame) or refresh:
+
+            print "Recomputing frame sampling flags"
+            stratification_variables = []
+            sampling_searches = []
+            for sample in self.samples.all():
+                params = sample.get_params()
+                stratify_by = params.get("stratify_by", None)
+                if stratify_by and stratify_by not in stratification_variables:
+                    stratification_variables.append(stratify_by)
+                for search_name in params.get("sampling_searches", {}).keys():
+                    if search_name not in sampling_searches:
+                        sampling_searches.append(search_name)
+
+            vals = ["pk", "text"] + stratification_variables
+            frame = pandas.DataFrame.from_records(self.documents.values(*vals))
+
+            if len(sampling_searches) > 0:
+                regex_patterns = {search_name: regex_filters[search_name]().pattern for search_name in sampling_searches}
+                frame['search_none'] = ~frame["text"].str.contains(r"|".join(regex_patterns.values()))
+                for search_name, search_pattern in regex_patterns.iteritems():
+                    frame["search_{}".format(search_name)] = frame["text"].str.contains(search_pattern)
+
+            cache.write(self.name, frame)
+
+        return frame
 
 
 class Sample(LoggedExtendedModel):
@@ -150,41 +198,21 @@ class Sample(LoggedExtendedModel):
             if not allow_overlap_with_existing_project_samples and not recompute_weights:
                 existing_doc_ids = SampleUnit.objects.filter(sample__project=self.project).values_list("document_id", flat=True)
                 docs = docs.exclude(pk__in=existing_doc_ids)
-                # for s in self.frame.samples.filter(project=self.project):
-                #     docs = docs.exclude(pk__in=s.documents.values_list("pk", flat=True))
 
-            # print "Sampling frame: {} documents".format(docs.count())
-            vals = ["pk"] # + [f[0] for f in params.get("filter_by", [])] + [f[0] for f in params.get("exclude_by", [])]
-            if "sampling_searches" in params.keys() and len(params["sampling_searches"].keys()) > 0:
-                vals.append("text")
-            if not "stratify_by" in params.keys() or not params["stratify_by"]:
-                frame = pandas.DataFrame.from_records(docs.values(*vals))
-            else:
-                vals.append(params["stratify_by"])
-                frame = pandas.DataFrame.from_records(docs.values(*vals))
+            stratify_by = params.get("stratify_by", None)
+            frame = self.frame.get_sampling_flags()
+            frame = frame[frame["pk"].isin(list(docs.values_list("pk", flat=True)))]
 
             weight_vars = []
             use_keyword_searches = False
             if "sampling_searches" in params.keys() and len(params["sampling_searches"].keys()) > 0:
-
-                print "Extracting sampling search flags"
-
-                frame['none'] = ~frame["text"].str.contains(
-                    r"|".join([s['pattern'] for s in params["sampling_searches"].values()]))
-                for search_name, p in params["sampling_searches"].items():
-                    frame[search_name] = frame["text"].str.contains(p['pattern'])
+                weight_vars.append("search_none")
+                weight_vars.extend(["search_{}".format(name) for name in params["sampling_searches"].keys()])
                 use_keyword_searches = True
-                weight_vars.extend(params["sampling_searches"].keys() + ['none'])
 
             if is_null(override_doc_ids):
 
                 print "Extracting sample"
-
-                # subframe = frame
-                # for filter_by, val in params["filter_by"]:
-                #     subframe = subframe[subframe[filter_by] == val]
-                # for exclude_by, val in params["exclude_by"]:
-                #     subframe = subframe[subframe[exclude_by] != val]
 
                 sample_chunks = []
                 if not use_keyword_searches:
@@ -193,7 +221,7 @@ class Sample(LoggedExtendedModel):
                         SampleExtractor(
                             sampling_strategy=params["sampling_strategy"],
                             id_col="pk",
-                            stratify_by=params.get("stratify_by", None)
+                            stratify_by=stratify_by
                         ).extract(
                             frame,
                             sample_size=int(size)
@@ -203,14 +231,14 @@ class Sample(LoggedExtendedModel):
                 else:
 
                     sample_chunks = []
-                    non_search_sample_size = 1.0 - sum([s['proportion'] for s in params["sampling_searches"].values()])
+                    non_search_sample_size = 1.0 - sum([p['proportion'] for search, p in params["sampling_searches"].iteritems()])
                     sample_chunks.append(
                         SampleExtractor(
                             sampling_strategy=params["sampling_strategy"],
                             id_col="pk",
-                            stratify_by=params.get("stratify_by", None)
+                            stratify_by=stratify_by
                         ).extract(
-                            frame[frame['none'] == 1],
+                            frame[frame["search_none"] == 1],
                             sample_size=int(math.ceil(float(size) * non_search_sample_size))
                         )
                     )
@@ -220,9 +248,9 @@ class Sample(LoggedExtendedModel):
                             SampleExtractor(
                                 sampling_strategy=params["sampling_strategy"],
                                 id_col="pk",
-                                stratify_by=params.get("stratify_by", None)
+                                stratify_by=stratify_by
                             ).extract(
-                                frame[frame[search] == 1],
+                                frame[frame["search_{}".format(search)] == 1],
                                 sample_size=int(math.ceil(size * p["proportion"]))
                             )
                         )
@@ -230,7 +258,7 @@ class Sample(LoggedExtendedModel):
                 sample_ids = list(set(list(itertools.chain(*sample_chunks))))
                 if len(sample_ids) < size:
                     # fill_ids = list(frame[~frame["pk"].isin(sample_ids)]["pk"].values)
-                    fill_ids = list(self.frame.documents.values_list("pk", flat=True))
+                    fill_ids = list(docs.values_list("pk", flat=True))
                     random.shuffle(fill_ids)
                     while len(sample_ids) < size:
                         try:
@@ -243,15 +271,15 @@ class Sample(LoggedExtendedModel):
                 print "Override document IDs passed, skipping sample extraction"
                 sample_ids = override_doc_ids
 
-            print "Computing weights"
-
-            if params.get("stratify_by", None):
-                dummies = pandas.get_dummies(frame[params.get("stratify_by")], prefix="fbid")
+            if stratify_by:
+                dummies = pandas.get_dummies(frame[stratify_by], prefix=stratify_by)
                 weight_vars.extend(dummies.columns)
                 frame = frame.join(dummies)
 
+            weight_vars = list(set(weight_vars))
             df = frame[frame['pk'].isin(sample_ids)]
             if not skip_weighting:
+                print "Computing weights"
                 df['weight'] = compute_sample_weights_from_frame(frame, df, weight_vars)
             else:
                 df['weight'] = 1.0
