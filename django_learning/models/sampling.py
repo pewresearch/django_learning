@@ -50,6 +50,9 @@ class SamplingFrame(LoggedExtendedModel):
                     objs = objs.filter(**params["filter_dict"])
                 if "exclude_dict" in params.keys() and params["exclude_dict"]:
                     objs = objs.exclude(**params["exclude_dict"])
+                if "complex_filters" in params.keys() and params["complex_filters"]:
+                    for c in params["complex_filters"]:
+                        objs = objs.filter(c)
                 self.documents = objs
                 self.save()
                 print "Extracted {} documents for frame '{}'".format(self.documents.count(), self.name)
@@ -61,7 +64,7 @@ class SamplingFrame(LoggedExtendedModel):
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
 
 
-    def get_sampling_flags(self, refresh=True):
+    def get_sampling_flags(self, refresh=False):
 
         cache = CacheHandler(os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
             hash=False,
