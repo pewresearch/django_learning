@@ -40,7 +40,13 @@ class Command(BasicCommand):
                     .filter(turk_approved=False)
             for a in assignments:
                 if random.random() <= self.options["probability"]:
-                    mturk.conn.approve_assignment(a.turk_id)
+                    try:
+                        mturk.conn.approve_assignment(a.turk_id)
+                    except Exception as e:
+                        print e
+                        print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
+                        import pdb
+                        pdb.set_trace()
                     a.turk_approved = True
                     a.save()
                     approved += 1
