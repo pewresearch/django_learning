@@ -32,8 +32,7 @@ class DatasetExtractor(object):
 
     def get_hash(self, **kwargs):
 
-        hash_key = str(inspect.getsourcelines(self._get_dataset)) + str({k: v for k, v in kwargs.iteritems() if k != "refresh"})
-
+        hash_key = str(inspect.getsourcelines(self._get_dataset)) + str({k: v for k, v in self.kwargs.iteritems() if k != "refresh"})
         return self.cache.file_handler.get_key_hash(hash_key)
 
     def set_outcome_column(self, outcome_col):

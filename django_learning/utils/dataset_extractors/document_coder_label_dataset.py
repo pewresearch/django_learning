@@ -19,16 +19,16 @@ from django_learning.functions import get_sampling_weights
 
 class Extractor(DatasetExtractor):
 
-    def __init__(self,
-                 project_name=None,
-                 sample_names=None,
-                 question_names=None,
-                 code_filters=None,
-                 coder_filters=None,
-                 document_filters=None,
-                 balancing_variables=None,
-                 **kwargs
-                 ):
+    def __init__(self, **kwargs):
+
+        project_name = kwargs.get("project_name", None)
+        sample_names = kwargs.get("sample_names", None)
+        question_names = kwargs.get("question_names", None)
+        code_filters = kwargs.get("code_filters", None)
+        coder_filters = kwargs.get("coder_filters", None)
+        document_filters = kwargs.get("document_filters", None)
+        balancing_variables = kwargs.get("balancing_variables", None)
+        ignore_stratification_weights = kwargs.get("ignore_stratification_weights", None)
 
         super(Extractor, self).__init__(**kwargs)
 
@@ -42,6 +42,7 @@ class Extractor(DatasetExtractor):
         self.document_filters = document_filters if document_filters else []
 
         self.balancing_variables = balancing_variables if balancing_variables else []
+        self.ignore_stratification_weights = ignore_stratification_weights
 
         self.raw_codes = get_model("Code", app_name="django_learning").objects \
             .filter(sample_unit__sample__in=self.samples.all())\
@@ -177,8 +178,8 @@ class Extractor(DatasetExtractor):
 
         if self.samples.count() > 1:
             del dataset["sampling_weight"]
-            weights = get_sampling_weights(self.samples)
-            dataset = pandas.merge(dataset, weights[["pk", "weight"]], how="left", left_on="document_id", right_on="pk")
+            weights = get_sampling_weights(self.samples, ignore_stratification_weights=self.ignore_stratification_weights)
+            dataset = pandas.merge(dataset, weights[["pk", "weight", "approx_weight", "strat_weight", "keyword_weight"]], how="left", left_on="document_id", right_on="pk")
             del dataset["pk_y"]
             dataset = dataset.rename(columns={"weight": "sampling_weight"})
 
@@ -215,6 +216,8 @@ class Extractor(DatasetExtractor):
         for doc_type in doc_types:
             docs.ix[~docs["sample_unit__document__{}__pk".format(doc_type)].isnull(), "document_type"] = doc_type
             del docs["sample_unit__document__{}__pk".format(doc_type)]
+        if "text" in dataset.columns:
+            del docs["text"]
         dataset = dataset.merge(docs, how="left", on="document_id")
         self.document_types = list(dataset['document_type'].unique())
 
@@ -257,6 +260,7 @@ class Extractor(DatasetExtractor):
             "label_value",
             "coder_id"
         )
+
     def compute_scores(self, refresh=False, min_overlap=10, discrete_classes=True, pos_label=None):
 
         dataset = self.extract(refresh=refresh)
