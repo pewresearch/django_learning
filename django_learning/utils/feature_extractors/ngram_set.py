@@ -36,14 +36,14 @@ class Extractor(BasicExtractor):
                 text = p.run(text)
             ngramset_row = defaultdict(int)
             for cat in self.regexes.keys():
-                matches = self.regexes[cat].findall(" {0} ".format(text))
+                matches = self.regexes[cat].findall(u" {0} ".format(text))
                 if self.params["feature_name_prefix"]:
                     ngramset_row["%s__%s" % (self.params["feature_name_prefix"], cat)] = len([m for m in matches if m != ''])
                 else:
                     ngramset_row[cat] = len([m for m in matches if m != ''])
             if self.params["include_ngrams"]:
                 for word in self.ngram_regexes.keys():
-                    matches = self.ngram_regexes[word].findall(" {0} ".format(text))
+                    matches = self.ngram_regexes[word].findall(u" {0} ".format(text))
                     if self.params["feature_name_prefix"]:
                         ngramset_row["%s__ngram__%s" % (self.params["feature_name_prefix"], word)] = len([m for m in matches if m != ''])
                     else:
