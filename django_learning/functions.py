@@ -4,6 +4,7 @@ from django.db.models import Q
 
 from pewtils.sampling import compute_sample_weights_from_frame
 from pewtils.django import get_model
+from pewtils import is_not_null
 
 
 def filter_hits(
@@ -111,7 +112,11 @@ def filter_coders(project=None, sample=None, min_hit_count=None):
     return get_model("Coder", app_name="django_learning").objects.filter(pk__in=good_coder_ids).distinct()
 
 
-def get_sampling_weights(samples, refresh_flags=False):
+def get_sampling_weights(
+    samples,
+    refresh_flags=False,
+    ignore_stratification_weights=False
+):
 
     frame_ids = set(list(samples.values_list("frame_id", flat=True)))
     if len(frame_ids) == 1:
@@ -121,26 +126,76 @@ def get_sampling_weights(samples, refresh_flags=False):
 
     frame = sampling_frame.get_sampling_flags(refresh=refresh_flags)
 
+    # weight_vars = []
+    # stratification_variables = []
+    # for sample in samples:
+    #     params = sample.get_params()
+    #     stratify_by = params.get("stratify_by", None)
+    #     if is_not_null(stratify_by) and stratify_by not in stratification_variables:
+    #         stratification_variables.append(stratify_by)
+    #     sampling_searches = params.get("sampling_searches", {})
+    #     if len(sampling_searches) > 0:
+    #         weight_vars.append("search_none")
+    #         weight_vars.extend(["search_{}".format(name) for name in sampling_searches.keys()])
+    # weight_vars = list(set(weight_vars))
+    #
+    # for stratify_by in stratification_variables:
+    #     dummies = pandas.get_dummies(frame[stratify_by], prefix=stratify_by)
+    #     weight_vars.extend(dummies.columns)
+    #     frame = frame.join(dummies)
+    #
+    # full_sample = frame[frame['pk'].isin(list(get_model("SampleUnit", app_name="django_learning").objects.filter(sample__in=samples).values_list("document_id", flat=True)))]
+    # full_sample['weight'] = compute_sample_weights_from_frame(frame, full_sample, weight_vars)
+
     weight_vars = []
     stratification_variables = []
     for sample in samples:
         params = sample.get_params()
         stratify_by = params.get("stratify_by", None)
-        if stratify_by not in stratification_variables:
+        if is_not_null(stratify_by) and stratify_by not in stratification_variables:
             stratification_variables.append(stratify_by)
         sampling_searches = params.get("sampling_searches", {})
         if len(sampling_searches) > 0:
             weight_vars.append("search_none")
-            weight_vars.extend(["search_{}".format(name) for name in sampling_searches.values()])
+            weight_vars.extend(["search_{}".format(name) for name in sampling_searches.keys()])
     weight_vars = list(set(weight_vars))
+    if ignore_stratification_weights:
+        stratification_variables = []
 
+    strat_weight_vars = []
     for stratify_by in stratification_variables:
         dummies = pandas.get_dummies(frame[stratify_by], prefix=stratify_by)
-        weight_vars.extend(dummies.columns)
+        strat_weight_vars.extend(dummies.columns)
         frame = frame.join(dummies)
 
-    full_sample = frame[frame['pk'].isin(list(get_model("SampleUnit", app_name="django_learning").objects.filter(sample__in=samples).values_list("document_id", flat=True)))]
-    full_sample['weight'] = compute_sample_weights_from_frame(frame, full_sample, weight_vars)
+    full_sample = frame[frame['pk'].isin(list(
+        get_model("SampleUnit", app_name="django_learning").objects.filter(sample__in=samples).values_list(
+            "document_id", flat=True)))]
+
+    if len(weight_vars) > 0:
+        keyword_weight = compute_sample_weights_from_frame(frame, full_sample, weight_vars)
+        full_sample['keyword_weight'] = keyword_weight
+        if len(strat_weight_vars) == 0:
+            full_sample['weight'] = keyword_weight
+            full_sample['approx_weight'] = None
+    else:
+        full_sample['keyword_weight'] = None
+
+    if len(strat_weight_vars) > 0:
+        strat_weight = compute_sample_weights_from_frame(frame, full_sample, strat_weight_vars)
+        full_sample['strat_weight'] = strat_weight
+        if len(weight_vars) == 0:
+            full_sample['weight'] = strat_weight
+            full_sample['approx_weight'] = None
+    else:
+        full_sample['strat_weight'] = None
+
+    if len(weight_vars) > 0 and len(strat_weight_vars) > 0:
+        full_sample['approx_weight'] = keyword_weight * strat_weight
+        all_weight_vars = weight_vars + strat_weight_vars
+        full_sample['weight'] = compute_sample_weights_from_frame(frame, full_sample, all_weight_vars)
+
+    full_sample['weight'] = full_sample['weight'].fillna(1.0)
 
     return full_sample
 
