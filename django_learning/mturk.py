@@ -181,7 +181,7 @@ class MTurk(object):
         for su in tqdm(sample.document_units.all(), desc="Creating HITs", total=sample.document_units.count()):
 
             existing = HIT.objects.get_if_exists({
-                "sample_unit": su, "turk": False
+                "sample_unit": su, "turk": True
             })
             if existing and existing.turk_id:
                 print "Skipping existing HIT: {}".format(existing)
@@ -277,7 +277,13 @@ class MTurk(object):
                             assignment.time_finished = a.SubmitTime
                             assignment.save()
                             if approve and not assignment.turk_approved:
-                                self.conn.approve_assignment(a.AssignmentId)
+                                try:
+                                    self.conn.approve_assignment(a.AssignmentId)
+                                except Exception as e:
+                                    print e
+                                    print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
+                                    import pdb
+                                    pdb.set_trace()
                                 assignment.turk_approved = True
                                 assignment.save()
                         else:
