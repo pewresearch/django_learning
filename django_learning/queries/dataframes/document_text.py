@@ -31,7 +31,7 @@ class DataFrame(DataFrameQuery):
             c = TextCleaner(**{
                 "lemmatize": True,
                 "regex_filters": [],
-                "stopword_sets": ["english", "months"],
+                "stopword_sets": ["english", "months", "misc_boilerplate"],
                 "strip_html": True
             })
             df['text_clean'] = df['text'].map(c.run)
