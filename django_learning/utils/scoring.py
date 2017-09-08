@@ -117,7 +117,8 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
             for pos in pos_labels:
                 if not pos_label or pos == pos_label:
                     coder_df["{}__{}".format(outcome_column, pos)] = (coder_df[outcome_column] == pos).astype(int)
-                    scores.append(_get_scores(coder_df, coder1, coder2, "{}__{}".format(outcome_column, pos), document_column, coder_column, weight_column, pos_label=1))
+                    scoreset = _get_scores(coder_df, coder1, coder2, "{}__{}".format(outcome_column, pos), document_column, coder_column, weight_column, pos_label=1)
+                    scores.append(scoreset)
 
         combo_count += 1
 
@@ -163,51 +164,13 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     coder1_df = coder1_df[coder1_df.index.isin(coder2_df.index)]
     coder2_df = coder2_df[coder2_df.index.isin(coder1_df.index)]
 
-    alpha = AnnotationTask(data=coder_df[[coder_column, document_column, outcome_column]].as_matrix())
-    try:
-        alpha = alpha.alpha()
-    except (ZeroDivisionError, ValueError):
-        alpha = None
-
     row = {
         "coder1": coder1,
         "coder2": coder2,
         "n": len(coder1_df),
         "outcome_column": outcome_column,
         "pos_label": pos_label,
-        "alpha": alpha
     }
-
-    try:
-        row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["accuracy"] = None
-
-    try:
-        row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["f1"] = None
-
-    try:
-        row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["precision"] = None
-
-    try:
-        row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column]),
-    except ValueError:
-        row["recall"] = None
-
-    try:
-        row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["matthews_corrcoef"] = None
-
-    try:
-        row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
-            if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
-    except ValueError:
-        row["roc_auc"] = None
 
     for labelsetname, labelset in [
         ("coder1", coder1_df[outcome_column]),
@@ -227,40 +190,90 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
             for valname, val in zip(["mean", "err", "std"], list(weighted)):
                 row["{}_{}".format(labelsetname, valname)] = val
 
-    try:
-        row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column], coder2_df[outcome_column])
-    except TypeError:
+    # if len(numpy.unique(coder_df[outcome_column])) == 2: # and sum(coder1_df[outcome_column]) > 0 and sum(coder2_df[outcome_column]) > 0:
+
+    if len(coder1_df[outcome_column].unique()) >= 2 and len(coder2_df[outcome_column].unique()) >= 2:
+        # not running reliability tests unless both coders saw at least more than one outcome at least once each
+
+        alpha = AnnotationTask(data=coder_df[[coder_column, document_column, outcome_column]].as_matrix())
         try:
-            row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column].astype(int),
-                                                       coder2_df[outcome_column].astype(int))
+            alpha = alpha.alpha()
+        except (ZeroDivisionError, ValueError):
+            alpha = None
+        row["alpha"] = alpha
+
+        try:
+            row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
         except ValueError:
-            row["ttest_t"], row["ttest_p"] = None, None
-    if row["ttest_p"]:
-        if row["ttest_p"] > .05:
-            row["ttest_pass"] = 1
+            row["accuracy"] = None
+
+        try:
+            row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
+        except ValueError:
+            row["f1"] = None
+
+        try:
+            row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
+        except ValueError:
+            row["precision"] = None
+
+        try:
+            row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column]),
+        except ValueError:
+            row["recall"] = None
+
+        try:
+            row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
+        except ValueError:
+            row["matthews_corrcoef"] = None
+
+        try:
+            row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
+                if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
+        except ValueError:
+            row["roc_auc"] = None
+
+        # try:
+        #     row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column], coder2_df[outcome_column])
+        # except TypeError:
+        #     try:
+        #         row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column].astype(int),
+        #                                                    coder2_df[outcome_column].astype(int))
+        #     except ValueError:
+        #         row["ttest_t"], row["ttest_p"] = None, None
+        # if row["ttest_p"]:
+        #     if row["ttest_p"] > .05:
+        #         row["ttest_pass"] = 1
+        #     else:
+        #         row["ttest_pass"] = 0
+
+        row["pct_agree"] = numpy.average([1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
+
+        if len(numpy.unique(coder_df[outcome_column])) == 2:
+            if pos_label: val1, val2 = 0, 1
+            else:
+                try: val1, val2 = coder_df[outcome_column].unique()
+                except ValueError: val1, val2 = None, None
+            if val1 != None and val2 != None:
+                result_dict = {val1: defaultdict(int), val2: defaultdict(int)}
+                for pred, true in zip(coder1_df[outcome_column], coder2_df[outcome_column], ):
+                    result_dict[pred][true] += 1
+                kappa = cohens_kappa([
+                    [result_dict[val1][val1], result_dict[val1][val2]],
+                    [result_dict[val2][val1], result_dict[val2][val2]]
+                ])
+                row["cohens_kappa"] = kappa["kappa"]
+                row["cohens_kappa_err"] = kappa["std_kappa"]
+            else:
+                row["cohens_kappa"] = None
+                row["cohens_kappa_err"] = None
         else:
-            row["ttest_pass"] = 0
+            row["cohens_kappa"] = None
+            row["cohens_kappa_err"] = None
 
-    row["pct_agree"] = numpy.average([1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
-
-    if len(numpy.unique(coder_df[outcome_column])) == 2 and pos_label == 1:
-        if sum(coder1_df[outcome_column]) > 0 and sum(coder2_df[outcome_column]) > 0:
-            result_dict = {0: defaultdict(int), 1: defaultdict(int)}
-            for pred, true in zip(coder1_df[outcome_column], coder2_df[outcome_column], ):
-                result_dict[pred][true] += 1
-            kappa = cohens_kappa([
-                [result_dict[0][0], result_dict[0][1]],
-                [result_dict[1][0], result_dict[1][1]]
-            ])
-            row["cohens_kappa"] = kappa["kappa"]
-            row["cohens_kappa_err"] = kappa["std_kappa"]
-    else:
-        row["cohens_kappa"] = None
-        row["cohens_kappa_err"] = None
-
-    for k, v in row.iteritems():
-        if type(v) == tuple:
-            row[k] = v[0]
-            # For some weird reason, some of the sklearn scorers return 1-tuples sometimes
+        for k, v in row.iteritems():
+            if type(v) == tuple:
+                row[k] = v[0]
+                # For some weird reason, some of the sklearn scorers return 1-tuples sometimes
 
     return row
