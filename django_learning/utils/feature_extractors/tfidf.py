@@ -4,6 +4,8 @@ from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from pewtils.stats import wmom
+from pewtils.django import get_model
+
 from django_learning.utils.feature_extractors import BasicExtractor
 
 
@@ -23,6 +25,8 @@ class Extractor(BasicExtractor):
     def transform(self, X, **transform_params):
 
         print "Preprocessing text (transform)"
+        # if "text" not in X.columns and "document_id" in X.columns:
+        #     X['text'] = X['document_id'].map(lambda x: get_model("Document", app_name="django_learning").objects.get(pk=x).text)
         text = X['text']
         for p in self.get_preprocessors():
             text = text.apply(p.run)
