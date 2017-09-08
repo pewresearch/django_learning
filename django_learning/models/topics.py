@@ -73,8 +73,7 @@ class TopicModel(LoggedExtendedModel):
                     ("clean_text", {
                         "lemmatize": True,
                         "regex_filters": [],
-                        "stopword_sets": ["english", "politicians", "states", "locations", "fb_links", "months",
-                                          "misc_boilerplate"]
+                        "stopword_sets": ["english", "months", "misc_boilerplate"]
                     })
                 ]
             )
