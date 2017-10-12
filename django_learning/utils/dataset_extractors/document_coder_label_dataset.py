@@ -29,6 +29,7 @@ class Extractor(DatasetExtractor):
         document_filters = kwargs.get("document_filters", None)
         balancing_variables = kwargs.get("balancing_variables", None)
         ignore_stratification_weights = kwargs.get("ignore_stratification_weights", None)
+        exclude_consensus_ignore = kwargs.get("exclude_consensus_ignore", False)
 
         super(Extractor, self).__init__(**kwargs)
 
@@ -47,6 +48,8 @@ class Extractor(DatasetExtractor):
         self.raw_codes = get_model("Code", app_name="django_learning").objects \
             .filter(sample_unit__sample__in=self.samples.all())\
             .filter(label__in=self.labels.all())
+        if exclude_consensus_ignore:
+            self.raw_codes = self.raw_codes.exclude(consensus_ignore=True)
 
         self.index_levels = ["document_id", "coder_id", "label_id"]
         self.outcome_column = None
