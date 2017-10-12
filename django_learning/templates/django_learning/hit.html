@@ -196,10 +196,12 @@
                                             {% for label in q.labels.all %}
                                                 {% if not label.select_as_default %}
                                                     <label><input name="{{ q.name }}" type="checkbox" value="{{ label.pk }}" class="zoom"
+                                                                  id="{{ q.name }}_{{ label.value }}"
+                                                                  {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                                                   {% if label.select_as_default and not assignment.time_finished %}checked="checked"
                                                                   {% elif label.pk in q.existing_label_ids %}checked="checked"
                                                                   {% endif %}
-                                                    > {{ label.label }}</label> <!-- {{ q.existing_label_ids }} -->
+                                                    > {% if q.labels.count > 2 %}{{ label.label }}{% endif %}</label> <!-- {{ q.existing_label_ids }} -->
                                                 {% endif %}
                                             {% endfor %}
                                         </td>
@@ -243,29 +245,43 @@
             $('[data-toggle="tooltip"]').tooltip();
 
             {% for q in questions %}
+
                 {% if q.dependency %}
-                    // hide everything
-                    $('tr[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
-                    // remove required
+
+                    $('input[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
                     $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',false);
 
-                    {% for opt in q.dependency.question.labels.all %}
-                        {% if opt.value != q.dependency.value %}
-                            $("#{{ opt.question.name }}_{{ opt.value }}").on("click", function(){
-                                $("tr[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
-                                // remove required
-                                $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',false);
-                                //$("#tr_topic").hide();
-                            });
-                        {% endif %}
-                    {% endfor %}
-
-                    $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").on("click", function(){
-                        //$("#tr_topic").show();
-                        $('tr[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').show();
-                        // remove required
-                        $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',true);
+                    $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").change(function() {
+                        if($(this).is(':checked') | $(this).is(':selected')) {
+                            $("input[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
+                            $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
+                        } else {
+                            $("input[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                            $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
+                            {% for l in q.labels.all %}
+                                $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
+                                $("#{{ q.name }}_{{ l.value }}").prop("selected", false);
+                            {% endfor %}
+                        }
                     });
+
+                    {% if q.dependency.question.dependency %}
+
+                        $("#{{ q.dependency.question.dependency.question.name }}_{{ q.dependency.question.dependency.value }}").change(function() {
+                            if($(this).is(':checked') | $(this).is(':selected')) {
+                                $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
+                            } else {
+                                $("input[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                                $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
+                                {% for l in q.labels.all %}
+                                    $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
+                                    $("#{{ q.name }}_{{ l.value }}").prop("selected", false);
+                                {% endfor %}
+                            }
+                        });
+
+                    {% endif %}
+
                 {% endif %}
             {% endfor %}
 
