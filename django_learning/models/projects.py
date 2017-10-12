@@ -38,6 +38,8 @@ class Project(LoggedExtendedModel):
             raise Exception("Project '{}' is not defined in any of the known folders".format(self.name))
 
         config = projects[self.name]
+        if "instructions" in config.keys():
+            self.instructions = config['instructions']
         super(Project, self).save(*args, **kwargs)
 
         qual_tests = []
