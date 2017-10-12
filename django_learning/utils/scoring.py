@@ -222,6 +222,11 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
         except ValueError:
             row["recall"] = None
 
+        if row["precision"] and row["recall"]:
+            row["precision_recall_min"] = min([row["precision"], row["recall"]])
+        else:
+            row["precision_recall_min"] = None
+
         try:
             row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
         except ValueError:
