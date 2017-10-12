@@ -242,10 +242,13 @@ class LearningModel(LoggedExtendedModel):
             self.dataset_extractor.outcome_column
         )
 
+        fit_params = {"model__{}".format(k): v for k, v in self.parameters["model"].get("fit_params", {}).iteritems()}
+        if self.parameters["model"].get("use_sample_weights", False):
+            fit_params["model__sample_weight"] = [x for x in train_dataset["training_weight"].values]
         model = GridSearchCV(
             Pipeline(pipeline_steps),
             params,
-            fit_params={'model__sample_weight': [x for x in train_dataset["training_weight"].values]} if self.parameters["model"].get("use_sample_weights", False) else {},
+            fit_params=fit_params,
             cv=self.parameters["model"].get("cv", 5),
             n_jobs=self.num_cores,
             verbose=1,
