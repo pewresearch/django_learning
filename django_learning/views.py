@@ -493,6 +493,53 @@ def _save_response(request, overwrite=False):
 
         return False
 
+@login_required
+def adjudicate_question(request, project_name, sample_name, question_name):
+
+    project = Project.objects.get(name=project_name)
+    sample = project.samples.get(name=sample_name)
+
+    if request.user.coder in sample.project.admins.all():
+
+        if request.method == "POST":
+
+            hit_id = request.POST.get("hit_id")
+            ignore_coder_id = request.POST.get("ignore_coder_id")
+
+            code = HIT.objects.get(pk=hit_id).assignments.get(coder_id=ignore_coder_id).codes.get(label__question__name=question_name)
+            code.consensus_ignore = True
+            code.save()
+
+        completed_expert_hits = filter_hits(
+            assignments=filter_assignments(sample=sample, experts_only=True, completed_only=True),
+            experts_only=True
+        )
+
+        codes = pandas.DataFrame.from_records(
+            Code.objects\
+                .filter(consensus_ignore=False)\
+                .filter(assignment__hit__in=completed_expert_hits)\
+                .filter(label__question__name=question_name)
+                .values("label_id", "assignment__hit__id", "coder_id")
+        )
+        grouped = codes.groupby(["assignment__hit__id"]).agg({"label_id": lambda x: x.nunique()})
+        hits = grouped[grouped['label_id']>1]
+        hits = HIT.objects.filter(pk__in=hits.index)
+
+        random_hit = hits.order_by("?")[0]
+        codes = codes[codes['assignment__hit__id'] == random_hit.pk].groupby("label_id")['coder_id'].first()
+
+        return render(request, "django_learning/adjudicate_question.html", {
+            "question_name": question_name,
+            "sample": sample,
+            "hit": random_hit,
+            "coder_1": Coder.objects.get(pk=codes.values[0]),
+            "coder_2": Coder.objects.get(pk=codes.values[1]),
+            "label_1": Label.objects.get(pk=codes.index[0]),
+            "label_2": Label.objects.get(pk=codes.index[1])
+        })
+
+
 # @login_required
 # def get_dataframe(request, project_name):
 #

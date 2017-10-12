@@ -144,6 +144,22 @@
         </div>
     </div>
     <div class="row">
+        {% if request.user.coder in sample.project.admins.all %}
+            <div class="col-md-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">Adjudicate Disagreements</div>
+                    <table class="panel-body table table-condensed">
+                        {% for question in sample.project.questions.all %}
+                            <tr>
+                                <td><a href="{% url 'django_learning:adjudicate_question' sample.project.name sample.name question.name %}">{{ question.name }}</a></td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <div class="row">
         <div class="col-md-3">
             <a class="btn btn-primary btn-block" href="{% url 'django_learning:view_project' sample.project.name %}">Back to Project</a>
         </div>

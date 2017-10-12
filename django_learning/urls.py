@@ -13,6 +13,7 @@ urlpatterns = [
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/code_assignment/(?P<assignment_id>[0-9]+)$', views.code_assignment, name="code_specific_assignment"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/code_assignment$', views.code_assignment, name="code_assignment"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/complete_qualification/(?P<qualification_test_name>[\w\_]+)$', views.complete_qualification, name="complete_qualification"),
+    url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/adjudicate_question/(?P<question_name>[\w\_]+)', views.adjudicate_question, name="adjudicate_question"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)', views.view_sample, name="view_sample"),
     url(r'^project/(?P<project_name>[\w\_]+)', views.view_project, name="view_project"),
     url(r'^project/create/(?P<project_name>[\w\_]+)', views.create_project, name="create_project"),
