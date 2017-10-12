@@ -24,19 +24,19 @@ class Extractor(BasicExtractor):
 
     def transform(self, X, **transform_params):
 
-        print "Preprocessing text (transform)"
+        # print "Preprocessing text (transform)"
         # if "text" not in X.columns and "document_id" in X.columns:
         #     X['text'] = X['document_id'].map(lambda x: get_model("Document", app_name="django_learning").objects.get(pk=x).text)
         text = X['text']
         for p in self.get_preprocessors():
             text = text.apply(p.run)
 
-        print "Transforming text to TF-IDF matrix (transform)"
+        # print "Transforming text to TF-IDF matrix (transform)"
         ngrams = self.vectorizer.transform(text, **transform_params)
 
         if hasattr(self, "normalize_document_types") and self.normalize_document_types:
 
-            print "Normalizing across document types (transform)"
+            # print "Normalizing across document types (transform)"
             ngrams = pandas.DataFrame(ngrams.todense(), index=X.index)
             for doctype, group in X.groupby("document_type"):
                 for col in ngrams.columns:
@@ -46,17 +46,17 @@ class Extractor(BasicExtractor):
 
     def fit(self, X, y=None, **fit_params):
 
-        print "Preprocessing text (fit)"
+        # print "Preprocessing text (fit)"
         text = X['text']
         for p in self.get_preprocessors():
             text = text.apply(p.run)
 
-        print "Fitting TF-IDF matrix (fit)"
+        # print "Fitting TF-IDF matrix (fit)"
         self.vectorizer.fit(text, y, **fit_params)
 
         if hasattr(self, "normalize_document_types") and self.normalize_document_types:
 
-            print "Computing normalization parameters (fit)"
+            # print "Computing normalization parameters (fit)"
             ngrams = pandas.DataFrame(self.vectorizer.transform(text).todense(), index=X.index)
             self.mean_mapper = defaultdict(dict)
             self.std_mapper = defaultdict(dict)
