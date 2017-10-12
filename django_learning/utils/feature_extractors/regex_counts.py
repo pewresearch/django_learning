@@ -1,4 +1,4 @@
-import re, pandas
+import re, pandas, numpy
 
 from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.feature_extractors import BasicExtractor
@@ -24,9 +24,12 @@ class Extractor(BasicExtractor):
             for p in preprocessors:
                 text = p.run(text)
             matches = self.regex_filter.findall(text)
+            count = float(len(matches))
             row = {
-                "count": len(matches),
-                "has_match": 1 if len(matches) > 0 else 0
+                "count": count,
+                "has_match": 1 if count > 0 else 0,
+                "count_sq": count*count,
+                "count_log": numpy.log(count+1.0)
             }
             rows.append(row)
 
