@@ -12,6 +12,8 @@ from langdetect import detect
 from abc import abstractmethod
 from collections import OrderedDict, defaultdict
 from statsmodels.stats.inter_rater import cohens_kappa
+from tempfile import mkdtemp
+from shutil import rmtree
 
 from sklearn.cross_validation import train_test_split
 from sklearn.model_selection import KFold
@@ -227,7 +229,7 @@ class LearningModel(LoggedExtendedModel):
             )
 
         train_dataset = df.ix[train_ids]
-        test_dataset = df.ix[test_ids] if len(test_ids) > 0 else None
+        test_dataset = df.ix[test_ids] if is_not_null(test_ids) and len(test_ids) > 0 else None
 
         scoring_function = None
         if "scoring_function" in self.parameters["model"].keys():
@@ -245,15 +247,23 @@ class LearningModel(LoggedExtendedModel):
         fit_params = {"model__{}".format(k): v for k, v in self.parameters["model"].get("fit_params", {}).iteritems()}
         if self.parameters["model"].get("use_sample_weights", False):
             fit_params["model__sample_weight"] = [x for x in train_dataset["training_weight"].values]
+
+        # os.path.join(LOCAL_CACHE_PATH
+        try: sklearn_cache = mkdtemp(prefix="sklearn", dir=os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)))
+        except:
+            print "Couldn't create local sklearn cache dir"
+            sklearn_cache = None
         model = GridSearchCV(
-            Pipeline(pipeline_steps),
+            Pipeline(pipeline_steps, memory=sklearn_cache),
             params,
             fit_params=fit_params,
             cv=self.parameters["model"].get("cv", 5),
             n_jobs=self.num_cores,
-            verbose=1,
+            verbose=2,
             scoring=scoring_function
         )
+        if sklearn_cache:
+            rmtree(sklearn_cache)
 
         model.fit(train_dataset, train_dataset[self.dataset_extractor.outcome_column])
 
