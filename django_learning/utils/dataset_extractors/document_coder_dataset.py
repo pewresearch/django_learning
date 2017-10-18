@@ -28,7 +28,7 @@ class Extractor(DocumentCoderLabelDatasetExtractor):
             "coder_name": lambda x: x.value_counts().index[0],
             "coder_is_mturk": lambda x: x.value_counts().index[0],
             "sampling_weight": lambda x: numpy.average(x),
-            "date": lambda x: x.value_counts().index[0]
+            "date": lambda x: x.value_counts().index[0] if len(x.value_counts().index) > 0 else None
         })
         dataset = dataset.groupby(["document_id", "coder_id"]).agg(agg_dict).reset_index()  # this is in case a question allows multiple labels; need to consolidate
         self.outcome_column = None

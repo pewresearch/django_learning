@@ -114,7 +114,7 @@ class Extractor(DatasetExtractor):
                     "coder_name": lambda x: x.value_counts().index[0],
                     "coder_is_mturk": lambda x: x.value_counts().index[0],
                     "sampling_weight": lambda x: numpy.average(x),
-                    "date": lambda x: x.value_counts().index[0]
+                    "date": lambda x: x.value_counts().index[0] if len(x.value_counts().index) > 0 else None
                 })
                 grouped = dataset.groupby(["document_id", "coder_id"]).agg(agg_dict)
                 grouped['label_id'] = grouped.apply(lambda x: "".join(["1" if x[l] > 0 else "0" for l in label_cols]), axis=1)
@@ -129,12 +129,12 @@ class Extractor(DatasetExtractor):
             self._add_balancing_weights(dataset)
 
             if self.outcome_column:
-                print "Extracted dataset: outcome_column '{}', discrete='{}', valid_label_ids='{}'".format(
-                    self.outcome_column, self.discrete_classes, self.valid_label_ids
+                print "Extracted dataset for {}: outcome_column '{}', discrete='{}', valid_label_ids='{}'".format(
+                    self.outcome_column, self.questions.all(), self.discrete_classes, self.valid_label_ids
                 )
             else:
-                print "Extracted dataset: outcome_columns '{}', discrete='{}', valid_label_ids='{}'".format(
-                    self.outcome_columns, self.discrete_classes, self.valid_label_ids
+                print "Extracted dataset for {}: outcome_columns '{}', discrete='{}', valid_label_ids='{}'".format(
+                    self.outcome_columns, self.questions.all(), self.discrete_classes, self.valid_label_ids
                 )
 
         return dataset
