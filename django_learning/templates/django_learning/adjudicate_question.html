@@ -1,6 +1,7 @@
 {% extends django_learning_template %}
 
 {% load staticfiles %}
+{% load template_filters %}
 
 {% block extra_head %}
 
@@ -53,7 +54,7 @@
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-body" style="overflow: scroll; height: 200px;">
-                    <p>{{ hit.sample_unit.document.text|safe|linebreaks }}</p>
+                    <p>{{ hit.sample_unit.document.date }}: {{ hit.sample_unit.document.text|safe|linebreaks }}</p>
                 </div>
             </div>
         </div>
