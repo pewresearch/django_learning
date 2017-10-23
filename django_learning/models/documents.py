@@ -69,6 +69,14 @@ class Document(LoggedExtendedModel, QueryModel):
         return obj_models
 
     @property
+    def document_type(self):
+
+        for doc_type in self._meta.model.objects.document_types():
+            if hasattr(self, doc_type) and getattr(self, doc_type):
+                return doc_type
+        return None
+
+    @property
     def object(self):
 
         for parent_field in self.get_parent_relations():

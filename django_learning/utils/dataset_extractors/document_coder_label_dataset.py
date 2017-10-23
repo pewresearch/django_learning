@@ -201,24 +201,17 @@ class Extractor(DatasetExtractor):
 
     def _add_document_data(self, dataset):
 
+        docs = get_model("Document", app_name="django_learning").objects\
+            .filter(pk__in=self.raw_codes.values_list("document_id", flat=True).distinct())
         doc_columns = [
-            "document_id",
-            "document__text"
+            "pk",
+            "text"
         ]
         if "date" not in dataset.columns:
-            doc_columns.append("document__date")
-        doc_types = get_model("Document", app_name="django_learning").objects.document_types()
-        for doc_type in doc_types:
-            doc_columns.append("sample_unit__document__{}__pk".format(doc_type))
-        docs = pandas.DataFrame.from_records(
-            self.raw_codes.values(*doc_columns).distinct()
-        )
-        docs = docs.rename(columns={"document__text": "text"})
-        if "document__date" in docs.columns:
-            docs = docs.rename(columns={"document__date": "date"})
-        for doc_type in doc_types:
-            docs.ix[~docs["sample_unit__document__{}__pk".format(doc_type)].isnull(), "document_type"] = doc_type
-            del docs["sample_unit__document__{}__pk".format(doc_type)]
+            doc_columns.append("date")
+        docs = pandas.DataFrame.from_records(docs.values(*doc_columns))
+        docs = docs.rename(columns={"pk": "document_id"})
+        docs["document_type"] = docs["document_id"].map(lambda x: get_model("Document", app_name="django_learning").objects.get(pk=x).document_type)
         if "text" in dataset.columns:
             del docs["text"]
         dataset = dataset.merge(docs, how="left", on="document_id")
