@@ -26,10 +26,10 @@ class Extractor(BasicExtractor):
             matches = self.regex_filter.findall(text)
             count = float(len(matches))
             row = {
-                "count": count,
-                "has_match": 1 if count > 0 else 0,
-                "count_sq": count*count,
-                "count_log": numpy.log(count+1.0)
+                "{}_count".format(self.params["regex_filter"]): count,
+                "{}_has_match".format(self.params["regex_filter"]): 1 if count > 0 else 0,
+                "{}_count_sq".format(self.params["regex_filter"]): count*count,
+                "{}_count_log".format(self.params["regex_filter"]): numpy.log(count+1.0)
             }
             rows.append(row)
 
