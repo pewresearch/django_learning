@@ -53,6 +53,7 @@ class DatasetExtractor(object):
                         setattr(self, k, v)
 
         if is_null(cache_data) and not only_get_existing:
+            print "Refreshing dataset: {}".format(self.cache_hash)
             updated_hashstr = self.get_hash(**kwargs)
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
