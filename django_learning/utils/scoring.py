@@ -161,8 +161,9 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     coder2_df = coder_df[coder_df[coder_column] == coder2]
     coder2_df.index = coder2_df[document_column]
     # coder2_df = coder2_df.ix[coder1_df.index]
+    # coder12_df = coder1_df.join(coder2_df, how="inner", lsuffix="1", rsuffix="2")
     coder1_df = coder1_df[coder1_df.index.isin(coder2_df.index)]
-    coder2_df = coder2_df[coder2_df.index.isin(coder1_df.index)]
+    coder2_df = coder2_df[coder2_df.index.isin(coder1_df.index)].ix[coder1_df.index]
 
     row = {
         "coder1": coder1,
