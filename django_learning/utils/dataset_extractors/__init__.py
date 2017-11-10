@@ -43,9 +43,10 @@ class DatasetExtractor(object):
 
         cache_data = None
 
+        if not self.cache_hash:
+            self.cache_hash = self.get_hash(**kwargs)
+
         if not refresh:
-            if not self.cache_hash:
-                self.cache_hash = self.get_hash(**kwargs)
             cache_data = self.cache.read(self.cache_hash)
             if is_not_null(cache_data):
                 for k, v in cache_data.iteritems():
@@ -54,13 +55,15 @@ class DatasetExtractor(object):
 
         if is_null(cache_data) and not only_get_existing:
             print "Refreshing dataset: {}".format(self.cache_hash)
-            updated_hashstr = self.get_hash(**kwargs)
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
-            self.cache.write(updated_hashstr, cache_data)
-            self.cache_hash = updated_hashstr
+            self.cache.write(self.cache_hash, cache_data)
 
-        return cache_data["dataset"]
+        if is_not_null(cache_data):
+            return cache_data.get("dataset", None)
+        else:
+            return cache_data
+
 
     def _get_preserved_state(self, **kwargs):
 
