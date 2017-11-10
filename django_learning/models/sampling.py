@@ -163,6 +163,21 @@ class Sample(LoggedExtendedModel):
 
         return sampling_methods.get(self.sampling_method, None)()
 
+    def sync_with_frame(self, override_doc_ids=None):
+
+        if not override_doc_ids:
+            override_doc_ids = list(self.documents.values_list("pk", flat=True))
+        frame_ids = self.frame.documents.values_list("pk", flat=True)
+        bad_ids = [id for id in override_doc_ids if id not in frame_ids]
+        if len(bad_ids) > 0:
+            print "Warning: sample is out of sync with its frame; {} documents are now out-of-scope".format(len(bad_ids))
+            override_doc_ids = [id for id in override_doc_ids if id in frame_ids]
+            print "{} documents will remain in the sample".format(len(override_doc_ids))
+            print "Press 'c' to continue and remove them (and any associated codes) from the sample, otherwise 'q' to quit"
+            import pdb
+            pdb.set_trace()
+            SampleUnit.objects.filter(sample=self, document_id__in=bad_ids).delete()
+
     def extract_documents(self,
         size=None,
         recompute_weights=False,
@@ -177,18 +192,7 @@ class Sample(LoggedExtendedModel):
             self.document_units.all().delete()
 
         if recompute_weights:
-            override_doc_ids = list(self.documents.values_list("pk", flat=True))
-            frame_ids = self.frame.documents.values_list("pk", flat=True)
-            bad_ids = [id for id in override_doc_ids if id not in frame_ids]
-            if len(bad_ids) > 0:
-                print "Warning: sample is out of sync with its frame; {} documents are now out-of-scope".format(
-                    len(bad_ids))
-                override_doc_ids = [id for id in override_doc_ids if id in frame_ids]
-                print "{} documents will remain in the sample".format(len(override_doc_ids))
-                print "Press 'c' to continue and remove them from the sample, otherwise 'q' to quit"
-                import pdb
-                pdb.set_trace()
-                SampleUnit.objects.filter(sample=self, document_id__in=bad_ids).delete()
+            self.sync_with_frame(override_doc_ids=override_doc_ids)
 
         params = self.get_params()
         if params:
