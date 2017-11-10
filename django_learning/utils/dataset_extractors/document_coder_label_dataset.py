@@ -78,6 +78,8 @@ class Extractor(DatasetExtractor):
 
         hash_key = super(Extractor, self).get_hash(**kwargs)
         hash_key += str(inspect.getsourcelines(self._additional_steps)) + str(self.samples) + str(self.questions) + str(self.code_filters)
+        # TODO: shouldn't this also include document_filters and coder_filters?  although, those are already included in self.kwargs, so... why is that here?
+        # We'll keep it for now, since all of the existing cache keys rely on it
 
         return self.cache.file_handler.get_key_hash(hash_key)
 
