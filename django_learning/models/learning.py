@@ -54,8 +54,6 @@ class LearningModel(LoggedExtendedModel):
 
     cache_hash =  models.CharField(max_length=256, null=True)
 
-    num_cores = models.IntegerField(default=1)
-
     class Meta:
 
         abstract = True
@@ -76,7 +74,7 @@ class LearningModel(LoggedExtendedModel):
 
         self.cache_identifier = "{}_{}".format(self.name, self.pipeline_name)
 
-        self.dataset_extractor = self._get_dataset_extractor()
+        self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
         self.dataset = None
 
         self.model = None
@@ -96,12 +94,12 @@ class LearningModel(LoggedExtendedModel):
             use_s3=False
         )
 
-    def _get_dataset_extractor(self):
+    def _get_dataset_extractor(self, key):
 
         dataset_extractor = None
         try:
-            dataset_extractor = dataset_extractors[self.parameters["dataset_extractor"]["name"]](
-                **self.parameters["dataset_extractor"]["parameters"]
+            dataset_extractor = dataset_extractors[self.parameters[key]["name"]](
+                **self.parameters[key]["parameters"]
             )
         except TypeError:
             print "WARNING: couldn't identify dataset extractor, it may not exist anymore!"
@@ -135,9 +133,20 @@ class LearningModel(LoggedExtendedModel):
                     self.parameters["dataset_extractor"]["name"]
                 ))
         self.outcome_column = self.dataset_extractor.outcome_column
+        if "test_dataset_extractor" in self.parameters.keys():
+            test_dataset_extractor = self._get_dataset_extractor("test_dataset_extractor")
+            test_dataset = test_dataset_extractor.extract(refresh=refresh, **kwargs)
+            test_dataset.index = test_dataset.index.map(lambda x: 'test_{}'.format(x))
+            self.dataset = pandas.concat([self.dataset, test_dataset])
+
+        if "training_weight" not in self.dataset.columns:
+            if self.parameters.get("use_sample_weights", False):
+                self.dataset["training_weight"] = self.dataset["sampling_weight"]
+            else:
+                self.dataset["training_weight"] = 1.0
 
     @temp_cache_wrapper
-    def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, **kwargs):
+    def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, num_cores=1, **kwargs):
 
         if is_null(self.dataset):
             self.extract_dataset()
@@ -177,7 +186,7 @@ class LearningModel(LoggedExtendedModel):
                 str(OrderedDict(sorted(self.parameters.get("model", {}).items(), key=lambda t: t[0])))
             ])
             updated_hashstr = self.cache.file_handler.get_key_hash(updated_hashstr)
-            cache_data = self._train_model(pipeline_steps, params, **kwargs)
+            cache_data = self._train_model(pipeline_steps, params, num_cores=num_cores, **kwargs)
             self.cache.write(updated_hashstr, cache_data)
             self.cache_hash = updated_hashstr
             self.cv_folds = None
@@ -187,30 +196,33 @@ class LearningModel(LoggedExtendedModel):
             for k, v in cache_data.iteritems():
                 setattr(self, k, v)
 
-    def _train_model(self, pipeline_steps, params, **kwargs):
+    def _get_training_dataset(self):
+
+        df = copy.copy(self.dataset)
+
+        return df
+
+    def _get_largest_code(self):
 
         df = self.dataset
+        if self.dataset_extractor.base_class_id:
+            largest_code = self.dataset_extractor.base_class_id
+        else:
+            largest_code = df[self.dataset_extractor.outcome_column].value_counts(ascending=False).index[0]
 
-        smallest_code = df[self.dataset_extractor.outcome_column].value_counts(ascending=True).index[0]
-        largest_code = df[self.dataset_extractor.outcome_column].value_counts(ascending=False).index[0]
+        return largest_code
 
-        # print "Code frequencies: {}".format(dict(df[self.outcome_variable].value_counts(ascending=True)))
+    def _get_fit_params(self, train_dataset):
 
-        if "training_weight" not in df.columns:
-            df["training_weight"] = 1.0
+        fit_params = {"model__{}".format(k): v for k, v in self.parameters["model"].get("fit_params", {}).iteritems()}
+        if self.parameters["model"].get("use_sample_weights", False):
+            fit_params["model__sample_weight"] = [x for x in train_dataset["training_weight"].values]
 
-        if self.parameters["model"].get("use_class_weights", False):
+        return fit_params
 
-            class_weights = {}
-            base_weight = df[df[self.dataset_extractor.outcome_column] == largest_code]['training_weight'].sum()
-            # total_weight = df['training_weight'].sum()
-            for c in df[self.dataset_extractor.outcome_column].unique():
-                # class_weights[c] = float(df[df[self.outcome_column]==c]["training_weight"].sum()) / float(total_weight)
-                class_weights[c] = base_weight / float(df[df[self.dataset_extractor.outcome_column] == c]['training_weight'].sum())
-            total_weight = sum(class_weights.values())
-            class_weights = {k: float(v) / float(total_weight) for k, v in class_weights.items()}
-            params["model__class_weight"] = [class_weights, ]
-            print "Class weights: {}".format(class_weights)
+    def _train_model(self, pipeline_steps, params, num_cores=1, **kwargs):
+
+        df = self._get_training_dataset()
 
         print "Creating train-test split"
 
@@ -219,13 +231,25 @@ class LearningModel(LoggedExtendedModel):
         X_cols.remove(self.dataset_extractor.outcome_column)
         X = df[X_cols]
         if self.parameters["model"]["test_percent"] == 0.0:
-            X_train, X_test, y_train, y_test, train_ids, test_ids = X, None, y, None, y.index, None
-            print "Training on all {} cases".format(len(y_train))
+            train_ids, test_ids = y.index, None
+            print "Training on all {} cases".format(len(train_ids))
+            # if is_not_null(self.test_dataset):
+            if "test_dataset_extractor" in self.parameters.keys():
+                test_ids = [i for i in self.dataset.index if str(i).startswith("test_")]
+                train_ids = [i for i in self.dataset.index if not str(i).startswith("test_")]
+                # self.test_dataset['training_weight'] = 1.0
+                # self.test_dataset['balancing_weight'] = 1.0
+                # y_test = self.test_dataset[self.dataset_extractor.outcome_column]
+                # X_test = self.test_dataset[X_cols]
+                # self.test_dataset.index = self.test_dataset.index.map(lambda x: 'test_{}'.format(x))
+                # test_ids = self.test_dataset.index
+                # df = pandas.concat([df, self.test_dataset])
+                print "Adding {} test cases from separate dataset".format(len(test_ids))
         else:
-            X_train, X_test, y_train, y_test, train_ids, test_ids = train_test_split(X, y, y.index, test_size=self.parameters["model"]["test_percent"], random_state=5)
+            _, _, _, _, train_ids, test_ids = train_test_split(X, y, y.index, test_size=self.parameters["model"]["test_percent"], random_state=5)
             print "Selected %i training cases and %i test cases" % (
-                len(y_train),
-                len(y_test)
+                len(train_ids),
+                len(test_ids)
             )
 
         train_dataset = df.ix[train_ids]
@@ -235,20 +259,17 @@ class LearningModel(LoggedExtendedModel):
         if "scoring_function" in self.parameters["model"].keys():
             scoring_function = self._get_scoring_function(
                 self.parameters["model"]["scoring_function"],
-                binary_base_code=smallest_code if len(y.unique()) == 2 else None
+                binary_base_code=self._get_largest_code() if len(y.unique()) == 2 else None
             )
+
+        fit_params = self._get_fit_params(train_dataset)
 
         print "Beginning grid search using %s and %i cores for %s" % (
             str(scoring_function),
-            self.num_cores,
+            num_cores,
             self.dataset_extractor.outcome_column
         )
 
-        fit_params = {"model__{}".format(k): v for k, v in self.parameters["model"].get("fit_params", {}).iteritems()}
-        if self.parameters["model"].get("use_sample_weights", False):
-            fit_params["model__sample_weight"] = [x for x in train_dataset["training_weight"].values]
-
-        # os.path.join(LOCAL_CACHE_PATH
         try: sklearn_cache = mkdtemp(prefix="sklearn", dir=os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)))
         except:
             print "Couldn't create local sklearn cache dir"
@@ -258,14 +279,14 @@ class LearningModel(LoggedExtendedModel):
             params,
             fit_params=fit_params,
             cv=self.parameters["model"].get("cv", 5),
-            n_jobs=self.num_cores,
+            n_jobs=num_cores,
             verbose=2,
             scoring=scoring_function
         )
-        if sklearn_cache:
-            rmtree(sklearn_cache)
 
         model.fit(train_dataset, train_dataset[self.dataset_extractor.outcome_column])
+        if sklearn_cache:
+            rmtree(sklearn_cache)
 
         print "Finished training model, best score: {}".format(model.best_score_)
 
@@ -294,12 +315,12 @@ class LearningModel(LoggedExtendedModel):
         # print params
 
     @require_model
-    def get_test_prediction_results(self, refresh=False):
+    def get_test_prediction_results(self, refresh=False, only_get_existing=False):
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
-            self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main", refresh=refresh)
-            scores = self.compute_prediction_scores(self.test_dataset, cache_key="predict_main", refresh=False)
+            self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main", refresh=refresh, only_get_existing=only_get_existing)
+            scores = self.compute_prediction_scores(self.test_dataset, predicted_df=self.predict_dataset)
             return scores
 
     def print_test_prediction_report(self):
@@ -307,31 +328,51 @@ class LearningModel(LoggedExtendedModel):
         print self.get_test_prediction_results()
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False):
+    def get_cv_prediction_results(self, refresh=False, only_get_existing=False):
 
         print "Computing cross-fold predictions"
         _final_model = self.model
         _final_model_best_estimator = self.model.best_estimator_
+        dataset = self._get_training_dataset()
+
         all_fold_scores = []
-        if not refresh and self.cv_folds:
-            cv_folds = self.cv_folds
-        else:
-            self.cv_folds = [f for f in KFold(n_splits=self.parameters["model"].get("cv", 5), shuffle=True).split(self.dataset.index)]
+        if refresh or not self.cv_folds:
+            self.cv_folds = [f for f in KFold(len(dataset.index), n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
             self.save()
         for i, folds in enumerate(self.cv_folds):
             fold_train_index, fold_test_index = folds
-            fold_train_dataset = self.dataset.ix[fold_train_index]
-            fold_test_dataset = self.dataset.ix[fold_test_index]
-            self.model = _final_model_best_estimator.fit(fold_train_dataset, fold_train_dataset[self.dataset_extractor.outcome_column])
-            fold_predict_dataset = self.produce_prediction_dataset(fold_test_dataset, cache_key="predict_fold_{}".format(i), refresh=refresh)
-            fold_scores = self.compute_prediction_scores(fold_test_dataset, cache_key="predict_fold_{}".format(i), refresh=False)
+            # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
+            fold_train_dataset = dataset.ix[pandas.Series(dataset.index).iloc[fold_train_index].values] # self.dataset.ix[fold_train_index]
+            fold_test_dataset = dataset.ix[pandas.Series(dataset.index).iloc[fold_test_index].values] # self.dataset.ix[fold_test_index]
+
+            fold_predict_dataset = None
+            if not refresh:
+                fold_predict_dataset = self.produce_prediction_dataset(fold_test_dataset, cache_key="predict_fold_{}".format(i), refresh=False, only_get_existing=True)
+            if is_null(fold_predict_dataset) and not only_get_existing:
+                fit_params = self._get_fit_params(fold_train_dataset)
+                self.model = _final_model_best_estimator.fit(
+                    fold_train_dataset,
+                    fold_train_dataset[self.dataset_extractor.outcome_column],
+                    **fit_params
+                )
+                fold_predict_dataset = self.produce_prediction_dataset(fold_test_dataset, cache_key="predict_fold_{}".format(i), refresh=refresh)
+
+            if is_not_null(fold_predict_dataset):
+                fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
+            else:
+                fold_scores = None
             all_fold_scores.append(fold_scores)
+
         self.model = _final_model
-        fold_score_df = pandas.concat(all_fold_scores)
-        return pandas.concat([
-            all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-            fold_score_df.groupby(fold_score_df.index).mean()
-        ], axis=1)
+        if any([is_null(f) for f in all_fold_scores]):
+            return None
+        else:
+            fold_score_df = pandas.concat(all_fold_scores)
+            fold_score_df = pandas.concat([
+                all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                fold_score_df.groupby(fold_score_df.index).mean()
+            ], axis=1)
+            return fold_score_df
 
     def print_cv_prediction_report(self):
 
@@ -457,20 +498,24 @@ class LearningModel(LoggedExtendedModel):
         return pandas.DataFrame(labels, index=data.index)
 
     @require_model
-    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False):
+    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_get_existing=False):
 
-        predicted_df = dataset_extractors["model_prediction_dataset"](dataset=df_to_predict, learning_model=self, cache_key=cache_key).extract(refresh=refresh)
+        predicted_df = dataset_extractors["model_prediction_dataset"](dataset=df_to_predict, learning_model=self, cache_key=cache_key)\
+            .extract(refresh=refresh, only_get_existing=only_get_existing)
+
         return predicted_df
 
     @require_model
-    def compute_prediction_scores(self, df_to_predict, cache_key=None, refresh=False):
+    def compute_prediction_scores(self, df_to_predict, predicted_df=None, cache_key=None, refresh=False, only_get_existing=False):
 
         if "sampling_weight" in df_to_predict.columns: weight_col = "sampling_weight"
         else: weight_col = None
-        predicted_df = self.produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh)
-
-        return compute_scores_from_datasets_as_coders(df_to_predict, predicted_df, "index", self.dataset_extractor.outcome_column, weight_column=weight_col)
-
+        if is_null(predicted_df):
+            predicted_df = self.produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh, only_get_existing=only_get_existing)
+        if is_not_null(predicted_df):
+            return compute_scores_from_datasets_as_coders(df_to_predict, predicted_df, "index", self.dataset_extractor.outcome_column, weight_column=weight_col)
+        else:
+            return None
 
 class DocumentLearningModel(LearningModel):
 
