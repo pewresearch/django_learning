@@ -4,7 +4,7 @@ from tqdm import tqdm
 from gensim.models import KeyedVectors
 from django.conf import settings
 
-from pewtils import flatten_list
+from pewtils import flatten_list, is_null
 from pewtils.django import get_model, reset_django_connection_wrapper
 from django_learning.utils.feature_extractors import BasicExtractor
 
@@ -14,11 +14,14 @@ class Extractor(BasicExtractor):
     def __init__(self, *args, **kwargs):
 
         self.name = "google_word2vec"
-        self.models = None
+        self.w2v = None
 
         super(Extractor, self).__init__(*args, **kwargs)
 
     def transform(self, X, **transform_params):
+
+        if is_null(self.w2v):
+            self.w2v = self._get_w2v()
 
         X = copy.deepcopy(X)
         for p in self.get_preprocessors():
@@ -57,14 +60,27 @@ class Extractor(BasicExtractor):
 
         self.features = df.columns
 
+        # self.w2v = None
+
         return df
 
     def fit(self, X, y=None, **fit_params):
 
-        self.w2v = KeyedVectors.load_word2vec_format('{}/GoogleNews-vectors-negative300.bin.gz'.format(settings.FILE_ROOT), binary=True, limit=self.params["limit"])
+        if is_null(self.w2v):
+            self.w2v = self._get_w2v()
 
         return self
 
     def get_feature_names(self):
 
         return ["{}_{}".format(self.params["feature_name_prefix"], x) for x in xrange(0, 1500)]
+
+    def _get_w2v(self):
+
+        return KeyedVectors.load_word2vec_format('{}/GoogleNews-vectors-negative300.bin.gz'.format(settings.FILE_ROOT), binary=True, limit=self.params["limit"])
+
+    # def _cleanup(self):
+    #
+    #     self.w2v = None
+    #
+    #     return self
