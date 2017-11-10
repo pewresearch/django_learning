@@ -7,6 +7,7 @@ from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score, precisi
 from scipy.stats import ttest_ind
 
 from pewtils.stats import wmom
+from pewtils import is_not_null
 
 #         scoring_function = None
 #         if "scoring_function" in self.parameters["model"].keys():
@@ -228,7 +229,7 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
         except ValueError:
             row["recall"] = None
 
-        if row["precision"] and row["recall"]:
+        if is_not_null(row["precision"]) and is_not_null(row["recall"]):
             row["precision_recall_min"] = min([row["precision"], row["recall"]])
         else:
             row["precision_recall_min"] = None
@@ -288,3 +289,47 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
                 # For some weird reason, some of the sklearn scorers return 1-tuples sometimes
 
     return row
+
+
+def get_probability_threshold_score_df(predicted_df, comparison_df, outcome_column="label_id", base_id=None, metric="precision_recall_min", weight_column=None):
+
+    predicted_df = copy.copy(predicted_df)
+    threshold_scores = []
+    for threshold in numpy.linspace(0, 1, 20, endpoint=False):
+        temp_df = apply_probability_threshold(predicted_df, threshold, outcome_column=outcome_column, base_id=base_id)
+        scores = compute_scores_from_datasets_as_coders(comparison_df, temp_df, "index", outcome_column,
+                                                        weight_column=weight_column)
+        scores["threshold"] = threshold
+        threshold_scores.append(scores)
+
+    score_df = pandas.concat(threshold_scores)
+
+    return score_df
+
+
+def get_probability_threshold_from_score_df(score_df, metric="precision_recall_min"):
+
+    sorted_df = score_df.groupby("threshold").agg({metric: min}).sort_values(metric, ascending=False)
+    max_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.max()
+    min_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.min()
+    sorted_df = sorted_df[~sorted_df[metric].isnull()]
+
+    return numpy.average(sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.values)
+
+
+def find_probability_threshold(predicted_df, comparison_df, outcome_column="label_id", base_id=None, metric="precision_recall_min", weight_column=None):
+
+    score_df = get_probability_threshold_score_df(predicted_df, comparison_df, outcome_column=outcome_column, base_id=base_id, metric=metric, weight_column=weight_column)
+    return get_probability_threshold_score_df(score_df, metric=metric)
+
+
+def apply_probability_threshold(predicted_df, threshold, outcome_column="label_id", base_id=None):
+
+    predicted_df = copy.copy(predicted_df)
+    if not base_id:
+        base_id = predicted_df[outcome_column].value_counts().sort_values(ascending=False).index[0]
+    pos_id = set(predicted_df[outcome_column].unique()).difference(set([base_id])).pop()
+    predicted_df["probability"] = predicted_df.apply(lambda x: x['probability'] if x[outcome_column] != base_id else 1.0 - x['probability'], axis=1)
+    predicted_df[outcome_column] = predicted_df.apply(lambda x: pos_id if x['probability'] >= threshold else base_id, axis=1)
+
+    return predicted_df
