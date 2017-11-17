@@ -22,6 +22,7 @@ from django_learning.utils.sampling_frames import sampling_frames as sampling_fr
 from django_learning.utils.sampling_methods import sampling_methods as sampling_method_configs
 from django_learning.utils.project_hit_types import project_hit_types as project_hit_type_configs
 
+from pewtils import is_not_null
 from pewtils.django import get_model
 
 
@@ -539,6 +540,39 @@ def adjudicate_question(request, project_name, sample_name, question_name):
             "label_2": Label.objects.get(pk=codes.index[1])
         })
 
+
+@login_required
+def view_topic_models(request):
+
+    topic_models = TopicModel.objects.all()
+    return render(request, "django_learning/topic_models.html", {
+        "topic_models": topic_models
+    })
+
+
+@login_required
+def edit_topic_model(request, model_id):
+
+    topic_model = TopicModel.objects.get(pk=model_id)
+
+    if request.method == "POST":
+        for topic in topic_model.topics.order_by("num"):
+            name = request.POST.get("topic_{}_name".format(topic.num), None)
+            topic.name = name
+            label = request.POST.get("topic_{}_label".format(topic.num), None)
+            topic.label = label
+            anchors = request.POST.get("topic_{}_anchors".format(topic.num), None)
+            if is_not_null(anchors):
+                anchors = [anchor.strip() for anchor in anchors.split(",")]
+                topic.anchors = anchors
+            else:
+                topic.anchors = []
+            topic.save()
+
+    return render(request, "django_learning/topic_model.html", {
+        "topic_model": topic_model,
+        "topics": topic_model.topics.order_by("num")
+    })
 
 # @login_required
 # def get_dataframe(request, project_name):

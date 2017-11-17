@@ -19,5 +19,8 @@ urlpatterns = [
     url(r'^project/create/(?P<project_name>[\w\_]+)', views.create_project, name="create_project"),
     url(r'^sampling_frame/(?P<sampling_frame_name>[\w\_]+)/extract', views.extract_sampling_frame, name="extract_sampling_frame"),
     url(r'^sampling_frame/(?P<sampling_frame_name>[\w\_]+)', views.view_sampling_frame, name="view_sampling_frame"),
+    url(r'^topic_model/(?P<model_id>[0-9]+)', views.edit_topic_model, name="edit_topic_model"),
+    url(r'^topic_models', views.view_topic_models, name="view_topic_models"),
+
     #url(r'^get_dataframe/(?P<project_name>[\w\_]+)$', views.get_dataframe),
 ]
