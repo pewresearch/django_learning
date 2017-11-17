@@ -328,8 +328,10 @@ def apply_probability_threshold(predicted_df, threshold, outcome_column="label_i
     predicted_df = copy.copy(predicted_df)
     if not base_id:
         base_id = predicted_df[outcome_column].value_counts().sort_values(ascending=False).index[0]
-    pos_id = set(predicted_df[outcome_column].unique()).difference(set([base_id])).pop()
+    try: pos_id = set(predicted_df[outcome_column].unique()).difference(set([base_id])).pop()
+    except KeyError: pos_id = None
     predicted_df["probability"] = predicted_df.apply(lambda x: x['probability'] if x[outcome_column] != base_id else 1.0 - x['probability'], axis=1)
-    predicted_df[outcome_column] = predicted_df.apply(lambda x: pos_id if x['probability'] >= threshold else base_id, axis=1)
+    if pos_id: predicted_df[outcome_column] = predicted_df.apply(lambda x: pos_id if x['probability'] >= threshold else base_id, axis=1)
+    else: predicted_df[outcome_column] = base_id
 
     return predicted_df
