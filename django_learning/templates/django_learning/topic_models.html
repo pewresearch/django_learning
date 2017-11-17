@@ -1,0 +1,36 @@
+{% extends django_learning_template %}
+
+{% load staticfiles %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+
+        <div class="col-md-4">
+            <div class="panel">
+                <div class="panel-heading">Topic Models</div>
+                <table class="panel-body table table-condensed">
+                    {% for model in topic_models %}
+                        <tr><th>Name</th><th>Parameters</th><th>Anchor Strength</th></tr>
+                        {% if model.model %}
+                            <tr>
+                                <td>{{ model.name }}</td>
+                                <td>{{ model.parameters }}</td>
+                                <td><a class="btn btn-block btn-danger" href="{% url 'django_learning:edit_topic_model' model.pk %}">Edit Anchors</a></td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

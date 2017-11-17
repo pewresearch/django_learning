@@ -1,0 +1,51 @@
+{% extends django_learning_template %}
+
+{% load staticfiles %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+
+        <form class="form" method="post" action="{% url 'django_learning:edit_topic_model' topic_model.pk %}">
+            {% csrf_token %}
+            <div class="col-md-12">
+                <div class="panel">
+                    <div class="panel-heading">Topic Models</div>
+                    <table class="panel-body table table-condensed">
+                        <tr><th>Topic</th><th>Name</th><th>Label</th><th>Anchors</th></tr>
+                        {% for topic in topics %}
+                            <tr>
+                                <td style="width:400px">{{ topic.num }}.) {{ topic.top_ngrams }}</td>
+                                <td style="width:200px">
+                                    <fieldset class="form-group">
+                                        <textarea name="topic_{{ forloop.counter0 }}_name" class="form-control" rows="1" placeholder="Name">{% if topic.name %}{{ topic.name }}{% endif %}</textarea>
+                                    </fieldset>
+                                </td>
+                                <td style="width:200px">
+                                    <fieldset class="form-group">
+                                        <textarea name="topic_{{ forloop.counter0 }}_label" class="form-control" rows="3" placeholder="Label">{% if topic.label %}{{ topic.label }}{% endif %}</textarea>
+                                    </fieldset>
+                                </td>
+                                <td style="width:400px">
+                                    <fieldset class="form-group">
+                                        <textarea name="topic_{{ forloop.counter0 }}_anchors" class="form-control" rows="3" placeholder="Anchors">{% if topic.anchors %}{{ topic.anchor_string }}{% endif %}</textarea>
+                                    </fieldset>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+            <button type="submit" id="submitButton" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}
