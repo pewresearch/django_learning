@@ -74,7 +74,7 @@ class Extractor(DatasetExtractor):
                 "date"
             )
         )
-        dataset = dataset.rename(columns={"pk", "document_id"})
+        dataset = dataset.rename(columns={"pk": "document_id"})
 
         if len(dataset) > 0:
 
