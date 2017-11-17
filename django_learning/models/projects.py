@@ -10,11 +10,11 @@ from django_commander.models import LoggedExtendedModel
 
 from django_learning.managers import QuestionManager
 from django_learning.exceptions import RequiredResponseException
-from django_learning.utils.projects import projects
-from django_learning.utils.project_hit_types import project_hit_types
-from django_learning.utils.project_qualification_tests import project_qualification_tests
-from django_learning.utils.project_qualification_scorers import project_qualification_scorers
-from django_learning.utils.dataset_extractors import dataset_extractors
+from django_learning.utils import projects
+from django_learning.utils import project_hit_types
+from django_learning.utils import project_qualification_tests
+from django_learning.utils import project_qualification_scorers
+from django_learning.utils import dataset_extractors
 
 
 class Project(LoggedExtendedModel):
@@ -34,10 +34,16 @@ class Project(LoggedExtendedModel):
 
     def save(self, *args, **kwargs):
 
-        if self.name not in projects.keys():
-            raise Exception("Project '{}' is not defined in any of the known folders".format(self.name))
+        if self.name not in projects.projects.keys():
+            reload(projects)
+            if self.name not in projects.projects.keys():
+                print self.name
+                print projects.projects.keys()
+                import pdb
+                pdb.set_trace()
+                raise Exception("Project '{}' is not defined in any of the known folders".format(self.name))
 
-        config = projects[self.name]
+        config = projects.projects[self.name]
         if "instructions" in config.keys():
             self.instructions = config['instructions']
         super(Project, self).save(*args, **kwargs)
@@ -51,8 +57,17 @@ class Project(LoggedExtendedModel):
 
         for i, q in enumerate(config["questions"]):
             Question.objects.create_from_config("project", self, q, i)
+
+        admin_names = [c for c in config.get("admins", [])]
+        coder_names = list(admin_names)
+        for c in config.get("coders", []):
+            if c["is_admin"] and c["name"] not in admin_names:
+                admin_names.append(c["name"])
+            coder_names.append(c["name"])
+
+        coders = []
         admins = []
-        for c in config["admins"]:
+        for c in coder_names:
             try: user = User.objects.get(username=c)
             except User.DoesNotExist:
                 user = User.objects.create_user(
@@ -64,7 +79,11 @@ class Project(LoggedExtendedModel):
                 {"name": c},
                 {"is_mturk": False, "user": user}
             )
-            admins.append(coder.pk)
+            coders.append(coder.pk)
+            if c in admin_names:
+                admins.append(coder.pk)
+
+        self.coders = get_model("Coder").objects.filter(pk__in=coders)
         self.admins = get_model("Coder").objects.filter(pk__in=admins)
 
     def expert_coders(self):
@@ -81,7 +100,7 @@ class Project(LoggedExtendedModel):
 
     def extract_document_coder_label_dataset(self, sample_names, question_names, code_filters=None, **kwargs):
 
-        e = dataset_extractors["document_coder_label_dataset"](
+        e = dataset_extractors.dataset_extractors["document_coder_label_dataset"](
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
@@ -91,7 +110,7 @@ class Project(LoggedExtendedModel):
 
     def extract_document_coder_dataset(self, sample_names, question_names, **kwargs):
 
-        e = dataset_extractors["document_coder_dataset"](
+        e = dataset_extractors.dataset_extractors["document_coder_dataset"](
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
@@ -101,7 +120,7 @@ class Project(LoggedExtendedModel):
 
     def extract_document_dataset(self, sample_names, question_names, **kwargs):
 
-        e = dataset_extractors["document_dataset"](
+        e = dataset_extractors.dataset_extractors["document_dataset"](
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
@@ -255,10 +274,10 @@ class QualificationTest(LoggedExtendedModel):
 
     def save(self, *args, **kwargs):
 
-        if self.name not in project_qualification_tests.keys():
+        if self.name not in project_qualification_tests.project_qualification_tests.keys():
             raise Exception("Qualification test '{}' is not defined in any of the known folders".format(self.name))
 
-        config = project_qualification_tests[self.name]
+        config = project_qualification_tests.project_qualification_tests[self.name]
         for attr in [
             "instructions",
             "title",
@@ -297,14 +316,14 @@ class QualificationAssignment(LoggedExtendedModel):
     def save(self, *args, **kwargs):
 
         if is_not_null(self.time_finished):
-            self.is_qualified = project_qualification_scorers[self.test.name](self)
+            self.is_qualified = project_qualification_scorers.project_qualification_scorers[self.test.name](self)
         super(QualificationAssignment, self).save(*args, **kwargs)
 
 
 class HITType(LoggedExtendedModel):
 
     project = models.ForeignKey("django_learning.Project", related_name="hit_types")
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
 
     title = models.TextField(null=True)
     description = models.TextField(null=True)
@@ -328,10 +347,10 @@ class HITType(LoggedExtendedModel):
 
     def save(self, *args, **kwargs):
 
-        if self.name not in project_hit_types.keys():
+        if self.name not in project_hit_types.project_hit_types.keys():
             raise Exception("HIT Type '{}' is not defined in any of the known folders".format(self.name))
 
-        config = project_hit_types[self.name]
+        config = project_hit_types.project_hit_types[self.name]
         for attr in [
             "title",
             "description",
