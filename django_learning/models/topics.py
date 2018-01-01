@@ -107,35 +107,42 @@ class TopicModel(LoggedExtendedModel):
 
             self.save()
 
-        self.topics.all().delete()
-        for i, topic_ngrams in enumerate(self.model.get_topics(n_words=20)):
+            self.topics.all().delete()
+            for i, topic_ngrams in enumerate(self.model.get_topics(n_words=20)):
 
-            topic = Topic.objects.create_or_update(
-                {
-                    "num": i,
-                    "model": self
-                },
-                search_nulls=False,
-                save_nulls=True,
-                empty_lists_are_null=True
-            )
-            topic.ngrams.all().delete()
-            for ngram, weight in topic_ngrams:
-                TopicNgram.objects.create(
-                    name=str(ngram),
-                    topic=topic,
-                    weight=weight
+                topic = Topic.objects.create_or_update(
+                    {
+                        "num": i,
+                        "model": self
+                    },
+                    search_nulls=False,
+                    save_nulls=True,
+                    empty_lists_are_null=True
                 )
-            print str(topic)
+                topic.ngrams.all().delete()
+                for ngram, weight in topic_ngrams:
+                    TopicNgram.objects.create(
+                        name=str(ngram),
+                        topic=topic,
+                        weight=weight
+                    )
+                print str(topic)
 
-            old_topic = old_topic_map.get(i, None)
-            if old_topic:
+                old_topic = old_topic_map.get(i, None)
+                if old_topic:
 
-                topic.name = old_topic['name']
-                topic.label = old_topic['label']
-                topic.anchors = old_topic['anchors']
-                topic.save()
+                    topic.name = old_topic['name']
+                    topic.label = old_topic['label']
+                    topic.anchors = old_topic['anchors']
+                    topic.save()
 
+    def apply_model(self, df):
+
+        tfidf = self.vectorizer.transform(df)
+        topic_names = list(self.topics.order_by("num").values_list("name", flat=True))
+        topic_df = pandas.DataFrame(self.model.transform(tfidf), columns=topic_names).astype(int)
+
+        return pandas.concat([df, topic_df], axis=1)
 
 
         # lda_model = self.model
@@ -253,10 +260,10 @@ class Topic(LoggedExtendedModel):
 
         return ", ".join(self.anchors)
 
-    def top_ngrams(self):
+    def top_ngrams(self, top_n=25):
 
         return " ".join([n.replace(" ", "_") for n in
-                         self.ngrams.order_by("-weight").filter(weight__gte=.001).values_list("name", flat=True)[:20]])
+                         self.ngrams.order_by("-weight").filter(weight__gte=.001).values_list("name", flat=True)[:top_n]])
 
     # def distinctive_ngrams(self):
     #
