@@ -162,10 +162,11 @@
                                             {% for label in q.labels.all %}
                                                 <label class="radio-inline">
                                                     <input class="zoom" type="radio" name="{{ q.name }}" value="{{ label.pk }}" id="{{ q.name }}_{{ label.value }}"
-                                                           {% if label.select_as_default and not assignment.time_finished %}checked="checked"
-                                                           {% elif label.pk in q.existing_label_ids %}checked="checked"
+                                                           {% if label.select_as_default and not assignment.time_finished %}checked="checked" selected="selected"
+                                                           {% elif label.pk in q.existing_label_ids %}checked="checked" selected="selected"
                                                            {% endif %}
-                                                           {% if not q.optional %}required data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                                           {% if not q.optional %}required{% endif %}
+                                                           {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                                     >
                                                     {{ label.label }}
                                                 </label>
@@ -175,12 +176,16 @@
                                         <td class="form-group">
                                             <input class="zoom" type="number" name="{{ q.name }}"
                                                    {% if q.existing_value %}value="{{ q.existing_value }}"{% endif %}
-                                                   {% if not q.optional %}required data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                                   {% if not q.optional %}required{% endif %}
+                                                   {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                             >
                                         </td>
                                     {% elif q.display == 'dropdown' %}
                                         <td class="form-group">
-                                            <select class="form-control" name="{{ q.name }}" {% if not q.optional %}required data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}>
+                                            <select class="form-control" name="{{ q.name }}"
+                                                    {% if not q.optional %}required{% endif %}
+                                                    {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
+                                            >
                                                 <option value="" disabled {% if q.existing_label_ids|length == 0 %}selected{% endif %}>---</option>
                                                 {% for label in q.labels.all %}
                                                     <option value="{{ label.pk }}"
@@ -248,30 +253,19 @@
 
                 {% if q.dependency %}
 
-                    $('input[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
-                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required',false);
+                    $('*[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
+                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
 
-                    $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").change(function() {
-                        if($(this).is(':checked') | $(this).is(':selected')) {
-                            $("input[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
-                            $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
-                        } else {
-                            $("input[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
-                            $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
-                            {% for l in q.labels.all %}
-                                $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
-                                $("#{{ q.name }}_{{ l.value }}").prop("selected", false);
-                            {% endfor %}
-                        }
-                    });
-
-                    {% if q.dependency.question.dependency %}
-
-                        $("#{{ q.dependency.question.dependency.question.name }}_{{ q.dependency.question.dependency.value }}").change(function() {
-                            if($(this).is(':checked') | $(this).is(':selected')) {
+                    {% for label in q.labels.all %}
+                        $("#{{ q.dependency.question.name }}_{{ label.value }}").change(function() {
+                            console.log("change detected");
+                            if($("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':checked') | $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':selected')) {
+                                console.log("is checked");
+                                $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
                                 $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
                             } else {
-                                $("input[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                                console.log("is not checked");
+                                $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
                                 $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
                                 {% for l in q.labels.all %}
                                     $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
@@ -279,6 +273,24 @@
                                 {% endfor %}
                             }
                         });
+                    {% endfor %}
+
+                    {% if q.dependency.question.dependency %}
+                        {% for label in q.dependency.question.labels.all %}
+                            $("#{{ q.dependency.question.dependency.question.name }}_{{ label.value }}").change(function() {
+                                if($("#{{ q.dependency.question.dependency.question.name }}_{{ q.dependency.question.dependency.value }}").is(':checked') | $("#{{ q.dependency.question.dependency.question.name }}_{{ q.dependency.question.dependency.value }}").is(':selected')) {
+                                    $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
+                                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
+                                } else {
+                                    $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
+                                    $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
+                                    {% for l in q.labels.all %}
+                                        $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
+                                        $("#{{ q.name }}_{{ l.value }}").prop("selected", false);
+                                    {% endfor %}
+                                }
+                            });
+                        {% endfor %}
 
                     {% endif %}
 
