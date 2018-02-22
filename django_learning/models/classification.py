@@ -1,7 +1,7 @@
 import importlib, copy, pandas, numpy
 
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, F
 from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -56,29 +56,34 @@ class ClassificationModel(LearningModel):
 
         return results
 
-    def _get_training_dataset(self):
+    def extract_dataset(self, refresh=False, **kwargs):
 
-        df = super(ClassificationModel, self)._get_training_dataset()
+        super(ClassificationModel, self).extract_dataset(refresh=refresh, **kwargs)
 
         if self.parameters["model"].get("use_class_weights", False):
 
-            largest_code = self._get_largest_code()
+            # largest_code = self._get_largest_code()
 
             class_weights = {}
             # base_weight = df[df[self.dataset_extractor.outcome_column] == largest_code]['training_weight'].sum()
             # total_weight = df['training_weight'].sum()
 
-            target_weight_per_class = df['training_weight'].sum() / float(len(df[self.dataset_extractor.outcome_column].unique()))
+            try:
+                target_weight_per_class = self.dataset['training_weight'].sum() / float(len(self.dataset[self.dataset_extractor.outcome_column].unique()))
+            except KeyError:
+                print "Huh..."
+                import pdb
+                pdb.set_trace()
 
-            for c in df[self.dataset_extractor.outcome_column].unique():
+            for c in self.dataset[self.dataset_extractor.outcome_column].unique():
                 # class_weights[c] = float(df[df[self.outcome_column]==c]["training_weight"].sum()) / float(total_weight)
                 # class_weights[c] = base_weight / float(df[df[self.dataset_extractor.outcome_column] == c]['training_weight'].sum())
-                class_weights[c] = target_weight_per_class / float(df[df[self.dataset_extractor.outcome_column] == c]['training_weight'].sum())
+                class_weights[c] = target_weight_per_class / float(self.dataset[self.dataset[self.dataset_extractor.outcome_column] == c]['training_weight'].sum())
 
             # total_weight = sum(class_weights.values())
             # class_weights = {k: float(v) / float(total_weight) for k, v in class_weights.items()}
             print "Class weights: {}".format(class_weights)
-            df["training_weight"] = df.apply(lambda x: x['training_weight']*class_weights[x[self.dataset_extractor.outcome_column]], axis=1)
+            self.dataset["training_weight"] = self.dataset.apply(lambda x: x['training_weight']*class_weights[x[self.dataset_extractor.outcome_column]], axis=1)
 
         # if self.parameters["model"].get("use_class_weights", False):
         #     scale_pos_weight = df[df[self.dataset_extractor.outcome_column].astype(str) == str(largest_code)][
@@ -87,8 +92,6 @@ class ClassificationModel(LearningModel):
         #                            'training_weight'].sum()
         #     df.ix[df[self.dataset_extractor.outcome_column].astype(str) != str(
         #         largest_code), "training_weight"] *= scale_pos_weight
-
-        return df
 
     @require_model
     def show_top_features(self, n=10):
@@ -140,6 +143,14 @@ class ClassificationModel(LearningModel):
         super(ClassificationModel, self).describe_model()
         self.show_top_features()
 
+    def _get_positive_code(self):
+        
+        codes = self.dataset[self.dataset_extractor.outcome_column].unique()
+        if len(codes) == 2:
+            return [c for c in codes if str(c) != str(self._get_largest_code())][0]
+        else:
+            return None
+        
     def print_test_prediction_report(self):
 
         results = self.get_test_prediction_results()
@@ -147,9 +158,7 @@ class ClassificationModel(LearningModel):
         report = classification_report(
             self.test_dataset[self.dataset_extractor.outcome_column],
             self.predict_dataset[self.dataset_extractor.outcome_column],
-            sample_weight=self.test_dataset["sampling_weight"] if "sampling_weight" in self.test_dataset.columns and
-                                                                  self.parameters["model"].get("use_sample_weights",
-                                                                                               False) else None
+            sample_weight=self.test_dataset["sampling_weight"] if "sampling_weight" in self.test_dataset.columns else None
         )
 
         matrix = confusion_matrix(
@@ -195,7 +204,7 @@ class ClassificationModel(LearningModel):
         print "Computing cross-fold predictions"
         _final_model = self.model
         _final_model_best_estimator = self.model.best_estimator_
-        dataset = self._get_training_dataset()
+        dataset = copy.copy(self.train_dataset)
 
         all_fold_scores = []
         if refresh or not self.cv_folds:
@@ -255,7 +264,13 @@ class ClassificationModel(LearningModel):
 
         print "Scanning CV folds for optimal probability threshold"
 
-        self.probability_threshold = None
+        base_code = self._get_largest_code()
+        if base_code: base_code = str(base_code)
+        pos_code = self._get_positive_code()
+        if pos_code: pos_code = str(pos_code)
+
+        if save:
+            self.probability_threshold = None
         if is_not_null(self.cv_folds):
 
             predict_dataset = self.produce_prediction_dataset(
@@ -271,11 +286,12 @@ class ClassificationModel(LearningModel):
                     predict_dataset,
                     self.test_dataset,
                     outcome_column=self.dataset_extractor.outcome_column,
-                    metric=metric,
-                    weight_column="sampling_weight" if "sampling_weight" in predict_dataset.columns else None
+                    weight_column="sampling_weight" if "sampling_weight" in predict_dataset.columns else None,
+                    base_code=base_code,
+                    pos_code=pos_code
                 )
 
-            dataset = self._get_training_dataset()
+            dataset = copy.copy(self.train_dataset)
 
             all_fold_scores = []
             for i, folds in enumerate(self.cv_folds):
@@ -291,59 +307,81 @@ class ClassificationModel(LearningModel):
                     only_get_existing=True,
                     ignore_probability_threshold=True
                 )
-                threshold = None
+                # threshold = None
                 if is_not_null(fold_predict_dataset):
                     fold_threshold_scores = get_probability_threshold_score_df(
                         fold_predict_dataset,
                         fold_test_dataset,
                         outcome_column=self.dataset_extractor.outcome_column,
-                        metric=metric,
-                        weight_column="sampling_weight" if "sampling_weight" in fold_predict_dataset.columns else None
+                        weight_column="sampling_weight" if "sampling_weight" in fold_predict_dataset.columns else None,
+                        base_code=base_code,
+                        pos_code=pos_code
                     )
                     if is_not_null(test_threshold_scores):
                         fold_threshold_scores[metric] = [min(list(x)) for x in zip(test_threshold_scores[metric], fold_threshold_scores[metric])]
-                    threshold = get_probability_threshold_from_score_df(
-                        fold_threshold_scores,
-                        metric=metric,
-                        base_id=str(self._get_largest_code())
-                    )
-                    fold_predict_dataset = apply_probability_threshold(
-                        fold_predict_dataset,
-                        threshold,
-                        outcome_column=self.dataset_extractor.outcome_column,
-                        base_id=str(self._get_largest_code())
-                    )
+                    all_fold_scores.append(fold_threshold_scores)
 
-                if is_not_null(fold_predict_dataset):
-                    fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
-                    fold_scores['probability_threshold'] = threshold
-                else:
-                    fold_scores = None
-                all_fold_scores.append(fold_scores)
+                #     # if is_not_null(test_threshold_scores):
+                #     #     fold_threshold_scores[metric] = [min(list(x)) for x in zip(test_threshold_scores[metric], fold_threshold_scores[metric])]
+                #     threshold = get_probability_threshold_from_score_df(
+                #         fold_threshold_scores,
+                #         metric=metric
+                #     )
+                #     fold_predict_dataset = apply_probability_threshold(
+                #         fold_predict_dataset,
+                #         threshold,
+                #         outcome_column=self.dataset_extractor.outcome_column,
+                #         base_code=base_code,
+                #         pos_code=pos_code
+                #     )
+                #
+                # if is_not_null(fold_predict_dataset):
+                #     fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
+                #     fold_scores['probability_threshold'] = threshold
+                # else:
+                #     fold_scores = None
+                # all_fold_scores.append(fold_scores)
 
-        if any([is_null(f) for f in all_fold_scores]):
-            print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
-            return None
+            if any([is_null(f) for f in all_fold_scores]):
+                print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+                if save:
+                    self.set_probability_threshold(None)
+                return None
+            else:
+                fold_score_df = pandas.concat(all_fold_scores).fillna(0.0)
+                threshold = fold_score_df.groupby(["threshold", "outcome_column"]).mean()[metric].sort_values(ascending=False).index[0][0]
+                if save:
+                    self.set_probability_threshold(threshold)
+                return threshold
+
+
+            # if any([is_null(f) for f in all_fold_scores]):
+            #     print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+            #     return None
+            # else:
+            #     fold_score_df = pandas.concat(all_fold_scores)
+            #     fold_score_df = pandas.concat([
+            #         all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+            #         fold_score_df.groupby(fold_score_df.index).mean()
+            #     ], axis=1)
+            #     threshold = fold_score_df['probability_threshold'].mean()
+            #     if save:
+            #         self.set_probability_threshold(threshold)
+            #     return threshold
         else:
-            fold_score_df = pandas.concat(all_fold_scores)
-            fold_score_df = pandas.concat([
-                all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-                fold_score_df.groupby(fold_score_df.index).mean()
-            ], axis=1)
-            threshold = fold_score_df['probability_threshold'].mean()
             if save:
-                self.set_probability_threshold(threshold)
-            return threshold
+                self.set_probability_threshold(None)
+            return None
 
     def set_probability_threshold(self, threshold):
 
         self.probability_threshold = threshold
         self.save()
 
-    def apply_model(self, data, keep_cols=None, clear_temp_cache=True):
+    def apply_model(self, data, keep_cols=None, clear_temp_cache=True, disable_probability_threshold_warning=False):
 
         results = super(ClassificationModel, self).apply_model(data, keep_cols=keep_cols, clear_temp_cache=clear_temp_cache)
-        if self.probability_threshold:
+        if self.probability_threshold and not disable_probability_threshold_warning:
             print "Warning: because 'apply_model' is used by model prediction dataset extractors, which cache their results, "
             print "probability thresholds are not applied, for the sake of efficiency.  If you wish to apply the threshold, "
             print "use 'produce_prediction_dataset' and pass 'ignore_probability_threshold=False' or manually pass the results "
@@ -353,7 +391,18 @@ class ClassificationModel(LearningModel):
     @require_model
     def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_get_existing=False, ignore_probability_threshold=False):
 
-        predicted_df = super(ClassificationModel, self).produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh, only_get_existing=only_get_existing)
+        base_code = self._get_largest_code()
+        if base_code: base_code = str(base_code)
+        pos_code = self._get_positive_code()
+        if pos_code: pos_code = str(pos_code)
+
+        predicted_df = super(ClassificationModel, self).produce_prediction_dataset(
+            df_to_predict,
+            cache_key=cache_key,
+            refresh=refresh,
+            only_get_existing=only_get_existing,
+            disable_probability_threshold_warning=(not ignore_probability_threshold)
+        )
         if is_not_null(predicted_df):
             if not ignore_probability_threshold:
                 if not self.probability_threshold:
@@ -363,7 +412,8 @@ class ClassificationModel(LearningModel):
                         predicted_df,
                         self.probability_threshold,
                         outcome_column=self.dataset_extractor.outcome_column,
-                        base_id=str(self._get_largest_code())
+                        base_code=base_code,
+                        pos_code=pos_code
                     )
             elif self.probability_threshold:
                 print "Probability threshold exists ({}) but you've said to ignore it".format(self.probability_threshold)
@@ -401,20 +451,19 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         documents,
         save=True,
         document_filters=None,
-        refresh_document_dataset=False,
-        refresh_predictions=False
+        refresh=False
     ):
 
         extractor = dataset_extractors["raw_document_dataset"](
             document_ids=list(documents.values_list("pk", flat=True)),
             document_filters=document_filters
         )
-        dataset = extractor.extract(refresh=refresh_document_dataset)
+        dataset = extractor.extract(refresh=refresh)
 
         predictions = pandas.DataFrame()
         if len(dataset) > 0:
 
-            predictions = self.produce_prediction_dataset(dataset, cache_key=extractor.get_hash(), refresh=refresh_predictions, only_get_existing=False)
+            predictions = self.produce_prediction_dataset(dataset, cache_key=extractor.get_hash(), refresh=refresh, only_get_existing=False)
 
             if save:
 
@@ -446,8 +495,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         documents,
         save=True,
         document_filters=None,
-        refresh_document_dataset=False,
-        refresh_predictions=False,
+        refresh=False,
         num_cores=2,
         chunk_size=1000
     ):
@@ -471,8 +519,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
                 i,
                 save,
                 document_filters,
-                refresh_document_dataset,
-                refresh_predictions
+                refresh
             ))
             results.append(result)
         pool.close()
@@ -490,22 +537,31 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         self,
         save=True,
         document_filters=None,
-        refresh_document_dataset=False,
-        refresh_predictions=False,
+        refresh=False,
         num_cores=2,
         chunk_size=1000
     ):
 
         docs = self.sampling_frame.documents.all()
+        if not refresh:
+            docs = docs.exclude(classifications__classification_model=self)
         self.apply_model_to_documents_multiprocessed(
             docs,
             save=save,
             document_filters=document_filters,
-            refresh_document_dataset=refresh_document_dataset,
-            refresh_predictions=refresh_predictions,
+            refresh=refresh,
             num_cores=num_cores,
             chunk_size=chunk_size
         )
+
+    def update_classifications_with_probability_threshold(self):
+
+        base_code = self._get_largest_code()
+        pos_code = self._get_positive_code()
+        switch_to_pos = self.classifications.filter(label_id=base_code).filter(probability__gte=self.probability_threshold)
+        switch_to_neg = self.classifications.filter(label_id=pos_code).filter(probability__lt=self.probability_threshold)
+        switch_to_pos.update(label_id=pos_code)
+        switch_to_neg.update(label_id=base_code)
 
 
 def _process_document_chunk(
@@ -514,13 +570,13 @@ def _process_document_chunk(
     i,
     save,
     document_filters,
-    refresh_document_dataset,
-    refresh_predictions
+    refresh
 ):
 
     import sys, traceback
     from django_learning.models import DocumentClassificationModel
     from pewtils.django import get_model, reset_django_connection
+    from pewtils import is_not_null
     from django.conf import settings
     reset_django_connection(settings.SITE_NAME)
 
@@ -529,15 +585,19 @@ def _process_document_chunk(
         documents = get_model("Document", app_name="django_learning").objects.filter(pk__in=chunk)
         model = DocumentClassificationModel.objects.get(pk=model_id)
         model.load_model(only_load_existing=True)
-        predictions = model.apply_model_to_documents(
-            documents,
-            save=save,
-            document_filters=document_filters,
-            refresh_document_dataset=refresh_document_dataset,
-            refresh_predictions=refresh_predictions
-        )
+        if is_not_null(model.model):
 
-        print "Done processing chunk %i" % (int(i) + 1)
+            predictions = model.apply_model_to_documents(
+                documents,
+                save=save,
+                document_filters=document_filters,
+                refresh=refresh
+            )
+
+            print "Done processing chunk %i" % (int(i) + 1)
+
+        else:
+            raise Exception("Couldn't load the model, aborting this chunk")
 
         return predictions
 
