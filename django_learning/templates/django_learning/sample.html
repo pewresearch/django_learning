@@ -128,17 +128,19 @@
                         <td>{{ total_turk_assignments }}</td>
                         <td>{{ completed_turk_assignments.count }}</td>
                     </tr>
-                    {% if request.user.coder in sample.project.admins.all %}
-                        {% for coder in mturk_coder_completion %}
-                            <tr>
-                                <td>{{ coder.coder.name }}</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{ coder.total_turk_assignments.count }}</td>
-                                <td>{{ coder.completed_turk_assignments.count }}</td>
-                            </tr>
-                        {% endfor %}
-                    {% endif %}
+                    <!--
+                        {% if request.user.coder in sample.project.admins.all %}
+                            {% for coder in mturk_coder_completion %}
+                                <tr>
+                                    <td>{{ coder.coder.name }}</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>{{ coder.total_turk_assignments.count }}</td>
+                                    <td>{{ coder.completed_turk_assignments.count }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    -->
                 </table>
             </div>
         </div>
