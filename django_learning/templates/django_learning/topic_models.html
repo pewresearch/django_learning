@@ -12,12 +12,12 @@
 
     <div class="row">
 
-        <div class="col-md-4">
-            <div class="panel">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
                 <div class="panel-heading">Topic Models</div>
                 <table class="panel-body table table-condensed">
+                    <tr><th>Name</th><th>Parameters</th><th>Anchor Strength</th></tr>
                     {% for model in topic_models %}
-                        <tr><th>Name</th><th>Parameters</th><th>Anchor Strength</th></tr>
                         {% if model.model %}
                             <tr>
                                 <td>{{ model.name }}</td>
