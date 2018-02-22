@@ -67,7 +67,8 @@ class LearningModel(LoggedExtendedModel):
 
         params = {}
         if self.pipeline_name:
-            params.update(pipelines[self.pipeline_name]())
+            try: params.update(pipelines[self.pipeline_name]())
+            except KeyError: print "WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name)
         try: self.parameters = recursive_update(params, self.parameters if self.parameters else {})
         except AttributeError:
             print "WARNING: couldn't update parameters from pipeline, it may not exist anymore!"
@@ -132,7 +133,7 @@ class LearningModel(LoggedExtendedModel):
                 raise Exception("Extractor '{}' has no outcome column set and one was not specified in your pipeline".format(
                     self.parameters["dataset_extractor"]["name"]
                 ))
-        self.outcome_column = self.dataset_extractor.outcome_column
+        # self.outcome_column = self.dataset_extractor.outcome_column
         if "test_dataset_extractor" in self.parameters.keys():
             test_dataset_extractor = self._get_dataset_extractor("test_dataset_extractor")
             test_dataset = test_dataset_extractor.extract(refresh=refresh, **kwargs)
@@ -140,10 +141,11 @@ class LearningModel(LoggedExtendedModel):
             self.dataset = pandas.concat([self.dataset, test_dataset])
 
         if "training_weight" not in self.dataset.columns:
-            if self.parameters.get("use_sample_weights", False):
-                self.dataset["training_weight"] = self.dataset["sampling_weight"]
-            else:
-                self.dataset["training_weight"] = 1.0
+            self.dataset["training_weight"] = 1.0
+        if self.parameters["model"].get("use_sample_weights", False):
+            self.dataset["training_weight"] = self.dataset["training_weight"] * self.dataset["sampling_weight"]
+        elif "sampling_weight" in self.dataset.columns:
+            print "Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation"
 
     @temp_cache_wrapper
     def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, num_cores=1, **kwargs):
@@ -196,33 +198,26 @@ class LearningModel(LoggedExtendedModel):
             for k, v in cache_data.iteritems():
                 setattr(self, k, v)
 
-    def _get_training_dataset(self):
-
-        df = copy.copy(self.dataset)
-
-        return df
-
     def _get_largest_code(self):
 
-        df = self.dataset
-        if self.dataset_extractor.base_class_id:
+        if hasattr(self.dataset_extractor, "base_class_id") and self.dataset_extractor.base_class_id:
             largest_code = self.dataset_extractor.base_class_id
         else:
-            largest_code = df[self.dataset_extractor.outcome_column].value_counts(ascending=False).index[0]
+            largest_code = self.dataset[self.dataset_extractor.outcome_column].value_counts(ascending=False).index[0]
 
         return largest_code
 
     def _get_fit_params(self, train_dataset):
 
         fit_params = {"model__{}".format(k): v for k, v in self.parameters["model"].get("fit_params", {}).iteritems()}
-        if self.parameters["model"].get("use_sample_weights", False):
-            fit_params["model__sample_weight"] = [x for x in train_dataset["training_weight"].values]
+        # if self.parameters["model"].get("use_sample_weights", False) or self.parameters["model"].get("use_class_weights", False):
+        fit_params["model__sample_weight"] = [x for x in train_dataset["training_weight"].values]
 
         return fit_params
 
     def _train_model(self, pipeline_steps, params, num_cores=1, **kwargs):
 
-        df = self._get_training_dataset()
+        df = copy.copy(self.dataset)
 
         print "Creating train-test split"
 
@@ -333,7 +328,7 @@ class LearningModel(LoggedExtendedModel):
         print "Computing cross-fold predictions"
         _final_model = self.model
         _final_model_best_estimator = self.model.best_estimator_
-        dataset = self._get_training_dataset()
+        dataset = copy.copy(self.train_dataset)
 
         all_fold_scores = []
         if refresh or not self.cv_folds:
@@ -473,7 +468,7 @@ class LearningModel(LoggedExtendedModel):
 
     @require_model
     @temp_cache_wrapper
-    def apply_model(self, data, keep_cols=None, clear_temp_cache=True):
+    def apply_model(self, data, keep_cols=None, clear_temp_cache=True, disable_probability_threshold_warning=False):
 
         if not keep_cols: keep_cols = []
 
@@ -498,10 +493,14 @@ class LearningModel(LoggedExtendedModel):
         return pandas.DataFrame(labels, index=data.index)
 
     @require_model
-    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_get_existing=False):
+    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_get_existing=False, disable_probability_threshold_warning=False):
 
-        predicted_df = dataset_extractors["model_prediction_dataset"](dataset=df_to_predict, learning_model=self, cache_key=cache_key)\
-            .extract(refresh=refresh, only_get_existing=only_get_existing)
+        predicted_df = dataset_extractors["model_prediction_dataset"](
+            dataset=df_to_predict,
+            learning_model=self,
+            cache_key=cache_key,
+            disable_probability_threshold_warning=disable_probability_threshold_warning
+        ).extract(refresh=refresh, only_get_existing=only_get_existing)
 
         return predicted_df
 
@@ -550,7 +549,12 @@ class DocumentLearningModel(LearningModel):
 
         super(DocumentLearningModel, self).extract_dataset(refresh=refresh)
         if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
-            self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+            try: self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+            except:
+                # TODO: this is very hacky and needs to be fixed
+                from pewtils.django import reset_django_connection
+                reset_django_connection("logos")
+                self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
             self.save()
 
 
