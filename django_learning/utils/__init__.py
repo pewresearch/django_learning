@@ -71,6 +71,19 @@ def get_param_repr(params):
             return decode_text(params)
 
 
+def filter_queryset_by_params(objs, params):
+
+    if "filter_dict" in params.keys() and params["filter_dict"]:
+        objs = objs.filter(**params["filter_dict"])
+    if "exclude_dict" in params.keys() and params["exclude_dict"]:
+        objs = objs.exclude(**params["exclude_dict"])
+    if "complex_filters" in params.keys() and params["complex_filters"]:
+        for c in params["complex_filters"]:
+            objs = objs.filter(c)
+
+    return objs
+
+
 # for mod_category, attribute_name in [
 #     ("balancing_variables", "var_mapper"),
 #     ("code_filters", "filter"),
