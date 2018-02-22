@@ -209,58 +209,6 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
             alpha = None
         row["alpha"] = alpha
 
-        try:
-            row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
-        except ValueError:
-            row["accuracy"] = None
-
-        try:
-            row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
-        except ValueError:
-            row["f1"] = None
-
-        try:
-            row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
-        except ValueError:
-            row["precision"] = None
-
-        try:
-            row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column]),
-        except ValueError:
-            row["recall"] = None
-
-        if is_not_null(row["precision"]) and is_not_null(row["recall"]):
-            row["precision_recall_min"] = min([row["precision"], row["recall"]])
-        else:
-            row["precision_recall_min"] = None
-
-        try:
-            row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
-        except ValueError:
-            row["matthews_corrcoef"] = None
-
-        try:
-            row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
-                if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
-        except ValueError:
-            row["roc_auc"] = None
-
-        # try:
-        #     row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column], coder2_df[outcome_column])
-        # except TypeError:
-        #     try:
-        #         row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column].astype(int),
-        #                                                    coder2_df[outcome_column].astype(int))
-        #     except ValueError:
-        #         row["ttest_t"], row["ttest_p"] = None, None
-        # if row["ttest_p"]:
-        #     if row["ttest_p"] > .05:
-        #         row["ttest_pass"] = 1
-        #     else:
-        #         row["ttest_pass"] = 0
-
-        row["pct_agree"] = numpy.average([1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
-
         if len(numpy.unique(coder_df[outcome_column])) == 2:
             if pos_label: val1, val2 = 0, 1
             else:
@@ -283,22 +231,92 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
             row["cohens_kappa"] = None
             row["cohens_kappa_err"] = None
 
-        for k, v in row.iteritems():
-            if type(v) == tuple:
-                row[k] = v[0]
-                # For some weird reason, some of the sklearn scorers return 1-tuples sometimes
+    try:
+        row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
+    except ValueError:
+        row["accuracy"] = None
+
+    try:
+        row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
+    except ValueError:
+        row["f1"] = None
+
+    try:
+        row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
+    except ValueError:
+        row["precision"] = None
+
+    try:
+        row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column]),
+    except ValueError:
+        row["recall"] = None
+
+    if is_not_null(row["precision"]) and is_not_null(row["recall"]):
+        row["precision_recall_min"] = min([row["precision"], row["recall"]])
+    else:
+        row["precision_recall_min"] = None
+
+    try:
+        row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
+    except ValueError:
+        row["matthews_corrcoef"] = None
+
+    try:
+        row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
+            if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
+    except ValueError:
+        row["roc_auc"] = None
+
+    # try:
+    #     row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column], coder2_df[outcome_column])
+    # except TypeError:
+    #     try:
+    #         row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column].astype(int),
+    #                                                    coder2_df[outcome_column].astype(int))
+    #     except ValueError:
+    #         row["ttest_t"], row["ttest_p"] = None, None
+    # if row["ttest_p"]:
+    #     if row["ttest_p"] > .05:
+    #         row["ttest_pass"] = 1
+    #     else:
+    #         row["ttest_pass"] = 0
+
+    row["pct_agree"] = numpy.average([1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
+
+    for k, v in row.iteritems():
+        if type(v) == tuple:
+            row[k] = v[0]
+            # For some weird reason, some of the sklearn scorers return 1-tuples sometimes
 
     return row
 
 
-def get_probability_threshold_score_df(predicted_df, comparison_df, outcome_column="label_id", base_id=None, metric="precision_recall_min", weight_column=None):
+def get_probability_threshold_score_df(
+    predicted_df,
+    comparison_df,
+    outcome_column="label_id",
+    base_code=None,
+    pos_code=None,
+    weight_column=None
+):
 
     predicted_df = copy.copy(predicted_df)
     threshold_scores = []
     for threshold in numpy.linspace(0, 1, 20, endpoint=False):
-        temp_df = apply_probability_threshold(predicted_df, threshold, outcome_column=outcome_column, base_id=base_id)
-        scores = compute_scores_from_datasets_as_coders(comparison_df, temp_df, "index", outcome_column,
-                                                        weight_column=weight_column)
+        temp_df = apply_probability_threshold(
+            predicted_df,
+            threshold,
+            outcome_column=outcome_column,
+            base_code=base_code,
+            pos_code=pos_code
+        )
+        scores = compute_scores_from_datasets_as_coders(
+            comparison_df,
+            temp_df,
+            "index",
+            outcome_column,
+            weight_column=weight_column
+        )
         scores["threshold"] = threshold
         threshold_scores.append(scores)
 
@@ -309,6 +327,7 @@ def get_probability_threshold_score_df(predicted_df, comparison_df, outcome_colu
 
 def get_probability_threshold_from_score_df(score_df, metric="precision_recall_min"):
 
+    score_df = score_df[(score_df['coder1_mean']>0.0)&(score_df['coder2_mean']>0.0)]
     sorted_df = score_df.groupby("threshold").agg({metric: min}).sort_values(metric, ascending=False)
     max_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.max()
     min_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.min()
@@ -317,21 +336,43 @@ def get_probability_threshold_from_score_df(score_df, metric="precision_recall_m
     return numpy.average(sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.values)
 
 
-def find_probability_threshold(predicted_df, comparison_df, outcome_column="label_id", base_id=None, metric="precision_recall_min", weight_column=None):
+def find_probability_threshold(
+    predicted_df,
+    comparison_df,
+    outcome_column="label_id",
+    base_code=None,
+    pos_code=None,
+    metric="precision_recall_min",
+    weight_column=None
+):
 
-    score_df = get_probability_threshold_score_df(predicted_df, comparison_df, outcome_column=outcome_column, base_id=base_id, metric=metric, weight_column=weight_column)
+    score_df = get_probability_threshold_score_df(
+        predicted_df,
+        comparison_df,
+        outcome_column=outcome_column,
+        base_code=base_code,
+        pos_code=pos_code,
+        metric=metric,
+        weight_column=weight_column
+    )
     return get_probability_threshold_score_df(score_df, metric=metric)
 
 
-def apply_probability_threshold(predicted_df, threshold, outcome_column="label_id", base_id=None):
+def apply_probability_threshold(predicted_df, threshold, outcome_column="label_id", base_code=None, pos_code=None):
 
     predicted_df = copy.copy(predicted_df)
-    if not base_id:
-        base_id = predicted_df[outcome_column].value_counts().sort_values(ascending=False).index[0]
-    try: pos_id = set(predicted_df[outcome_column].unique()).difference(set([base_id])).pop()
-    except KeyError: pos_id = None
-    predicted_df["probability"] = predicted_df.apply(lambda x: x['probability'] if x[outcome_column] != base_id else 1.0 - x['probability'], axis=1)
-    if pos_id: predicted_df[outcome_column] = predicted_df.apply(lambda x: pos_id if x['probability'] >= threshold else base_id, axis=1)
-    else: predicted_df[outcome_column] = base_id
+    if not base_code:
+        base_code = predicted_df[outcome_column].value_counts().sort_values(ascending=False).index[0]
+        print "apply_probability_threshold: 'base_code' not provided, setting base_code to most frequent code"
+    if not pos_code:
+        if len(predicted_df[outcome_column].unique()) == 2:
+            try: pos_code = set(predicted_df[outcome_column].unique()).difference(set([base_code])).pop()
+            except KeyError: pos_code = None
+        else:
+            print "Probability thresholding currently only works with binary classifications; setting all predictions to base_code"
+            print "Pass a pos_code if you wish to override it"
+    predicted_df["probability"] = predicted_df.apply(lambda x: x['probability'] if x[outcome_column] != base_code else 1.0 - x['probability'], axis=1)
+    if pos_code: predicted_df[outcome_column] = predicted_df.apply(lambda x: pos_code if x['probability'] >= threshold else base_code, axis=1)
+    else: predicted_df[outcome_column] = base_code
 
     return predicted_df
