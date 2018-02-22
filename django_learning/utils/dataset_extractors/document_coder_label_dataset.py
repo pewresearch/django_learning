@@ -8,6 +8,7 @@ from pewtils import classproperty, is_not_null, is_null, decode_text, extract_at
 from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
 from pewtils.sampling import compute_balanced_sample_weights
 
+from django_learning.utils import filter_queryset_by_params
 from django_learning.utils.dataset_code_filters import dataset_code_filters
 from django_learning.utils.dataset_document_filters import dataset_document_filters
 from django_learning.utils.dataset_coder_filters import dataset_coder_filters
@@ -29,7 +30,9 @@ class Extractor(DatasetExtractor):
         document_filters = kwargs.get("document_filters", None)
         balancing_variables = kwargs.get("balancing_variables", None)
         ignore_stratification_weights = kwargs.get("ignore_stratification_weights", None)
+        weight_column = kwargs.get("weight_column", "sampling_weight")
         exclude_consensus_ignore = kwargs.get("exclude_consensus_ignore", False)
+        frame_filter_params = kwargs.get("frame_filter_params", False)
 
         super(Extractor, self).__init__(**kwargs)
 
@@ -44,6 +47,8 @@ class Extractor(DatasetExtractor):
 
         self.balancing_variables = balancing_variables if balancing_variables else []
         self.ignore_stratification_weights = ignore_stratification_weights
+        self.weight_column = weight_column
+        self.frame_filter_params = frame_filter_params
 
         self.raw_codes = get_model("Code", app_name="django_learning").objects \
             .filter(sample_unit__sample__in=self.samples.all())\
@@ -65,6 +70,11 @@ class Extractor(DatasetExtractor):
             self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(pk__in=frame_ids)
         else:
             raise Exception("All of your samples must be belong to the same sampling frame")
+
+        if frame_filter_params:
+            self.raw_codes = self.raw_codes.filter(
+                sample_unit__document__in=filter_queryset_by_params(self.sampling_frame.documents.all(), frame_filter_params)
+            )
 
     def set_outcome_column(self, outcome_col):
 
@@ -104,6 +114,7 @@ class Extractor(DatasetExtractor):
         if len(dataset) > 0:
 
             dataset = self._apply_filters(dataset)
+            dataset = self._add_weights(dataset)
 
             if self.questions.count() > 1:
 
@@ -155,7 +166,7 @@ class Extractor(DatasetExtractor):
             "document_id",
             "document__date",
             # "sample_unit_id",
-            "sample_unit__weight",
+            # "sample_unit__weight",
             "label_id",
             "label__value",
             "label__question_id",
@@ -169,7 +180,7 @@ class Extractor(DatasetExtractor):
             "coder__name": "coder_name",
             "coder__is_mturk": "coder_is_mturk",
             "document__date": "date",
-            "sample_unit__weight": "sampling_weight",
+            # "sample_unit__weight": "sampling_weight",
             "label__value": "label_value",
             "label__question_id": "question_id",
             "label__question_name": "question_name",
@@ -181,12 +192,24 @@ class Extractor(DatasetExtractor):
         dataset['label_id'] = dataset['label_id'].astype(int)
         dataset['label_value'] = dataset['label_value'].astype(str)
 
-        if self.samples.count() > 1:
-            del dataset["sampling_weight"]
-            weights = get_sampling_weights(self.samples, ignore_stratification_weights=self.ignore_stratification_weights)
-            dataset = pandas.merge(dataset, weights[["pk", "weight", "approx_weight", "strat_weight", "keyword_weight"]], how="left", left_on="document_id", right_on="pk")
-            del dataset["pk_y"]
-            dataset = dataset.rename(columns={"weight": "sampling_weight"})
+        return dataset
+
+    def _add_weights(self, dataset):
+
+        # if self.samples.count() > 1:
+            # del dataset["sampling_weight"]
+        weights = get_sampling_weights(
+            self.samples,
+            ignore_stratification_weights=self.ignore_stratification_weights,
+            filter_params=self.frame_filter_params
+        )
+        dataset = pandas.merge(dataset, weights[
+            ["pk", "weight", "approx_weight", "strat_weight", "keyword_weight", "additional_weight"]], how="left",
+                               left_on="document_id", right_on="pk")
+        del dataset["pk_y"]
+        dataset = dataset.rename(columns={"weight": "sampling_weight"})
+
+        dataset["sampling_weight"] = dataset[self.weight_column]
 
         return dataset
 
