@@ -242,17 +242,17 @@ def view_sample(request, project_name, sample_name):
                     "available_expert_hits": coder_available_expert_hits
                 })
 
-        for coder in project.coders.exclude(pk=request.user.coder.pk).filter(is_mturk=True):
-            assignments = sample.assignments.filter(coder=coder).count()
-            if assignments > 0:
-                coder_completed_turk_assignments = filter_assignments(sample=sample, turk_only=True, coder=coder, completed_only=True)
-                coder_total_turk_assignments = filter_assignments(sample=sample, turk_only=True, coder=coder)
-                mturk_coder_completion.append({
-                    "coder": coder,
-                    "completed_turk_assignments": coder_completed_turk_assignments,
-                    "total_turk_assignments": coder_total_turk_assignments
-                })
-        # mturk_coder_completion = sorted(mturk_coder_completion, key=lambda x: x["completed_turk_assignments"], reverse=True)
+        # for coder in project.coders.exclude(pk=request.user.coder.pk).filter(is_mturk=True):
+        #     assignments = sample.assignments.filter(coder=coder).count()
+        #     if assignments > 0:
+        #         coder_completed_turk_assignments = filter_assignments(sample=sample, turk_only=True, coder=coder, completed_only=True)
+        #         coder_total_turk_assignments = filter_assignments(sample=sample, turk_only=True, coder=coder)
+        #         mturk_coder_completion.append({
+        #             "coder": coder,
+        #             "completed_turk_assignments": coder_completed_turk_assignments,
+        #             "total_turk_assignments": coder_total_turk_assignments
+        #         })
+        # # mturk_coder_completion = sorted(mturk_coder_completion, key=lambda x: x["completed_turk_assignments"], reverse=True)
 
     return render(request, "django_learning/sample.html", {
         "sample": sample,
@@ -264,7 +264,7 @@ def view_sample(request, project_name, sample_name):
         "total_turk_assignments": total_turk_assignments,
         "completed_turk_assignments": completed_turk_assignments,
         "expert_coder_completion": expert_coder_completion,
-        "mturk_coder_completion": mturk_coder_completion
+        # "mturk_coder_completion": mturk_coder_completion
     })
 
 
@@ -527,18 +527,25 @@ def adjudicate_question(request, project_name, sample_name, question_name):
         hits = grouped[grouped['label_id']>1]
         hits = HIT.objects.filter(pk__in=hits.index)
 
-        random_hit = hits.order_by("?")[0]
-        codes = codes[codes['assignment__hit__id'] == random_hit.pk].groupby("label_id")['coder_id'].first()
+        if hits.count() > 0:
 
-        return render(request, "django_learning/adjudicate_question.html", {
-            "question_name": question_name,
-            "sample": sample,
-            "hit": random_hit,
-            "coder_1": Coder.objects.get(pk=codes.values[0]),
-            "coder_2": Coder.objects.get(pk=codes.values[1]),
-            "label_1": Label.objects.get(pk=codes.index[0]),
-            "label_2": Label.objects.get(pk=codes.index[1])
-        })
+            random_hit = hits.order_by("?")[0]
+            codes = codes[codes['assignment__hit__id'] == random_hit.pk].groupby("label_id")['coder_id'].first()
+
+            return render(request, "django_learning/adjudicate_question.html", {
+                "question_name": question_name,
+                "sample": sample,
+                "hit": random_hit,
+                "coder_1": Coder.objects.get(pk=codes.values[0]),
+                "coder_2": Coder.objects.get(pk=codes.values[1]),
+                "label_1": Label.objects.get(pk=codes.index[0]),
+                "label_2": Label.objects.get(pk=codes.index[1])
+            })
+
+        else:
+
+            return view_sample(request, project_name, sample_name)
+
 
 
 @login_required
