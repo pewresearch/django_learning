@@ -12,6 +12,7 @@ from pewtils.django.sampling import SampleExtractor
 from tqdm import tqdm
 
 from django_commander.models import LoggedExtendedModel
+from django_learning.utils import filter_queryset_by_params
 from django_learning.utils.sampling_frames import sampling_frames
 from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.sampling_methods import sampling_methods
@@ -46,23 +47,18 @@ class SamplingFrame(LoggedExtendedModel):
             params = self.config
             if params:
                 objs = get_model("Document").objects.all()
-                if "filter_dict" in params.keys() and params["filter_dict"]:
-                    objs = objs.filter(**params["filter_dict"])
-                if "exclude_dict" in params.keys() and params["exclude_dict"]:
-                    objs = objs.exclude(**params["exclude_dict"])
-                if "complex_filters" in params.keys() and params["complex_filters"]:
-                    for c in params["complex_filters"]:
-                        objs = objs.filter(c)
+                objs = filter_queryset_by_params(objs, params)
                 self.documents = objs
                 self.save()
                 print "Extracted {} documents for frame '{}'".format(self.documents.count(), self.name)
             else:
                 print "Error!  No frame named '{}' was found".format(self.name)
 
+            self.get_sampling_flags(refresh=True)
+
         else:
 
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
-
 
     def get_sampling_flags(self, refresh=False):
 
@@ -85,6 +81,7 @@ class SamplingFrame(LoggedExtendedModel):
             print "Recomputing frame sampling flags"
             stratification_variables = []
             sampling_searches = []
+            additional_variables = {}
             for sample in self.samples.all():
                 params = sample.get_params()
                 stratify_by = params.get("stratify_by", None)
@@ -93,8 +90,8 @@ class SamplingFrame(LoggedExtendedModel):
                 for search_name in params.get("sampling_searches", {}).keys():
                     if search_name not in sampling_searches:
                         sampling_searches.append(search_name)
-
-            vals = ["pk", "text"] + stratification_variables
+                additional_variables.update(params.get("additional_weights", {}))
+            vals = ["pk", "text"] + stratification_variables + [a['field_lookup'] for a in additional_variables.values()]
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))
 
             if len(sampling_searches) > 0:
@@ -102,6 +99,12 @@ class SamplingFrame(LoggedExtendedModel):
                 frame['search_none'] = ~frame["text"].str.contains(r"|".join(regex_patterns.values()))
                 for search_name, search_pattern in regex_patterns.iteritems():
                     frame["search_{}".format(search_name)] = frame["text"].str.contains(search_pattern)
+
+            for name, additional in additional_variables.iteritems():
+                frame[name] = frame[additional["field_lookup"]].map(additional["mapper"])
+            for name, additional in additional_variables.iteritems():
+                try: del frame[additional["field_lookup"]]
+                except KeyError: pass
 
             cache.write(self.name, frame)
 
@@ -161,7 +164,8 @@ class Sample(LoggedExtendedModel):
 
     def get_params(self):
 
-        return sampling_methods.get(self.sampling_method, None)()
+        try: return sampling_methods.get(self.sampling_method, None)()
+        except TypeError: return {}
 
     def sync_with_frame(self, override_doc_ids=None):
 
@@ -192,6 +196,7 @@ class Sample(LoggedExtendedModel):
             self.document_units.all().delete()
 
         if recompute_weights:
+            override_doc_ids = list(self.documents.values_list("pk", flat=True))
             self.sync_with_frame(override_doc_ids=override_doc_ids)
 
         params = self.get_params()
