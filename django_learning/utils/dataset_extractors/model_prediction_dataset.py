@@ -22,6 +22,7 @@ class Extractor(DatasetExtractor):
         dataset=None,
         learning_model=None,
         cache_key=None,
+        disable_probability_threshold_warning=False,
         **kwargs
     ):
 
@@ -30,6 +31,8 @@ class Extractor(DatasetExtractor):
         self.dataset = copy.deepcopy(dataset)
         self.learning_model = learning_model
         self.cache_key = cache_key
+
+        self.disable_probability_threshold_warning = disable_probability_threshold_warning
 
     def get_hash(self, **kwargs):
 
@@ -43,7 +46,7 @@ class Extractor(DatasetExtractor):
         if is_null(self.learning_model.model):
             self.learning_model.load_model()
         dataset = self.dataset
-        predictions = self.learning_model.apply_model(dataset)
+        predictions = self.learning_model.apply_model(dataset, disable_probability_threshold_warning=False)
         dataset[self.learning_model.dataset_extractor.outcome_column] = predictions[self.learning_model.dataset_extractor.outcome_column]
         dataset["probability"] = predictions["probability"]
 
