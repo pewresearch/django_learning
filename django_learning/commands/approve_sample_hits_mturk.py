@@ -39,14 +39,22 @@ class Command(BasicCommand):
                     .filter(turk_id__isnull=False)\
                     .filter(turk_approved=False)
             for a in assignments:
-                if random.random() <= self.options["probability"]:
+                if a.turk_status == "Approved":
+                    a.turk_approved = True
+                    a.save()
+                elif random.random() <= self.options["probability"]:
                     try:
                         mturk.conn.approve_assignment(a.turk_id)
                     except Exception as e:
-                        print e
-                        print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
-                        import pdb
-                        pdb.set_trace()
+                        ass = mturk.conn.get_assignment(a.turk_id)
+                        if ass[0].AssignmentStatus == "Approved":
+                            a.turk_approved = True
+                            a.save()
+                        else:
+                            print e
+                            print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
+                            import pdb
+                            pdb.set_trace()
                     a.turk_approved = True
                     a.save()
                     approved += 1
