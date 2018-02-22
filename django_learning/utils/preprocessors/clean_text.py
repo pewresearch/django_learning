@@ -9,6 +9,7 @@ from pewtils.django import CacheHandler
 from django_learning.utils.stopword_sets import stopword_sets
 from django_learning.utils.stopword_whitelists import stopword_whitelists
 from django_learning.utils.regex_filters import regex_filters
+from django_learning.utils.regex_replacers import regex_replacers
 from django_learning.utils.preprocessors import BasicPreprocessor
 
 
@@ -48,8 +49,11 @@ class Preprocessor(BasicPreprocessor):
         stopwords = sorted(stopwords, key=lambda x: len(x), reverse=True)
         self.stopwords = stopwords
 
-        kwargs = {"decode_text": True, "stopwords": stopwords, "strip_html": True}
-        kwargs.update({k: v for k, v in self.params.items() if k not in ["stopword_sets", "regex_filters", "cache_identifier", "stopword_whitelists", "refresh_stopwords"]})
+        replacers = []
+        for r in self.params.get("regex_replacers", []):
+            replacers.extend(regex_replacers[r])
+        kwargs = {"decode_text": True, "stopwords": stopwords, "strip_html": True, "replacers": replacers}
+        kwargs.update({k: v for k, v in self.params.items() if k not in ["regex_replacers", "stopword_sets", "regex_filters", "cache_identifier", "stopword_whitelists", "refresh_stopwords"]})
         self.cleaner = TextCleaner(**kwargs)
         self.tokenizer = SentenceTokenizer()
 
