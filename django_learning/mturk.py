@@ -276,18 +276,23 @@ class MTurk(object):
                         if not assignment.time_finished:
                             assignment.time_finished = a.SubmitTime
                             assignment.save()
-                            if approve and not assignment.turk_approved:
-                                try:
-                                    self.conn.approve_assignment(a.AssignmentId)
-                                except Exception as e:
-                                    print e
-                                    print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
-                                    import pdb
-                                    pdb.set_trace()
-                                assignment.turk_approved = True
-                                assignment.save()
                         else:
                             assignment.save()
+
+                    if assignment and assignment.turk_status == "Approved":
+                        assignment.turk_approved = True
+                        assignment.save()
+
+                    if approve and assignment and not assignment.turk_approved:
+                        try:
+                            self.conn.approve_assignment(assignment.turk_id) # a.AssignmentId)
+                        except Exception as e:
+                            print e
+                            print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
+                            import pdb
+                            pdb.set_trace()
+                        assignment.turk_approved = True
+                        assignment.save()
 
     def sync_qualification_test(self, qual_test):
 
