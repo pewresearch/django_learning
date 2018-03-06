@@ -32,7 +32,7 @@ class Extractor(DatasetExtractor):
         ignore_stratification_weights = kwargs.get("ignore_stratification_weights", None)
         weight_column = kwargs.get("weight_column", "sampling_weight")
         exclude_consensus_ignore = kwargs.get("exclude_consensus_ignore", False)
-        frame_filter_params = kwargs.get("frame_filter_params", False)
+        # frame_filter_params = kwargs.get("frame_filter_params", False)
 
         super(Extractor, self).__init__(**kwargs)
 
@@ -48,7 +48,7 @@ class Extractor(DatasetExtractor):
         self.balancing_variables = balancing_variables if balancing_variables else []
         self.ignore_stratification_weights = ignore_stratification_weights
         self.weight_column = weight_column
-        self.frame_filter_params = frame_filter_params
+        # self.frame_filter_params = frame_filter_params
 
         self.raw_codes = get_model("Code", app_name="django_learning").objects \
             .filter(sample_unit__sample__in=self.samples.all())\
@@ -71,10 +71,10 @@ class Extractor(DatasetExtractor):
         else:
             raise Exception("All of your samples must be belong to the same sampling frame")
 
-        if frame_filter_params:
-            self.raw_codes = self.raw_codes.filter(
-                sample_unit__document__in=filter_queryset_by_params(self.sampling_frame.documents.all(), frame_filter_params)
-            )
+        # if frame_filter_params:
+        #     self.raw_codes = self.raw_codes.filter(
+        #         sample_unit__document__in=filter_queryset_by_params(self.sampling_frame.documents.all(), frame_filter_params)
+        #     )
 
     def set_outcome_column(self, outcome_col):
 
@@ -96,6 +96,8 @@ class Extractor(DatasetExtractor):
     def _test_index(self, dataset):
 
         if len(dataset) != len(dataset.groupby(self.index_levels).count()):
+            import pdb
+            pdb.set_trace()
             raise Exception("All {} combinations must be unique!".format(self.index_levels))
 
     def _get_preserved_state(self, **kwargs):
@@ -194,25 +196,6 @@ class Extractor(DatasetExtractor):
 
         return dataset
 
-    def _add_weights(self, dataset):
-
-        # if self.samples.count() > 1:
-            # del dataset["sampling_weight"]
-        weights = get_sampling_weights(
-            self.samples,
-            ignore_stratification_weights=self.ignore_stratification_weights,
-            filter_params=self.frame_filter_params
-        )
-        dataset = pandas.merge(dataset, weights[
-            ["pk", "weight", "approx_weight", "strat_weight", "keyword_weight", "additional_weight"]], how="left",
-                               left_on="document_id", right_on="pk")
-        del dataset["pk_y"]
-        dataset = dataset.rename(columns={"weight": "sampling_weight"})
-
-        dataset["sampling_weight"] = dataset[self.weight_column]
-
-        return dataset
-
     def _apply_filters(self, dataset):
 
         for filter_name, filter_args, filter_kwargs in self.code_filters:
@@ -221,6 +204,25 @@ class Extractor(DatasetExtractor):
             dataset = dataset_coder_filters[filter_name](self, dataset, *filter_args, **filter_kwargs)
         for filter_name, filter_args, filter_kwargs in self.document_filters:
             dataset = dataset_document_filters[filter_name](self, dataset, *filter_args, **filter_kwargs)
+
+        return dataset
+
+    def _add_weights(self, dataset):
+
+        # if self.samples.count() > 1:
+            # del dataset["sampling_weight"]
+        weights = get_sampling_weights(
+            self.samples,
+            ignore_stratification_weights=self.ignore_stratification_weights,
+            document_filters=self.document_filters
+        )
+        dataset = pandas.merge(dataset, weights[
+            ["pk", "weight", "approx_weight", "strat_weight", "keyword_weight", "additional_weight"]], how="left",
+                               left_on="document_id", right_on="pk")
+        del dataset["pk_y"]
+        dataset = dataset.rename(columns={"weight": "sampling_weight"})
+
+        dataset["sampling_weight"] = dataset[self.weight_column]
 
         return dataset
 
@@ -285,4 +287,5 @@ class Extractor(DatasetExtractor):
     def compute_scores(self, refresh=False, min_overlap=10, discrete_classes=True, pos_label=None):
 
         dataset = self.extract(refresh=refresh)
-        return compute_scores_from_dataset(dataset, "document_id", "label_value", "coder_id", "sampling_weight", min_overlap=min_overlap, discrete_classes=discrete_classes, pos_label=pos_label)
+        return compute_scores_from_dataset(dataset, "document_id", "label_value", "coder_id", "sampling_weight",
+                                           min_overlap=min_overlap, discrete_classes=discrete_classes, pos_label=pos_label)

@@ -7,6 +7,7 @@ from pewtils.django import get_model
 from pewtils import is_not_null
 
 from django_learning.utils import filter_queryset_by_params
+from django_learning.utils.dataset_document_filters import dataset_document_filters
 
 
 def filter_hits(
@@ -118,7 +119,7 @@ def get_sampling_weights(
     samples,
     refresh_flags=False,
     ignore_stratification_weights=False,
-    filter_params=None
+    document_filters=None
 ):
 
     frame_ids = set(list(samples.values_list("frame_id", flat=True)))
@@ -128,10 +129,17 @@ def get_sampling_weights(
         raise Exception("All of your samples must be belong to the same sampling frame")
 
     frame = sampling_frame.get_sampling_flags(refresh=refresh_flags)
-    if filter_params:
-        frame = frame[frame["pk"].isin(
-            filter_queryset_by_params(sampling_frame.documents.all(), filter_params).values_list("pk", flat=True)
-        )]
+    if document_filters:
+        print "Applying frame document filter: {}".format(len(frame))
+        frame = frame.rename(columns={"pk": "document_id"})
+        for filter_name, filter_args, filter_kwargs in document_filters:
+            frame = dataset_document_filters[filter_name](None, frame, *filter_args, **filter_kwargs)
+        frame = frame.rename(columns={"document_id": "pk"})
+        print "Frame is now {}".format(len(frame))
+    # if filter_params:
+    #     frame = frame[frame["pk"].isin(
+    #         filter_queryset_by_params(sampling_frame.documents.all(), filter_params).values_list("pk", flat=True)
+    #     )]
 
     keyword_weight_columns = set()
     strat_vars = set()
