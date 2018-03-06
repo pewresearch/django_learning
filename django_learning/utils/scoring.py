@@ -199,37 +199,37 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
 
     # if len(numpy.unique(coder_df[outcome_column])) == 2: # and sum(coder1_df[outcome_column]) > 0 and sum(coder2_df[outcome_column]) > 0:
 
-    if len(coder1_df[outcome_column].unique()) >= 2 and len(coder2_df[outcome_column].unique()) >= 2:
-        # not running reliability tests unless both coders saw at least more than one outcome at least once each
+    # if len(coder1_df[outcome_column].unique()) >= 2 and len(coder2_df[outcome_column].unique()) >= 2:
+    # not running reliability tests unless both coders saw at least more than one outcome at least once each
 
-        alpha = AnnotationTask(data=coder_df[[coder_column, document_column, outcome_column]].as_matrix())
-        try:
-            alpha = alpha.alpha()
-        except (ZeroDivisionError, ValueError):
-            alpha = None
-        row["alpha"] = alpha
+    alpha = AnnotationTask(data=coder_df[[coder_column, document_column, outcome_column]].as_matrix())
+    try:
+        alpha = alpha.alpha()
+    except (ZeroDivisionError, ValueError):
+        alpha = None
+    row["alpha"] = alpha
 
-        if len(numpy.unique(coder_df[outcome_column])) == 2:
-            if pos_label: val1, val2 = 0, 1
-            else:
-                try: val1, val2 = coder_df[outcome_column].unique()
-                except ValueError: val1, val2 = None, None
-            if val1 != None and val2 != None:
-                result_dict = {val1: defaultdict(int), val2: defaultdict(int)}
-                for pred, true in zip(coder1_df[outcome_column], coder2_df[outcome_column], ):
-                    result_dict[pred][true] += 1
-                kappa = cohens_kappa([
-                    [result_dict[val1][val1], result_dict[val1][val2]],
-                    [result_dict[val2][val1], result_dict[val2][val2]]
-                ])
-                row["cohens_kappa"] = kappa["kappa"]
-                row["cohens_kappa_err"] = kappa["std_kappa"]
-            else:
-                row["cohens_kappa"] = None
-                row["cohens_kappa_err"] = None
+    if len(numpy.unique(coder_df[outcome_column])) <= 2:
+        if pos_label: val1, val2 = 0, 1
+        else:
+            try: val1, val2 = coder_df[outcome_column].unique()
+            except ValueError: val1, val2 = None, None
+        if val1 != None and val2 != None:
+            result_dict = {val1: defaultdict(int), val2: defaultdict(int)}
+            for pred, true in zip(coder1_df[outcome_column], coder2_df[outcome_column], ):
+                result_dict[pred][true] += 1
+            kappa = cohens_kappa([
+                [result_dict[val1][val1], result_dict[val1][val2]],
+                [result_dict[val2][val1], result_dict[val2][val2]]
+            ])
+            row["cohens_kappa"] = kappa["kappa"]
+            row["cohens_kappa_err"] = kappa["std_kappa"]
         else:
             row["cohens_kappa"] = None
             row["cohens_kappa_err"] = None
+    else:
+        row["cohens_kappa"] = None
+        row["cohens_kappa_err"] = None
 
     try:
         row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
