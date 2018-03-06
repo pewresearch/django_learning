@@ -1,4 +1,4 @@
-import importlib, copy, pandas, numpy
+import importlib, copy, pandas, numpy, time
 
 from django.db import models
 from django.db.models import Q, F
@@ -492,7 +492,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
     @require_model
     def apply_model_to_documents_multiprocessed(
         self,
-        documents,
+        document_ids,
         save=True,
         document_filters=None,
         refresh=False,
@@ -500,10 +500,10 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         chunk_size=1000
     ):
 
-        try:
-            document_ids = list(documents.values_list("pk", flat=True))
-        except:
-            document_ids = [getattr(d, "pk") for d in documents]
+        # try:
+        #     document_ids = list(documents.values_list("pk", flat=True))
+        # except:
+        #     document_ids = [getattr(d, "pk") for d in documents]
 
         print "Processing {} documents".format(len(document_ids))
 
@@ -529,7 +529,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
             results = [r.get() for r in results]
             results = [r for r in results if is_not_null(r)]
             return pandas.concat(results)
-        except AttributeError:
+        except (ValueError, AttributeError):
             return None
 
     @require_model
@@ -542,11 +542,12 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         chunk_size=1000
     ):
 
-        docs = self.sampling_frame.documents.all()
+        doc_ids = set(list(self.sampling_frame.documents.values_list("pk", flat=True)))
         if not refresh:
-            docs = docs.exclude(classifications__classification_model=self)
+            existing_doc_ids = set(list(self.classifications.values_list("document_id", flat=True)))
+            doc_ids = doc_ids.difference(existing_doc_ids)
         self.apply_model_to_documents_multiprocessed(
-            docs,
+            list(doc_ids),
             save=save,
             document_filters=document_filters,
             refresh=refresh,
@@ -585,6 +586,9 @@ def _process_document_chunk(
         documents = get_model("Document", app_name="django_learning").objects.filter(pk__in=chunk)
         model = DocumentClassificationModel.objects.get(pk=model_id)
         model.load_model(only_load_existing=True)
+        if is_null(model.model):
+            time.sleep(5.0)
+            model.load_model(only_load_existing=True)
         if is_not_null(model.model):
 
             predictions = model.apply_model_to_documents(
