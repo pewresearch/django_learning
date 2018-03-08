@@ -211,6 +211,11 @@
                                             {% endfor %}
                                         </td>
                                     {% endif %}
+                                    {% if q.show_notes %}
+                                        <td class="form-group">
+                                            <textarea name="{{ q.name }}_notes" class="form-control" rows="3" placeholder="Notes">{% if q.notes %}{{ q.notes }}{% endif %}</textarea>
+                                        </td>
+                                    {% endif %}
                                 {% endif %}
                             </tr>
                         {% endfor %}

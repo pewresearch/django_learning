@@ -172,7 +172,7 @@ class Question(LoggedExtendedModel):
         else:
             return False
 
-    def update_assignment_response(self, assignment, label_values):
+    def update_assignment_response(self, assignment, label_values, notes=None):
 
         existing = assignment.codes.filter(label__question=self)
 
@@ -206,6 +206,9 @@ class Question(LoggedExtendedModel):
 
         outdated = existing.exclude(pk__in=current)
         outdated.delete()
+
+        if is_not_null(notes):
+            get_model("Code").objects.filter(pk__in=current).update(notes=notes)
 
 
     # def get_consensus_documents(self, label_value="1", turk_only=False, experts_only=False):

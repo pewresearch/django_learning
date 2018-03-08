@@ -428,6 +428,7 @@ def _render_assignment(request, project, sample, assignment, remaining_count=Non
             elif q.display == "number":
                 existing = assignment.codes.get_if_exists({"label__question": q})
                 if existing: q.existing_value = existing.label.value
+            q.notes = " ".join([c.notes for c in assignment.codes.filter(label__question=q)])
         questions.append(q)
 
     context = {
@@ -460,7 +461,7 @@ def _save_response(request, overwrite=False):
             for field in request.POST.keys():
                 try:
                     question = hit.sample.project.questions.get(name=field)
-                    question.update_assignment_response(assignment, request.POST.get(field))
+                    question.update_assignment_response(assignment, request.POST.get(field), notes=request.POST.get("{}_notes".format(field), None))
                 except Question.DoesNotExist:
                     if field == "notes":
                         assignment.notes = request.POST.get(field)
