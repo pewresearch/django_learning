@@ -149,6 +149,7 @@ class Question(LoggedExtendedModel):
     tooltip = models.TextField(null=True)
     priority = models.IntegerField(default=1)
     optional = models.BooleanField(default=False)
+    show_notes = models.BooleanField(default=False)
 
     dependency = models.ForeignKey("django_learning.Label", related_name="dependencies", null=True)
 

@@ -64,6 +64,8 @@ class Code(LoggedExtendedModel):
 
     consensus_ignore = models.BooleanField(default=False)
 
+    notes = models.TextField(null=True)
+
     # AUTO-FILLED RELATIONS
     coder = models.ForeignKey("django_learning.Coder", related_name="codes")
     hit = models.ForeignKey("django_learning.HIT", related_name="codes", null=True)

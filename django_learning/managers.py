@@ -32,7 +32,8 @@ class QuestionManager(BasicExtendedManager):
                 "multiple": q.get("multiple", False),
                 "tooltip": decode_text(q["tooltip"]) if q.get("tooltip", None) else None,
                 "priority": i,
-                "optional": q.get("optional", False)
+                "optional": q.get("optional", False),
+                "show_notes": q.get("show_notes", False)
             },
             save_nulls=True
         )
