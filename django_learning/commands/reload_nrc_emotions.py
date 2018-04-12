@@ -34,7 +34,7 @@ class Command(BasicCommand):
             except NgramSet.DoesNotExist:
                 nrc_set = NgramSet(name=cat, dictionary="nrc_emotions")
             nrc_set.label = cat.title()
-            nrc_set.words = list(words['word'].values)
+            nrc_set.words = list(words[words['assoc']==1]['word'].values)
             nrc_set.save()
             if cat == "trust":
                 # "congressman" is in there, but congresswoman isn't - so I'm adding it
