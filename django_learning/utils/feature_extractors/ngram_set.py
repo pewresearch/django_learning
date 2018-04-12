@@ -22,6 +22,32 @@ class Extractor(BasicExtractor):
 
         super(Extractor, self).__init__(*args, **kwargs)
 
+    def transform_text(self, text, preprocessors=None):
+
+        if not preprocessors:
+            preprocessors = self.get_preprocessors()
+
+        for p in preprocessors:
+            text = p.run(text)
+        ngramset_row = defaultdict(int)
+        for cat in self.regexes.keys():
+            matches = self.regexes[cat].findall(u" {0} ".format(text))
+            if self.params["feature_name_prefix"]:
+                ngramset_row["%s__%s" % (self.params["feature_name_prefix"], cat)] = len(
+                    [m for m in matches if m != ''])
+            else:
+                ngramset_row[cat] = len([m for m in matches if m != ''])
+        if self.params["include_ngrams"]:
+            for word in self.ngram_regexes.keys():
+                matches = self.ngram_regexes[word].findall(u" {0} ".format(text))
+                if self.params["feature_name_prefix"]:
+                    ngramset_row["%s__ngram__%s" % (self.params["feature_name_prefix"], word)] = len(
+                        [m for m in matches if m != ''])
+                else:
+                    ngramset_row["ngram__%s".format(word)] = len([m for m in matches if m != ''])
+
+        return ngramset_row
+
     def transform(self, X, **transform_params):
 
         if "include_ngrams" not in self.params.keys():
@@ -32,23 +58,7 @@ class Extractor(BasicExtractor):
         ngramsets = []
         for index, row in X.iterrows():
             text = row['text']
-            for p in preprocessors:
-                text = p.run(text)
-            ngramset_row = defaultdict(int)
-            for cat in self.regexes.keys():
-                matches = self.regexes[cat].findall(u" {0} ".format(text))
-                if self.params["feature_name_prefix"]:
-                    ngramset_row["%s__%s" % (self.params["feature_name_prefix"], cat)] = len([m for m in matches if m != ''])
-                else:
-                    ngramset_row[cat] = len([m for m in matches if m != ''])
-            if self.params["include_ngrams"]:
-                for word in self.ngram_regexes.keys():
-                    matches = self.ngram_regexes[word].findall(u" {0} ".format(text))
-                    if self.params["feature_name_prefix"]:
-                        ngramset_row["%s__ngram__%s" % (self.params["feature_name_prefix"], word)] = len([m for m in matches if m != ''])
-                    else:
-                        ngramset_row["ngram__%s".format(word)] = len([m for m in matches if m != ''])
-
+            ngramset_row = self.transform_text(text, preprocessors=preprocessors)
             # text_length = len(text.split())
             # if text_length > 0:
             #     ngramset_row = {k: float(v) / float(text_length) for k, v in ngramset_row.items()}
