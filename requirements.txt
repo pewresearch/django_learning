@@ -64,7 +64,6 @@ south>=1.0.2
 sphinx-argparse>=0.1.17
 sphinx>=1.5.3
 ssdeep
-# ssdeep>=3.2
 static>=1.1.1
 stopit>=1.1.1
 suds>=0.4
