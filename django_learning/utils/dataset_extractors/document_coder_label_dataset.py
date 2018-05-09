@@ -69,7 +69,10 @@ class Extractor(DatasetExtractor):
         if len(frame_ids) == 1:
             self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(pk__in=frame_ids)
         else:
-            raise Exception("All of your samples must be belong to the same sampling frame")
+            if len(frame_ids) == 0:
+                raise Exception("The specified samples don't exist")
+            else:
+                raise Exception("All of your samples must be belong to the same sampling frame")
 
         # if frame_filter_params:
         #     self.raw_codes = self.raw_codes.filter(
