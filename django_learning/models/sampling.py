@@ -60,7 +60,7 @@ class SamplingFrame(LoggedExtendedModel):
 
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
 
-    def get_sampling_flags(self, refresh=False):
+    def get_sampling_flags(self, refresh=False, sampling_search_override=None):
 
         cache = CacheHandler(os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
             hash=False,
@@ -80,7 +80,10 @@ class SamplingFrame(LoggedExtendedModel):
 
             print "Recomputing frame sampling flags"
             stratification_variables = []
-            sampling_searches = []
+            if sampling_search_override:
+                sampling_searches = sampling_search_override
+            else:
+                sampling_searches = []
             additional_variables = {}
             for sample in self.samples.all():
                 params = sample.get_params()
