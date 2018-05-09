@@ -642,7 +642,7 @@ class Classification(LoggedExtendedModel):
                    )
 
     def __repr__(self):
-        return "<Classification label={0}, document={2}>".format(
+        return "<Classification label={0}, document={1}>".format(
             self.label, self.document
         )
 
