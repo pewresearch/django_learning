@@ -37,7 +37,7 @@ class Preprocessor(BasicPreprocessor):
                         final_slist = []
                         for s in slist:
                             s = s.lower()
-                            if len(s) > 3 or is_probable_stopword(s):
+                            if len(s) > 3 or is_probable_stopword(s) or self.params.get("override_stopword_check", False):
                                 final_slist.append(s)
                         slist = final_slist
                     if self.cache:
@@ -51,9 +51,11 @@ class Preprocessor(BasicPreprocessor):
 
         replacers = []
         for r in self.params.get("regex_replacers", []):
-            replacers.extend(regex_replacers[r])
+            replacers.extend(regex_replacers[r]())
         kwargs = {"decode_text": True, "stopwords": stopwords, "strip_html": True, "replacers": replacers}
-        kwargs.update({k: v for k, v in self.params.items() if k not in ["regex_replacers", "stopword_sets", "regex_filters", "cache_identifier", "stopword_whitelists", "refresh_stopwords"]})
+        kwargs.update({k: v for k, v in self.params.items() if k not in ["regex_replacers", "stopword_sets", "regex_filters",
+                                                                         "cache_identifier", "stopword_whitelists", "refresh_stopwords",
+                                                                         "override_stopword_check"]})
         self.cleaner = TextCleaner(**kwargs)
         self.tokenizer = SentenceTokenizer()
 
