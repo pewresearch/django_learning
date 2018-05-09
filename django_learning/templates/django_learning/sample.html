@@ -54,6 +54,7 @@
                         <th>HITs Completed</th>
                         <th>HITs Available</th>
                         <th></th>
+                        <th></th>
                     </tr>
                     <tr>
                         <td>YOU</td>
@@ -65,6 +66,9 @@
                                 <a class="btn btn-primary" href="{% url 'django_learning:code_assignment' sample.project.name sample.name %}">Start Coding</a>
                             {% endif %}
                         </td>
+                        <td>
+                            <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ request.user.coder.pk }}">View Assignments</a>
+                        </td>
                     </tr>
                     {% if request.user.coder in sample.project.admins.all %}
                         {% for coder in expert_coder_completion %}
@@ -74,6 +78,9 @@
                                 <td>{{ coder.completed_expert_hits.count }}</td>
                                 <td>{{ coder.available_expert_hits.count }}</td>
                                 <td></td>
+                                <td>
+                                    <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ coder.coder.pk }}">View Assignments</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     {% endif %}

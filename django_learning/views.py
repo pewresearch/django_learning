@@ -341,10 +341,56 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
 
 
 @login_required
+def view_expert_assignments(request, project_name, sample_name):
+
+    if request.method == "POST":
+        try:
+            saved = _save_response(request, overwrite=True)
+            if not saved:
+                return view_project(request, project_name)
+        except RequiredResponseException:
+            return render(request, "django_learning/alert.html",
+                          {"message": "You didn't fill out all of the required responses"})
+
+    project = Project.objects.get(name=project_name)
+
+    if request.user.coder in project.coders.all() or request.user.coder in project.admins.all():
+
+        sample = Sample.objects.get(project=project, name=sample_name)
+        request.user.coder._clear_abandoned_sample_assignments(sample)
+
+        coder_id = request.GET.get("coder_id", None)
+        state = request.GET.get("state", None)
+        queue_ordering = request.GET.getlist("order_queue_by", ["time_finished"])
+
+        completed_only = True if state == "completed" else False
+        incomplete_only = True if state == "incomplete" else False
+
+        if request.user.coder not in project.admins.all(): coder_id = request.user.coder.pk
+        filter_coders = project.coders.all()
+        if coder_id: filter_coders = filter_coders.filter(pk=coder_id)
+
+        assignments = filter_assignments(project=project, sample=sample, experts_only=True, filter_coders=filter_coders, completed_only=completed_only, incomplete_only=incomplete_only).distinct()
+        assignments = assignments.order_by(*queue_ordering)
+
+        return render(request, "django_learning/expert_assignments.html", {
+            "assignments": assignments,
+            "sample": sample,
+            "coder_id": coder_id,
+            "state": state
+        })
+
+    else:
+
+        return view_sample(request, project_name, sample_name)
+
+
+@login_required
 def code_assignment(request, project_name, sample_name, assignment_id=None, skip_post=False):
 
-    if request.method == "POST" and not skip_post:
+    form_post_path = request.GET.get("form_post_path", None)
 
+    if request.method == "POST" and not skip_post:
         try:
             saved = _save_response(request)
             if not saved:
@@ -371,21 +417,20 @@ def code_assignment(request, project_name, sample_name, assignment_id=None, skip
             if assignment_id:
 
                 assignment = Assignment.objects.get(pk=assignment_id)
-                return _render_assignment(request, project, sample, assignment)
+                return _render_assignment(request, project, sample, assignment, form_post_path=form_post_path)
 
             else:
 
                 queue_ordering = request.GET.getlist("order_queue_by", ["?"])
                 # queue_ordering.reverse()
-                hits_available = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[request.user.coder])\
-                    .distinct() # .annotate(c=Count("assignments"))
+                hits_available = filter_hits(sample=sample, unfinished_only=True, experts_only=True, exclude_coders=[request.user.coder]).distinct() # .annotate(c=Count("assignments"))
                 hits_available = hits_available.order_by(*queue_ordering)
 
                 if hits_available.count() > 0:
 
                     hit = hits_available[0]
                     assignment = Assignment.objects.create_or_update({"hit": hit, "coder": request.user.coder})
-                    return _render_assignment(request, project, sample, assignment, remaining_count=len(hits_available))
+                    return _render_assignment(request, project, sample, assignment, remaining_count=len(hits_available), form_post_path=form_post_path)
 
                 else:
                     return render(request, "django_learning/alert.html", {"message": "No available assignments for this sample!"})
@@ -428,7 +473,7 @@ def _render_assignment(request, project, sample, assignment, remaining_count=Non
             elif q.display == "number":
                 existing = assignment.codes.get_if_exists({"label__question": q})
                 if existing: q.existing_value = existing.label.value
-            q.notes = " ".join([c.notes for c in assignment.codes.filter(label__question=q)])
+            q.notes = " ".join([c.notes if c.notes else "" for c in assignment.codes.filter(label__question=q)])
         questions.append(q)
 
     context = {

@@ -19,6 +19,7 @@ def filter_hits(
     unfinished_only=False,
     assignments=None,
     exclude_coders=None,
+    filter_coders=None,
     documents=None
 ):
 
@@ -32,6 +33,7 @@ def filter_hits(
     elif unfinished_only:
         hits = get_model("HIT", app_name="django_learning").objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() < h.num_coders])
     if exclude_coders != None: hits = hits.exclude(assignments__coder__in=exclude_coders)
+    if filter_coders != None: hits = hits.filter(assignments__coder__in=filter_coders)
     if assignments != None: hits = hits.filter(assignments__in=assignments)
     if documents != None: hits = hits.filter(sample_unit__document__in=documents)
 
@@ -49,6 +51,7 @@ def filter_assignments(
     incomplete_only=False,
     hits=None,
     exclude_coders=None,
+    filter_coders=None,
     documents=None
 ):
 
@@ -62,6 +65,7 @@ def filter_assignments(
     if completed_only: assignments = assignments.filter(time_finished__isnull=False)
     elif incomplete_only: assignments = assignments.filter(time_finished__isnull=True)
     if exclude_coders != None: assignments = assignments.exclude(coder__in=exclude_coders)
+    if filter_coders != None: assignments = assignments.filter(coder__in=filter_coders)
     if hits != None: assignments = assignments.filter(hit__in=hits)
     if documents != None: assignments = assignments.filter(hits__sample_unit__document__in=documents)
 
@@ -172,11 +176,15 @@ def get_sampling_weights(
         additional_weight_columns = additional_weight_columns.union(set(dummies.columns))
         frame = frame.join(dummies)
 
+    if "search_none" in keyword_weight_columns:
+        actual_keywords = [k for k in list(keyword_weight_columns) if k != "search_none"]
+        frame['search_none'] = ~frame[actual_keywords].max(axis=1)
     full_sample = frame[frame['pk'].isin(list(
         get_model("SampleUnit", app_name="django_learning").objects.filter(sample__in=samples).values_list(
             "document_id", flat=True)))]
 
     if len(keyword_weight_columns) > 0:
+        frame
         keyword_weight = compute_sample_weights_from_frame(frame, full_sample, list(keyword_weight_columns))
         full_sample['keyword_weight'] = keyword_weight
     else:

@@ -1,0 +1,42 @@
+{% extends django_learning_template %}
+
+{% load staticfiles %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+
+        <form class="form" method="post" action="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}">
+            {% csrf_token %}
+            <div class="col-md-12">
+                <div class="panel">
+                    <div class="panel-heading">{{ sample.project.name }}: {{ sample.name }}</div>
+                    <table class="panel-body table table-condensed">
+                        <tr><th>Document</th><th>Time Started</th><th>Time Finished</th><th>Coder</th><th></th></tr>
+                        {% for a in assignments %}
+                            <tr>
+                                <td>{% if a.hit.sample_unit.document.text %}{{ a.hit.sample_unit.document.text|slice:":100" }}{% endif %}</td>
+                                <td>{{ a.time_started }}</td>
+                                <td>{{ a.time_finished }}</td>
+                                <td>{{ a.coder.name }}</td>
+                                <td>
+                                    <a class="btn btn-primary" href="{% url 'django_learning:code_specific_assignment' sample.project.name sample.name a.pk %}?form_post_path={{ request.path }}{% if state %}%3Fstate%3D{{ state }}{% endif %}{% if coder_id %}{% if not state %}%3F{% else %}%26{% endif %}coder_id%3D{{ coder_id }}{% endif %}">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+            <button type="submit" id="submitButton" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

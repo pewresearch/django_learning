@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'^project/(?P<project_name>[\w\_]+)/edit_project_coders/(?P<mode>expert|mturk)', views.edit_project_coders, name="edit_project_coders"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/code_assignment/(?P<assignment_id>[0-9]+)$', views.code_assignment, name="code_specific_assignment"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/code_assignment$', views.code_assignment, name="code_assignment"),
+    url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/expert_assignments$', views.view_expert_assignments, name="view_expert_assignments"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/complete_qualification/(?P<qualification_test_name>[\w\_]+)$', views.complete_qualification, name="complete_qualification"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)/adjudicate_question/(?P<question_name>[\w\_]+)', views.adjudicate_question, name="adjudicate_question"),
     url(r'^project/(?P<project_name>[\w\_]+)/sample/(?P<sample_name>[\w\_]+)', views.view_sample, name="view_sample"),
