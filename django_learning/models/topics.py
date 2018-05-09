@@ -136,11 +136,12 @@ class TopicModel(LoggedExtendedModel):
                     topic.anchors = old_topic['anchors']
                     topic.save()
 
-    def apply_model(self, df):
+    def apply_model(self, df, probabilities=False):
 
         tfidf = self.vectorizer.transform(df)
         topic_names = list(self.topics.order_by("num").values_list("name", flat=True))
-        topic_df = pandas.DataFrame(self.model.transform(tfidf), columns=topic_names).astype(int)
+        if not probabilities: topic_df = pandas.DataFrame(self.model.transform(tfidf), columns=topic_names).astype(int)
+        else: topic_df = pandas.DataFrame(self.model.transform(tfidf, details=True)[1], columns=topic_names).astype(int)
 
         return pandas.concat([df, topic_df], axis=1)
 
