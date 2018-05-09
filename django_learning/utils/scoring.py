@@ -264,7 +264,7 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     try:
         row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
             if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
-    except ValueError:
+    except (ValueError, TypeError):
         row["roc_auc"] = None
 
     # try:
@@ -297,12 +297,14 @@ def get_probability_threshold_score_df(
     outcome_column="label_id",
     base_code=None,
     pos_code=None,
-    weight_column=None
+    weight_column=None,
+    max_prob=1,
+    n_thresholds=20
 ):
 
     predicted_df = copy.copy(predicted_df)
     threshold_scores = []
-    for threshold in numpy.linspace(0, 1, 20, endpoint=False):
+    for threshold in numpy.linspace(0, max_prob, n_thresholds, endpoint=False):
         temp_df = apply_probability_threshold(
             predicted_df,
             threshold,
@@ -327,7 +329,7 @@ def get_probability_threshold_score_df(
 
 def get_probability_threshold_from_score_df(score_df, metric="precision_recall_min"):
 
-    score_df = score_df[(score_df['coder1_mean']>0.0)&(score_df['coder2_mean']>0.0)]
+    # score_df = score_df[(score_df['coder1_mean']>0.0)&(score_df['coder2_mean']>0.0)]
     sorted_df = score_df.groupby("threshold").agg({metric: min}).sort_values(metric, ascending=False)
     max_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.max()
     min_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.min()
@@ -343,7 +345,9 @@ def find_probability_threshold(
     base_code=None,
     pos_code=None,
     metric="precision_recall_min",
-    weight_column=None
+    weight_column=None,
+    max_prob=1,
+    n_thresholds=20
 ):
 
     score_df = get_probability_threshold_score_df(
@@ -352,16 +356,17 @@ def find_probability_threshold(
         outcome_column=outcome_column,
         base_code=base_code,
         pos_code=pos_code,
-        metric=metric,
-        weight_column=weight_column
+        weight_column=weight_column,
+        max_prob=max_prob,
+        n_thresholds=n_thresholds
     )
-    return get_probability_threshold_score_df(score_df, metric=metric)
+    return get_probability_threshold_from_score_df(score_df, metric=metric)
 
 
 def apply_probability_threshold(predicted_df, threshold, outcome_column="label_id", base_code=None, pos_code=None):
 
     predicted_df = copy.copy(predicted_df)
-    if not base_code:
+    if base_code == None:
         base_code = predicted_df[outcome_column].value_counts().sort_values(ascending=False).index[0]
         print "apply_probability_threshold: 'base_code' not provided, setting base_code to most frequent code"
     if not pos_code:
