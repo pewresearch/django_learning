@@ -75,8 +75,12 @@ class Extractor(BasicExtractor):
 
         if "include_ngrams" not in self.params.keys():
             self.params["include_ngrams"] = False
+        if "ngramset_name" not in self.params.keys():
+            self.params["ngramset_name"] = None
 
-        for cat in get_model("NgramSet").objects.filter(dictionary=self.params["dictionary"]):
+        ngram_sets = get_model("NgramSet").objects.filter(dictionary=self.params["dictionary"])
+        if self.params["ngramset_name"]: ngram_sets = ngram_sets.filter(name=self.params["ngramset_name"])
+        for cat in ngram_sets:
             full_words = []
             wildcards = []
             for word in cat.words:
@@ -94,11 +98,15 @@ class Extractor(BasicExtractor):
                         self.ngram_regexes[re.escape(search_word)] = re.compile(
                             r"((?<=\s)" + re.escape(search_word) + "(?=\W))", re.IGNORECASE
                         )
-            self.regexes[decode_text(cat.name)] = re.compile(
-                r"((?<=\s)" + "|".join(wildcards) + "(?=\w)|" + \
-                r"(?<=\s)" + "|".join(full_words) + "(?=\W))",
-                re.IGNORECASE
-            )
+
+            if len(wildcards) > 0 and len(full_words) > 0: final_pattern = r'('
+            else: final_pattern = r''
+            if len(wildcards) > 0: final_pattern += r"(?<=\s)(" + "|".join(wildcards) + r")(?=\w)"
+            if len(full_words) > 0:
+                if len(wildcards) > 0: final_pattern += r"|"
+                final_pattern += r"(?<=\s)(" + "|".join(full_words) + r")(?=\W)"
+            if len(wildcards) > 0 and len(full_words) > 0: final_pattern += r')'
+            self.regexes[decode_text(cat.name)] = re.compile(final_pattern, re.IGNORECASE)
 
         return self
 
