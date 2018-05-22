@@ -132,7 +132,24 @@ def get_sampling_weights(
     else:
         raise Exception("All of your samples must be belong to the same sampling frame")
 
-    frame = sampling_frame.get_sampling_flags(refresh=refresh_flags)
+    keyword_weight_columns = set()
+    strat_vars = set()
+    additional_vars = set()
+    for sample in samples:
+        params = sample.get_params()
+        stratify_by = params.get("stratify_by", None)
+        if is_not_null(stratify_by):
+            strat_vars.add(stratify_by)
+        sampling_searches = params.get("sampling_searches", {})
+        if len(sampling_searches) > 0:
+            for search_name in sampling_searches.keys():
+                keyword_weight_columns.add(search_name)
+        for additional_var in params.get("additional_weights", {}).keys():
+            additional_vars.add(additional_var)
+
+    frame = sampling_frame.get_sampling_flags(refresh=refresh_flags, sampling_search_subset=keyword_weight_columns)
+    keyword_weight_columns = set(["search_{}".format(s) for s in keyword_weight_columns])
+    keyword_weight_columns.add("search_none")
     if document_filters:
         print "Applying frame document filter: {}".format(len(frame))
         frame = frame.rename(columns={"pk": "document_id"})
@@ -144,22 +161,6 @@ def get_sampling_weights(
     #     frame = frame[frame["pk"].isin(
     #         filter_queryset_by_params(sampling_frame.documents.all(), filter_params).values_list("pk", flat=True)
     #     )]
-
-    keyword_weight_columns = set()
-    strat_vars = set()
-    additional_vars = set()
-    for sample in samples:
-        params = sample.get_params()
-        stratify_by = params.get("stratify_by", None)
-        if is_not_null(stratify_by):
-            strat_vars.add(stratify_by)
-        sampling_searches = params.get("sampling_searches", {})
-        if len(sampling_searches) > 0:
-            keyword_weight_columns.add("search_none")
-            for search_name in sampling_searches.keys():
-                keyword_weight_columns.add("search_{}".format(search_name))
-        for additional_var in params.get("additional_weights", {}).keys():
-            additional_vars.add(additional_var)
 
     if ignore_stratification_weights:
         strat_vars = set()

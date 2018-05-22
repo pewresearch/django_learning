@@ -60,7 +60,7 @@ class SamplingFrame(LoggedExtendedModel):
 
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
 
-    def get_sampling_flags(self, refresh=False, sampling_search_override=None):
+    def get_sampling_flags(self, refresh=False, sampling_search_subset=None):
 
         cache = CacheHandler(os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
             hash=False,
@@ -76,24 +76,23 @@ class SamplingFrame(LoggedExtendedModel):
             if is_not_null(frame):
                 print "Loaded frame sampling flags from cache"
 
+        sampling_searches = []
+        stratification_variables = []
+        additional_variables = {}
+        for sample in self.samples.all():
+            params = sample.get_params()
+            stratify_by = params.get("stratify_by", None)
+            if stratify_by and stratify_by not in stratification_variables:
+                stratification_variables.append(stratify_by)
+            for search_name in params.get("sampling_searches", {}).keys():
+                if search_name not in sampling_searches:
+                    sampling_searches.append(search_name)
+            additional_variables.update(params.get("additional_weights", {}))
+
         if is_null(frame) or refresh:
 
             print "Recomputing frame sampling flags"
-            stratification_variables = []
-            if sampling_search_override:
-                sampling_searches = sampling_search_override
-            else:
-                sampling_searches = []
-            additional_variables = {}
-            for sample in self.samples.all():
-                params = sample.get_params()
-                stratify_by = params.get("stratify_by", None)
-                if stratify_by and stratify_by not in stratification_variables:
-                    stratification_variables.append(stratify_by)
-                for search_name in params.get("sampling_searches", {}).keys():
-                    if search_name not in sampling_searches:
-                        sampling_searches.append(search_name)
-                additional_variables.update(params.get("additional_weights", {}))
+
             vals = ["pk", "text"] + stratification_variables + [a['field_lookup'] for a in additional_variables.values()]
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))
 
@@ -110,6 +109,11 @@ class SamplingFrame(LoggedExtendedModel):
                 except KeyError: pass
 
             cache.write(self.name, frame)
+
+        if len(sampling_searches) > 0:
+            if sampling_search_subset and len(sampling_search_subset) > 0:
+                sampling_searches = sampling_search_subset
+            frame['search_none'] = ~frame[["search_{}".format(s) for s in sampling_searches]].max(axis=1)
 
         return frame
 
@@ -215,7 +219,7 @@ class Sample(LoggedExtendedModel):
                 docs = docs.exclude(pk__in=existing_doc_ids)
 
             stratify_by = params.get("stratify_by", None)
-            frame = self.frame.get_sampling_flags()
+            frame = self.frame.get_sampling_flags(sampling_search_subset=params.get('sampling_searches', None))
             frame = frame[frame["pk"].isin(list(docs.values_list("pk", flat=True)))]
 
             weight_vars = []
@@ -295,7 +299,7 @@ class Sample(LoggedExtendedModel):
             df = frame[frame['pk'].isin(sample_ids)]
             if not skip_weighting:
                 print "Computing weights"
-                df['weight'] = compute_sample_weights_from_frame(frame, df, weight_vars)
+                df['weight'] = list(compute_sample_weights_from_frame(frame, df, weight_vars))
             else:
                 df['weight'] = 1.0
 
