@@ -137,6 +137,14 @@
                         Needs Review / Uncodeable
                     </label>
                 </label>
+                {% if not hit.turk %}
+                    {% if remaining_count %}
+                        <p>{{ remaining_count }} HITs remaining in this batch</p>
+                    {% endif %}
+                    {% if last_assignment_id %}
+                        <p><a href="{% url 'django_learning:code_assignment' project.name sample.name %}/{{ last_assignment_id }}">Correct last assignment</a></p>
+                    {% endif %}
+                {% endif %}
             </div>
             <div class="col-md-7">
                 <div class="panel panel-default">

@@ -390,7 +390,9 @@ def code_assignment(request, project_name, sample_name, assignment_id=None, skip
 
     form_post_path = request.GET.get("form_post_path", None)
 
+    last_assignment_id = None
     if request.method == "POST" and not skip_post:
+        last_assignment_id = request.POST.get("assignment_id", None)
         try:
             saved = _save_response(request)
             if not saved:
@@ -417,7 +419,9 @@ def code_assignment(request, project_name, sample_name, assignment_id=None, skip
             if assignment_id:
 
                 assignment = Assignment.objects.get(pk=assignment_id)
-                return _render_assignment(request, project, sample, assignment, form_post_path=form_post_path)
+                return _render_assignment(request, project, sample, assignment,
+                                          form_post_path=form_post_path,
+                                          additional_context={"last_assignment_id": last_assignment_id})
 
             else:
 
@@ -430,7 +434,10 @@ def code_assignment(request, project_name, sample_name, assignment_id=None, skip
 
                     hit = hits_available[0]
                     assignment = Assignment.objects.create_or_update({"hit": hit, "coder": request.user.coder})
-                    return _render_assignment(request, project, sample, assignment, remaining_count=len(hits_available), form_post_path=form_post_path)
+                    return _render_assignment(request, project, sample, assignment,
+                                              remaining_count=len(hits_available),
+                                              form_post_path=form_post_path,
+                                              additional_context={"last_assignment_id": last_assignment_id})
 
                 else:
                     return render(request, "django_learning/alert.html", {"message": "No available assignments for this sample!"})
