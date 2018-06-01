@@ -148,8 +148,9 @@ def get_sampling_weights(
             additional_vars.add(additional_var)
 
     frame = sampling_frame.get_sampling_flags(refresh=refresh_flags, sampling_search_subset=keyword_weight_columns)
-    keyword_weight_columns = set(["search_{}".format(s) for s in keyword_weight_columns])
-    keyword_weight_columns.add("search_none")
+    if len(keyword_weight_columns) > 0:
+        keyword_weight_columns = set(["search_{}".format(s) for s in keyword_weight_columns])
+        keyword_weight_columns.add("search_none")
     if document_filters:
         print "Applying frame document filter: {}".format(len(frame))
         frame = frame.rename(columns={"pk": "document_id"})
