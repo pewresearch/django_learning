@@ -3,7 +3,8 @@ import itertools, numpy, pandas, copy
 from collections import defaultdict
 from nltk.metrics.agreement import AnnotationTask
 from statsmodels.stats.inter_rater import cohens_kappa, fleiss_kappa
-from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score, precision_score, recall_score, roc_auc_score, brier_score_loss
+from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score, \
+    precision_score, recall_score, roc_auc_score, brier_score_loss, cohen_kappa_score
 from scipy.stats import ttest_ind
 
 from pewtils.stats import wmom
@@ -210,6 +211,13 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     row["alpha"] = alpha
 
     if len(numpy.unique(coder_df[outcome_column])) <= 2:
+
+        row["cohens_kappa_weighted"] = cohen_kappa_score(
+            coder1_df[outcome_column],
+            coder2_df[outcome_column],
+            sample_weight=coder1_df[weight_column]
+        )
+
         if pos_label: val1, val2 = 0, 1
         else:
             try: val1, val2 = coder_df[outcome_column].unique()
