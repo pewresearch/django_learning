@@ -1,3 +1,4 @@
+from django_learning.settings import S3_CACHE_PATH
 from django_learning.utils.dataset_code_filters import dataset_code_filters
 from django_learning.utils.dataset_coder_filters import dataset_coder_filters
 from django_learning.utils.dataset_document_filters import dataset_document_filters
@@ -41,7 +42,7 @@ class DatasetExtractor(object):
 
         if cache_params['bucket'] is None:
             if getattr(settings, 'S3_BUCKET', None) is not None:
-                cache_params['bucket'] = settings.BUCKET
+                cache_params['bucket'] = settings.S3_BUCKET
 
             else:
                 cache_params.pop('bucket', None)
@@ -55,7 +56,7 @@ class DatasetExtractor(object):
             cache_params['use_s3'] = False
 
         self.cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "datasets"),
+            os.path.join(S3_CACHE_PATH, "datasets"),
             **cache_params
         )
 
