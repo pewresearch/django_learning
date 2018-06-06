@@ -1,22 +1,22 @@
-import pandas, math, random, itertools, os
-
-from django.db import models
+from django_commander.models import LoggedExtendedModel
+from django_learning.settings import S3_CACHE_PATH, LOCAL_CACHE_PATH
+from django_learning.utils import filter_queryset_by_params
+from django_learning.utils.regex_filters import regex_filters
+from django_learning.utils.sampling_frames import sampling_frames
+from django_learning.utils.sampling_methods import sampling_methods
 from django.conf import settings
-
+from django.db import models
 from pewtils import is_null, decode_text, is_not_null
-from pewtils.nlp import get_hash
-from pewtils.sampling import compute_sample_weights_from_frame
 from pewtils.django import get_model, CacheHandler
 from pewtils.django.sampling import SampleExtractor
-
+from pewtils.nlp import get_hash
+from pewtils.sampling import compute_sample_weights_from_frame
 from tqdm import tqdm
-
-from django_commander.models import LoggedExtendedModel
-from django_learning.utils import filter_queryset_by_params
-from django_learning.utils.sampling_frames import sampling_frames
-from django_learning.utils.regex_filters import regex_filters
-from django_learning.utils.sampling_methods import sampling_methods
-from django_learning.settings import S3_CACHE_PATH, LOCAL_CACHE_PATH
+import itertools
+import math
+import os
+import pandas
+import random
 
 
 class SamplingFrame(LoggedExtendedModel):
@@ -61,13 +61,46 @@ class SamplingFrame(LoggedExtendedModel):
             print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
 
     def get_sampling_flags(self, refresh=False, sampling_search_subset=None):
+        cache_params = {
+            'hash': False,
+            'use_s3': True,
+            'aws_access': os.environ.get("AWS_ACCESS_KEY_ID", None),
+            'aws_secret': os.environ.get("AWS_SECRET_ACCESS_KEY", None),
+            'bucket': os.environ.get("S3_BUCKET", None)
+        }
 
-        cache = CacheHandler(os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
-            hash=False,
-            use_s3=True,
-            aws_access=settings.AWS_ACCESS_KEY_ID,
-            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
-            bucket=settings.S3_BUCKET
+        if cache_params['aws_access'] is None:
+            if getattr(settings, 'AWS_ACCESS_KEY_ID', None) is not None:
+                cache_params['aws_access'] = settings.AWS_ACCESS_KEY_ID
+
+            else:
+                cache_params.pop('aws_access', None)
+
+        if cache_params['aws_secret'] is None:
+            if getattr(settings, 'AWS_SECRET_ACCESS_KEY', None) is not None:
+                cache_params['aws_secret'] = settings.AWS_SECRET_ACCESS_KEY
+
+            else:
+                cache_params.pop('aws_secret', None)
+
+        if cache_params['bucket'] is None:
+            if getattr(settings, 'S3_BUCKET', None) is not None:
+                cache_params['bucket'] = settings.S3_BUCKET
+
+            else:
+                cache_params.pop('bucket', None)
+
+        if not all(
+            map(
+                lambda x: x in cache_params and cache_params[x] is not None,
+                ('aws_access', 'aws_secret', 'bucket')
+            )
+        ):
+            cache_params['use_s3'] = False
+
+        cache = CacheHandler(
+            os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
+            **cache_params
         )
 
         frame = None
