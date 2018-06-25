@@ -1,19 +1,30 @@
-import re
-
-from tqdm import tqdm
-
-from django.template.loader import render_to_string
-from django.conf import settings
-
 from boto.mturk.connection import MTurkConnection
-from boto.mturk.qualification import Qualifications, Requirement, PercentAssignmentsApprovedRequirement, NumberHitsApprovedRequirement, LocaleRequirement
-from boto.mturk.question import QuestionForm, Overview, HTMLQuestion, QuestionContent, AnswerSpecification, SelectionAnswer, FreeTextAnswer, LengthConstraint, NumericConstraint, RegExConstraint
+from boto.mturk.qualification import (
+    LocaleRequirement,
+    NumberHitsApprovedRequirement,
+    PercentAssignmentsApprovedRequirement,
+    Qualifications,
+    Requirement
+)
 from boto.mturk.question import Question as TurkQuestion
-
-from pewtils import is_not_null, decode_text
-
+from boto.mturk.question import (
+    AnswerSpecification,
+    FreeTextAnswer,
+    HTMLQuestion,
+    LengthConstraint,
+    NumericConstraint,
+    Overview,
+    QuestionContent,
+    QuestionForm,
+    RegExConstraint,
+    SelectionAnswer
+)
 from django_learning.models import *
-# from django.conf.settings import AWS_ACCESS, AWS_SECRET
+from django.conf import settings
+from django.template.loader import render_to_string
+from pewtils import is_not_null, decode_text
+from tqdm import tqdm
+import re
 
 
 class MTurk(object):
