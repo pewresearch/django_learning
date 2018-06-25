@@ -28,10 +28,9 @@ import re
 
 
 class MTurk(object):
-
     def __init__(self, sandbox=True):
-
         self.sandbox = sandbox
+
         if sandbox:
             mturk_host = "mechanicalturk.sandbox.amazonaws.com"
         else:
@@ -39,7 +38,7 @@ class MTurk(object):
 
         mturk_params = { 'host': mturk_host }
 
-        if getattr(settings, 'MTURK_API_ACCESS', None) is not None
+        if getattr(settings, 'MTURK_API_ACCESS', None) is not None \
             and getattr(settings, 'MTURK_API_SECRET', None) is not None:
                 mturk_params['aws_access_key_id'] = settings.MTURK_API_ACCESS
                 mturk_params['aws_secret_access_key'] = settings.MTURK_API_SECRET
