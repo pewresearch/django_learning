@@ -37,11 +37,14 @@ class MTurk(object):
         else:
             mturk_host = "mechanicalturk.amazonaws.com"
 
-        self.conn = MTurkConnection(
-            aws_access_key_id=settings.MTURK_API_ACCESS,
-            aws_secret_access_key=settings.MTURK_API_SECRET,
-            host=mturk_host
-        )
+        mturk_params = { 'host': mturk_host }
+
+        if getattr(settings, 'MTURK_API_ACCESS', None) is not None
+            and getattr(settings, 'MTURK_API_SECRET', None) is not None:
+                mturk_params['aws_access_key_id'] = settings.MTURK_API_ACCESS
+                mturk_params['aws_secret_access_key'] = settings.MTURK_API_SECRET
+
+        self.conn = MTurkConnection(**mturk_params)
 
     def sync_hit_type(self, hit_type):
 
