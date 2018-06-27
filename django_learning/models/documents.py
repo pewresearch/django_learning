@@ -1,19 +1,17 @@
-import re
-
-from django.db import models
-from django.contrib.postgres.fields import ArrayField, JSONField
-from django.apps import apps
-from django.db.models.signals import class_prepared
-
-from langdetect import detect
-
-from pewtils import is_not_null, is_null, decode_text
-from pewtils.nlp import get_hash
-from pewtils.django import get_fields_with_model
-
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import DocumentManager
 from django_queries.models import QueryModel
+from django.apps import apps
+from django.contrib.postgres.fields import ArrayField, JSONField
+from django.db import models
+from django.db.models.signals import class_prepared
+from langdetect import detect
+from pewtils import is_not_null, is_null, decode_text
+from pewtils.django import get_fields_with_model
+from pewtils.nlp import get_hash
+import re
 
 
 class Document(LoggedExtendedModel, QueryModel):
@@ -234,4 +232,3 @@ class Document(LoggedExtendedModel, QueryModel):
 #                     field.contribute_to_class(sender, re.sub(" ", "_", model._meta.verbose_name))
 #
 # class_prepared.connect(add_foreign_keys)
-
