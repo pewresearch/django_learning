@@ -14,10 +14,13 @@ for setting, default in [
     ("LOCAL_CACHE_ROOT", ""),
     ("S3_CACHE_ROOT", "")
 ]:
-    if not getattr(settings, setting, None):
+    value = getattr(settings, setting, None)
+
+    if value is None and default is not None:
         globals()[setting] = default
-    else:
-        globals()[setting] = getattr(settings, setting)
+
+    elif value is not None:
+        globals()[setting] = value
 
 LOCAL_CACHE_PATH = os.path.join(globals()["LOCAL_CACHE_ROOT"], "django_learning")
 globals()["LOCAL_CACHE_PATH"] = LOCAL_CACHE_PATH

@@ -1,36 +1,49 @@
-import re
-
-from tqdm import tqdm
-
-from django.template.loader import render_to_string
-from django.conf import settings
-
 from boto.mturk.connection import MTurkConnection
-from boto.mturk.qualification import Qualifications, Requirement, PercentAssignmentsApprovedRequirement, NumberHitsApprovedRequirement, LocaleRequirement
-from boto.mturk.question import QuestionForm, Overview, HTMLQuestion, QuestionContent, AnswerSpecification, SelectionAnswer, FreeTextAnswer, LengthConstraint, NumericConstraint, RegExConstraint
+from boto.mturk.qualification import (
+    LocaleRequirement,
+    NumberHitsApprovedRequirement,
+    PercentAssignmentsApprovedRequirement,
+    Qualifications,
+    Requirement
+)
 from boto.mturk.question import Question as TurkQuestion
-
-from pewtils import is_not_null, decode_text
-
+from boto.mturk.question import (
+    AnswerSpecification,
+    FreeTextAnswer,
+    HTMLQuestion,
+    LengthConstraint,
+    NumericConstraint,
+    Overview,
+    QuestionContent,
+    QuestionForm,
+    RegExConstraint,
+    SelectionAnswer
+)
 from django_learning.models import *
-# from django.conf.settings import AWS_ACCESS, AWS_SECRET
+from django.conf import settings
+from django.template.loader import render_to_string
+from pewtils import is_not_null, decode_text
+from tqdm import tqdm
+import re
 
 
 class MTurk(object):
-
     def __init__(self, sandbox=True):
-
         self.sandbox = sandbox
+
         if sandbox:
             mturk_host = "mechanicalturk.sandbox.amazonaws.com"
         else:
             mturk_host = "mechanicalturk.amazonaws.com"
 
-        self.conn = MTurkConnection(
-            aws_access_key_id=settings.MTURK_API_ACCESS,
-            aws_secret_access_key=settings.MTURK_API_SECRET,
-            host=mturk_host
-        )
+        mturk_params = { 'host': mturk_host }
+
+        if getattr(settings, 'MTURK_API_ACCESS', None) is not None \
+            and getattr(settings, 'MTURK_API_SECRET', None) is not None:
+                mturk_params['aws_access_key_id'] = settings.MTURK_API_ACCESS
+                mturk_params['aws_secret_access_key'] = settings.MTURK_API_SECRET
+
+        self.conn = MTurkConnection(**mturk_params)
 
     def sync_hit_type(self, hit_type):
 
