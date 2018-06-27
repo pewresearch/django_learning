@@ -1,9 +1,9 @@
-import time
-
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from django_commander.commands import BasicCommand
-
 from django_learning.models import Project, Sample
 from django_learning.mturk import MTurk
+import time
 
 
 class Command(BasicCommand):
