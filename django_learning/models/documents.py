@@ -146,9 +146,14 @@ class Document(LoggedExtendedModel, QueryModel):
     def save(self, *args, **kwargs):
 
         if "ignore_warnings" in kwargs.keys():
-            ignore = kwargs.pop("ignore_warnings")
+            ignore_warnings = kwargs.pop("ignore_warnings")
         else:
-            ignore = False
+            ignore_warnings = False
+
+        if "allow_modified_text" in kwargs.keys():
+            allow_modified_text = kwargs.pop("allow_modified_text")
+        else:
+            allow_modified_text = False
 
         if not self.original_text:
             self.original_text = self.text
@@ -161,38 +166,44 @@ class Document(LoggedExtendedModel, QueryModel):
 
         # self.nilsimsa = get_hash(self.text, hash_function="nilsimsa")
         # self.tlsh = get_hash(self.text, hash_function="tlsh")
-        if self.__init_text != self.text and not self.freeze_text:
-            self.ssdeep = get_hash(self.text, hash_function="ssdeep")
-            for m2m in ["document_fragments", "entities", "ngram_sets", "topics"]:
-                if getattr(self, m2m).count() > 0:
-                    if not ignore:
-                        print "Warning: text for document {} was modified, clearing out {}".format(self.pk, m2m)
-                    # setattr(self, m2m, [])
-                    # getattr(self, m2m).clear()
-                    try:
-                        getattr(self, m2m).clear()
-                    except:
-                        getattr(self, m2m).all().delete()
-            # for su in self.sample_weights.all():
-            #     # if not ignore:
-            if self.coded_labels.count() > 0:
-                print "Warning: text for document {} was modified, clearing out coded labels".format(self.pk)
-                delete = True
-                import pdb
-                pdb.set_trace()
-                if delete:
-                    self.codes.all().delete()
-                else:
-                    print "Manual override, skipping"
-            # TODO: reenable
-            # if self.classified_labels.count() > 0:
-            #     print "Warning: text for document {} was modified, clearing out classified labels".format(self.pk)
-            #     import pdb
-            #     pdb.set_trace()
-            #     self.classified_labels.through.delete()
-            self._update_paragraphs()
-        else:
-            self.text = self.__init_text
+        if not allow_modified_text:
+            if self.__init_text != self.text and not self.freeze_text:
+                self.ssdeep = get_hash(self.text, hash_function="ssdeep")
+                for m2m in ["document_fragments", "entities", "ngram_sets", "topics"]:
+                    if getattr(self, m2m).count() > 0:
+                        delete = True
+                        if not ignore_warnings:
+                            print "Warning: text for document {} was modified, clearing out {}".format(self.pk, m2m)
+                            # setattr(self, m2m, [])
+                            # getattr(self, m2m).clear()
+                            import pdb
+                            pdb.set_trace()
+                        if delete:
+                            try:
+                                getattr(self, m2m).clear()
+                            except:
+                                getattr(self, m2m).all().delete()
+                        else:
+                            print "Manual override, skipping"
+                if self.coded_labels.count() > 0:
+                    delete = True
+                    if not ignore_warnings:
+                        print "Warning: text for document {} was modified, clearing out coded labels".format(self.pk)
+                        import pdb
+                        pdb.set_trace()
+                    if delete:
+                        self.codes.all().delete()
+                    else:
+                        print "Manual override, skipping"
+                # TODO: reenable
+                # if self.classified_labels.count() > 0:
+                #     print "Warning: text for document {} was modified, clearing out classified labels".format(self.pk)
+                #     import pdb
+                #     pdb.set_trace()
+                #     self.classified_labels.through.delete()
+                self._update_paragraphs()
+            else:
+                self.text = self.__init_text
 
         super(Document, self).save(*args, **kwargs)
         if self.object:
