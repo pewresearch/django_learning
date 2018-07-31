@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from boto.mturk.connection import MTurkConnection
 from boto.mturk.qualification import (
     LocaleRequirement,
