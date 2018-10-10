@@ -46,7 +46,7 @@ class Extractor(DatasetExtractor):
         if is_null(self.learning_model.model):
             self.learning_model.load_model()
         dataset = self.dataset
-        predictions = self.learning_model.apply_model(dataset, disable_probability_threshold_warning=False)
+        predictions = self.learning_model.apply_model(dataset, disable_probability_threshold_warning=self.disable_probability_threshold_warning)
         dataset[self.learning_model.dataset_extractor.outcome_column] = predictions[self.learning_model.dataset_extractor.outcome_column]
         dataset["probability"] = predictions["probability"]
 
