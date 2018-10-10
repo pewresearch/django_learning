@@ -89,7 +89,7 @@ class DatasetExtractor(object):
 
         if is_null(cache_data) and not only_load_existing:
             print "Refreshing dataset: {}".format(self.cache_hash)
-            if hasattr(self, name) and self.name: print self.name
+            if hasattr(self, "name") and self.name: print self.name
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
             self.cache.write(self.cache_hash, cache_data)
