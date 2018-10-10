@@ -310,11 +310,11 @@ class LearningModel(LoggedExtendedModel):
         # print params
 
     @require_model
-    def get_test_prediction_results(self, refresh=False, only_get_existing=False):
+    def get_test_prediction_results(self, refresh=False, only_load_existing=False):
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
-            self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main", refresh=refresh, only_get_existing=only_get_existing)
+            self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main", refresh=refresh, only_load_existing=only_load_existing)
             scores = self.compute_prediction_scores(self.test_dataset, predicted_df=self.predict_dataset)
             return scores
 
@@ -323,7 +323,7 @@ class LearningModel(LoggedExtendedModel):
         print self.get_test_prediction_results()
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_get_existing=False):
+    def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
 
         print "Computing cross-fold predictions"
         _final_model = self.model
@@ -342,8 +342,8 @@ class LearningModel(LoggedExtendedModel):
 
             fold_predict_dataset = None
             if not refresh:
-                fold_predict_dataset = self.produce_prediction_dataset(fold_test_dataset, cache_key="predict_fold_{}".format(i), refresh=False, only_get_existing=True)
-            if is_null(fold_predict_dataset) and not only_get_existing:
+                fold_predict_dataset = self.produce_prediction_dataset(fold_test_dataset, cache_key="predict_fold_{}".format(i), refresh=False, only_load_existing=True)
+            if is_null(fold_predict_dataset) and not only_load_existing:
                 fit_params = self._get_fit_params(fold_train_dataset)
                 self.model = _final_model_best_estimator.fit(
                     fold_train_dataset,
@@ -493,24 +493,24 @@ class LearningModel(LoggedExtendedModel):
         return pandas.DataFrame(labels, index=data.index)
 
     @require_model
-    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_get_existing=False, disable_probability_threshold_warning=False):
+    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_load_existing=False, disable_probability_threshold_warning=False):
 
         predicted_df = dataset_extractors["model_prediction_dataset"](
             dataset=df_to_predict,
             learning_model=self,
             cache_key=cache_key,
             disable_probability_threshold_warning=disable_probability_threshold_warning
-        ).extract(refresh=refresh, only_get_existing=only_get_existing)
+        ).extract(refresh=refresh, only_load_existing=only_load_existing)
 
         return predicted_df
 
     @require_model
-    def compute_prediction_scores(self, df_to_predict, predicted_df=None, cache_key=None, refresh=False, only_get_existing=False):
+    def compute_prediction_scores(self, df_to_predict, predicted_df=None, cache_key=None, refresh=False, only_load_existing=False):
 
         if "sampling_weight" in df_to_predict.columns: weight_col = "sampling_weight"
         else: weight_col = None
         if is_null(predicted_df):
-            predicted_df = self.produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh, only_get_existing=only_get_existing)
+            predicted_df = self.produce_prediction_dataset(df_to_predict, cache_key=cache_key, refresh=refresh, only_load_existing=only_load_existing)
         if is_not_null(predicted_df):
             return compute_scores_from_datasets_as_coders(df_to_predict, predicted_df, "index", self.dataset_extractor.outcome_column, weight_column=weight_col)
         else:
