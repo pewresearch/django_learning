@@ -73,7 +73,7 @@ class DatasetExtractor(object):
 
         self.outcome_column = outcome_col
 
-    def extract(self, refresh=False, only_get_existing=False, **kwargs):
+    def extract(self, refresh=False, only_load_existing=False, **kwargs):
 
         cache_data = None
 
@@ -87,8 +87,9 @@ class DatasetExtractor(object):
                     if k != "dataset":
                         setattr(self, k, v)
 
-        if is_null(cache_data) and not only_get_existing:
+        if is_null(cache_data) and not only_load_existing:
             print "Refreshing dataset: {}".format(self.cache_hash)
+            if hasattr(self, "name") and self.name: print self.name
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
             self.cache.write(self.cache_hash, cache_data)

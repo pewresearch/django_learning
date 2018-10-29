@@ -15,7 +15,7 @@ from collections import OrderedDict, defaultdict
 from statsmodels.stats.inter_rater import cohens_kappa
 from multiprocessing.pool import Pool
 
-from sklearn.cross_validation import train_test_split, KFold
+from sklearn.cross_validation import train_test_split, KFold, StratifiedKFold
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import f1_score, precision_score, recall_score, brier_score_loss, make_scorer, mean_squared_error, r2_score, matthews_corrcoef, accuracy_score, f1_score, roc_auc_score
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -188,18 +188,18 @@ class ClassificationModel(LearningModel):
         print matrix
 
     @require_model
-    def get_test_prediction_results(self, refresh=False, only_get_existing=False):
+    def get_test_prediction_results(self, refresh=False, only_load_existing=False):
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
             self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main",
                                                                    refresh=refresh,
-                                                                   only_get_existing=only_get_existing)
+                                                                   only_load_existing=only_load_existing)
             scores = self.compute_prediction_scores(self.test_dataset, predicted_df=self.predict_dataset)
             return scores
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_get_existing=False):
+    def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
 
         print "Computing cross-fold predictions"
         _final_model = self.model
@@ -208,7 +208,8 @@ class ClassificationModel(LearningModel):
 
         all_fold_scores = []
         if refresh or not self.cv_folds:
-            self.cv_folds = [f for f in KFold(len(dataset.index), n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
+            self.cv_folds = [f for f in StratifiedKFold(dataset[self.dataset_extractor.outcome_column], n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
+            # self.cv_folds = [f for f in KFold(len(dataset.index), n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
             self.save()
 
         for i, folds in tqdm(enumerate(self.cv_folds), desc="Producing CV predictions"):
@@ -221,8 +222,8 @@ class ClassificationModel(LearningModel):
             if not refresh:
                 fold_predict_dataset = self.produce_prediction_dataset(fold_test_dataset,
                                                                        cache_key="predict_fold_{}".format(i),
-                                                                       refresh=False, only_get_existing=True)
-            if is_null(fold_predict_dataset) and not only_get_existing:
+                                                                       refresh=False, only_load_existing=True)
+            if is_null(fold_predict_dataset) and not only_load_existing:
 
                 fit_params = self._get_fit_params(fold_train_dataset)
                 self.model = _final_model_best_estimator.fit(
@@ -277,7 +278,7 @@ class ClassificationModel(LearningModel):
                 self.test_dataset,
                 cache_key="predict_main",
                 refresh=False,
-                only_get_existing=True,
+                only_load_existing=True,
                 ignore_probability_threshold=True
             )
             test_threshold_scores = None
@@ -304,7 +305,7 @@ class ClassificationModel(LearningModel):
                     fold_test_dataset,
                     cache_key="predict_fold_{}".format(i),
                     refresh=False,
-                    only_get_existing=True,
+                    only_load_existing=True,
                     ignore_probability_threshold=True
                 )
                 # threshold = None
@@ -389,7 +390,7 @@ class ClassificationModel(LearningModel):
         return results
 
     @require_model
-    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_get_existing=False, ignore_probability_threshold=False):
+    def produce_prediction_dataset(self, df_to_predict, cache_key=None, refresh=False, only_load_existing=False, ignore_probability_threshold=False):
 
         base_code = self._get_largest_code()
         if base_code: base_code = str(base_code)
@@ -400,7 +401,7 @@ class ClassificationModel(LearningModel):
             df_to_predict,
             cache_key=cache_key,
             refresh=refresh,
-            only_get_existing=only_get_existing,
+            only_load_existing=only_load_existing,
             disable_probability_threshold_warning=(not ignore_probability_threshold)
         )
         if is_not_null(predicted_df):
@@ -463,7 +464,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         predictions = pandas.DataFrame()
         if len(dataset) > 0:
 
-            predictions = self.produce_prediction_dataset(dataset, cache_key=extractor.get_hash(), refresh=refresh, only_get_existing=False)
+            predictions = self.produce_prediction_dataset(dataset, cache_key=extractor.get_hash(), refresh=refresh, only_load_existing=False)
 
             if save:
 
