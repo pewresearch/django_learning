@@ -3,7 +3,7 @@ import pandas
 from django.db.models import Count
 from tqdm import tqdm
 
-from pewtils.django import get_model
+from django_pewtils import get_model
 from django_queries.queries.dataframes import DataFrameQuery
 
 

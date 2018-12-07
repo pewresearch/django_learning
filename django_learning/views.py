@@ -23,7 +23,7 @@ from django_learning.utils.sampling_methods import sampling_methods as sampling_
 from django_learning.utils.project_hit_types import project_hit_types as project_hit_type_configs
 
 from pewtils import is_not_null
-from pewtils.django import get_model
+from django_pewtils import get_model
 
 
 # def render_hit(request, hit_id):

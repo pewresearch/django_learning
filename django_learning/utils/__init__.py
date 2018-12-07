@@ -6,7 +6,7 @@ from django.apps import apps
 from django.conf import settings
 
 from pewtils import extract_attributes_from_folder_modules, extract_json_from_folder, decode_text
-from pewtils.django import get_model, get_app_settings_folders
+from django_pewtils import get_model, get_app_settings_folders
 
 
 def get_document_types():

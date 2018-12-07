@@ -35,7 +35,7 @@ from django_learning.utils.models import models as learning_models
 from django_learning.models.learning import LearningModel, DocumentLearningModel
 
 from pewtils import is_not_null, is_null, decode_text, recursive_update, chunker
-from pewtils.django import get_model, CacheHandler, reset_django_connection_wrapper, django_multiprocessor
+from django_pewtils import get_model, CacheHandler, reset_django_connection_wrapper, django_multiprocessor
 from pewtils.sampling import compute_sample_weights_from_frame, compute_balanced_sample_weights
 from pewtils.stats import wmom
 
@@ -577,7 +577,7 @@ def _process_document_chunk(
 
     import sys, traceback
     from django_learning.models import DocumentClassificationModel
-    from pewtils.django import get_model, reset_django_connection
+    from django_pewtils import get_model, reset_django_connection
     from pewtils import is_not_null
     from django.conf import settings
     reset_django_connection(settings.SITE_NAME)

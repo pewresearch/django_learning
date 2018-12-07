@@ -11,8 +11,8 @@ from django_learning.settings import S3_CACHE_PATH
 
 from pewtils import chunker, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer
-from pewtils.django import CacheHandler, get_model
-from pewtils.django.managers import BasicExtendedManager
+from django_pewtils import CacheHandler, get_model
+from django_pewtils.managers import BasicExtendedManager
 from django_queries.managers import QueryModelManager
 
 from django_learning.utils.dataset_extractors import dataset_extractors

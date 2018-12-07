@@ -1,4 +1,4 @@
-from pewtils.django import get_model
+from django_pewtils import get_model
 
 
 def filter(self, df, model_name, filter_value):

@@ -5,7 +5,7 @@ from gensim.models import KeyedVectors
 from django.conf import settings
 
 from pewtils import flatten_list, is_null
-from pewtils.django import get_model, reset_django_connection_wrapper
+from django_pewtils import get_model, reset_django_connection_wrapper
 from django_learning.utils.feature_extractors import BasicExtractor
 
 

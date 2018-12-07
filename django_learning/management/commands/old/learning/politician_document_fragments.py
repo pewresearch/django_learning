@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from django.db.models import Count
 
 from logos.models import Document, DocumentFragment
-from pewtils.django import get_model
+from django_pewtils import get_model
 from pewtils.nlp import has_fragment, get_hash, TextHelper
 from logos.learning.supervised import ClassificationHandler
 

@@ -31,7 +31,7 @@
 # from django_learning.models.learning import LearningModel, DocumentLearningModel
 #
 # from pewtils import is_not_null, is_null, decode_text, recursive_update
-# from pewtils.django import get_model, CacheHandler
+# from django_pewtils import get_model, CacheHandler
 # from pewtils.sampling import compute_sample_weights_from_frame, compute_balanced_sample_weights
 # from pewtils.stats import wmom
 #

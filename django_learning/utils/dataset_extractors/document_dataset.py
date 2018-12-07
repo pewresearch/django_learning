@@ -5,7 +5,7 @@ from tqdm import tqdm
 from django.conf import settings
 
 from pewtils import classproperty, is_not_null, is_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
-from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
+from django_pewtils import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
 
 from django_learning.utils.dataset_extractors.document_coder_dataset import Extractor as DocumentCoderDatasetExtractor
 

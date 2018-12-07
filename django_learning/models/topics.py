@@ -11,8 +11,8 @@ from django_learning.utils import topic_models
 from django_learning.models import SamplingFrame
 
 from pewtils import is_null, is_not_null
-from pewtils.django import get_model
-from pewtils.django.sampling import SampleExtractor
+from django_pewtils import get_model
+from django_pewtils.sampling import SampleExtractor
 from pewtils.nlp import corex_topic
 
 

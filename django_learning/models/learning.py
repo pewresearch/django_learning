@@ -36,7 +36,7 @@ from django_learning.utils.scoring import compute_scores_from_datasets_as_coders
 from django_learning.utils.scoring_functions import scoring_functions
 
 from pewtils import is_not_null, is_null, decode_text, recursive_update
-from pewtils.django import get_model, CacheHandler
+from django_pewtils import get_model, CacheHandler
 from pewtils.sampling import compute_sample_weights_from_frame, compute_balanced_sample_weights
 from pewtils.stats import wmom
 
@@ -552,7 +552,7 @@ class DocumentLearningModel(LearningModel):
             try: self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
             except:
                 # TODO: this is very hacky and needs to be fixed
-                from pewtils.django import reset_django_connection
+                from django_pewtils import reset_django_connection
                 reset_django_connection("logos")
                 self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
             self.save()

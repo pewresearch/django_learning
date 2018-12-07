@@ -1,7 +1,7 @@
 import re, os
 
 from pewtils import extract_attributes_from_folder_modules, extract_json_from_folder, decode_text
-from pewtils.django import get_model, get_app_settings_folders
+from django_pewtils import get_model, get_app_settings_folders
 
 
 for mod_category, attribute_name in [

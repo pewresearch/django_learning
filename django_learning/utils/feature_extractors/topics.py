@@ -4,7 +4,7 @@ from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from pewtils.stats import wmom
-from pewtils.django import get_model
+from django_pewtils import get_model
 
 from django_learning.utils.feature_extractors import BasicExtractor
 

@@ -5,7 +5,7 @@ from django.db import migrations, models
 from django.contrib.contenttypes.models import ContentType
 
 from tqdm import tqdm
-from pewtils.django import get_model
+from django_pewtils import get_model
 from pewtils.io import FileHandler
 from django_learning.settings import BASE_DIR
 from django_commander.commands import commands

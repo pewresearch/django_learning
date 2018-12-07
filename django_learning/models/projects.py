@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericRelation
 
 from pewtils import is_not_null
-from pewtils.django import get_model
+from django_pewtils import get_model
 
 from django_commander.models import LoggedExtendedModel
 

@@ -6,7 +6,7 @@ from collections import defaultdict
 from sklearn.feature_extraction.text import TfidfTransformer
 
 from pewtils import decode_text
-from pewtils.django import get_model, reset_django_connection_wrapper
+from django_pewtils import get_model, reset_django_connection_wrapper
 from django_learning.utils.feature_extractors import BasicExtractor
 
 

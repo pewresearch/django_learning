@@ -3,7 +3,7 @@ import pandas
 from django.db.models import Q
 
 from pewtils.sampling import compute_sample_weights_from_frame
-from pewtils.django import get_model
+from django_pewtils import get_model
 from pewtils import is_not_null
 
 from django_learning.utils import filter_queryset_by_params

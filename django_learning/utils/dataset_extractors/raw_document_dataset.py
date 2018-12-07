@@ -5,7 +5,7 @@ from tqdm import tqdm
 from django.conf import settings
 
 from pewtils import classproperty, is_not_null, is_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
-from pewtils.django import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
+from django_pewtils import CacheHandler, reset_django_connection_wrapper, get_model, get_app_settings_folders
 from pewtils.sampling import compute_balanced_sample_weights
 
 from django_learning.utils.dataset_code_filters import dataset_code_filters

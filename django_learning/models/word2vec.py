@@ -9,7 +9,7 @@ from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
 
 from pewtils import chunker
-from pewtils.django import get_model
+from django_pewtils import get_model
 from pewtils.nlp import TextCleaner, SentenceTokenizer
 
 

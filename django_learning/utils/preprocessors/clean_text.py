@@ -4,7 +4,7 @@ from nltk.corpus import wordnet
 
 from pewtils import is_not_null, decode_text
 from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
-from pewtils.django import CacheHandler
+from django_pewtils import CacheHandler
 
 from django_learning.utils.stopword_sets import stopword_sets
 from django_learning.utils.stopword_whitelists import stopword_whitelists

@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 
 from django_commander.commands import BasicCommand
 
-from pewtils.django import get_model
+from django_pewtils import get_model
 from django_learning.models import Project
 
 

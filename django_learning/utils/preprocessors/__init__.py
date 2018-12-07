@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 from pewtils import is_not_null, decode_text, extract_attributes_from_folder_modules, extract_json_from_folder
 from pewtils.nlp import TextCleaner, SentenceTokenizer, is_probable_stopword
-from pewtils.django import CacheHandler, get_model, get_app_settings_folders, reset_django_connection_wrapper
+from django_pewtils import CacheHandler, get_model, get_app_settings_folders, reset_django_connection_wrapper
 
 from django_learning.utils import get_param_repr
 from django_learning.settings import LOCAL_CACHE_PATH

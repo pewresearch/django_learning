@@ -1,7 +1,7 @@
 from django.db.models import Q
 
 from pewtils import is_not_null
-from pewtils.django import get_model
+from django_pewtils import get_model
 
 
 def filter(self, df, search_filter=None, search_value=None, exclude=False, operator=None):

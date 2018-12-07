@@ -7,8 +7,8 @@ from django_learning.utils.sampling_methods import sampling_methods
 from django.conf import settings
 from django.db import models
 from pewtils import is_null, decode_text, is_not_null
-from pewtils.django import get_model, CacheHandler
-from pewtils.django.sampling import SampleExtractor
+from django_pewtils import get_model, CacheHandler
+from django_pewtils.sampling import SampleExtractor
 from pewtils.nlp import get_hash
 from pewtils.sampling import compute_sample_weights_from_frame
 from tqdm import tqdm
