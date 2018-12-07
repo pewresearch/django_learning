@@ -186,7 +186,6 @@ def get_sampling_weights(
             "document_id", flat=True)))]
 
     if len(keyword_weight_columns) > 0:
-        frame
         keyword_weight = compute_sample_weights_from_frame(frame, full_sample, list(keyword_weight_columns))
         full_sample['keyword_weight'] = keyword_weight
     else:
