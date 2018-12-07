@@ -88,3 +88,4 @@ git+ssh://labsdeploy/pewresearch/pewtils#egg=pewtils
 git+ssh://labsdeploy/pewresearch/scikit-learn#egg=sklearn
 git+ssh://labsdeploy/pewresearch/django_commander#egg=django_commander
 git+ssh://labsdeploy/pewresearch/django_queries#egg=django_queries
+git+ssh://labsdeploy/pewresearch/django_pewtils#egg=django_pewtils
