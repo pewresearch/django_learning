@@ -32,6 +32,10 @@ class Command(BasicCommand):
 
         mturk = MTurk(sandbox=(not self.options["prod"]))
 
+        # TODO: this can become a problem when you create a hit type in prod, but then on a new sample you want to try sandbox again
+        # the project already has an API ID for the hit type (the correct prod one, which may be associated with existing Turker qualification test results)
+        # but if you switch back to the sandbox, the API won't recognize the prod ID
+        # easiest solution is to modify the HitType model to have a prod and non-prod ID
         if not sample.hit_type.turk_id or self.options["force_hit_type_reset"]:
             mturk.sync_hit_type(sample.hit_type)
 
