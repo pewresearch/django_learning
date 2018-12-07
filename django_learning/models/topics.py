@@ -141,8 +141,8 @@ class TopicModel(LoggedExtendedModel):
         tfidf = self.vectorizer.transform(df)
         topic_names = list(self.topics.order_by("num").values_list("name", flat=True))
         if not probabilities: topic_df = pandas.DataFrame(self.model.transform(tfidf), columns=topic_names).astype(int)
-        else: topic_df = pandas.DataFrame(self.model.transform(tfidf, details=True)[1], columns=topic_names).astype(int)
-
+        else: topic_df = pandas.DataFrame(self.model.transform(tfidf, details=True)[1], columns=topic_names).astype(float)
+        topic_df.index = df.index
         return pandas.concat([df, topic_df], axis=1)
 
 
