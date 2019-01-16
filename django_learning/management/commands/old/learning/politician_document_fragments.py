@@ -8,7 +8,9 @@ from django.db.models import Count
 
 from logos.models import Document, DocumentFragment
 from django_pewtils import get_model
-from pewtils.nlp import has_fragment, get_hash, TextHelper
+from pewtils import get_hash
+from pewanalytics.text.fragments import has_fragment
+from pewanalytics.text import TextDataFrame
 from logos.learning.supervised import ClassificationHandler
 
 from django_commander.commands import DownloadIterateCommand
@@ -80,7 +82,7 @@ class Command(DownloadIterateCommand):
 
             doc_df = pandas.DataFrame(list(docs.values("pk", "text", "date")))
 
-            h = TextHelper(doc_df, "text")
+            h = TextDataFrame(doc_df, "text")
 
             fragments = h.extract_corpus_fragments(
                 scan_top_n_matches_per_doc=self.options["scan_top_n_matches_per_doc"],

@@ -2,9 +2,8 @@ from django.db import models
 from django.contrib.postgres.fields import JSONField
 
 from django_commander.models import LoggedExtendedModel
-from django_learning.utils import get_document_types
 
-from pewtils import is_not_null, is_null, decode_text
+from pewtils import decode_text
 
 
 class DocumentFragment(LoggedExtendedModel):

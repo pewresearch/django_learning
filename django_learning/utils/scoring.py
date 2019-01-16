@@ -7,7 +7,7 @@ from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score, \
     precision_score, recall_score, roc_auc_score, brier_score_loss, cohen_kappa_score
 from scipy.stats import ttest_ind
 
-from pewtils.stats import wmom
+from pewanalytics.internal import wmom
 from pewtils import is_not_null
 
 #         scoring_function = None

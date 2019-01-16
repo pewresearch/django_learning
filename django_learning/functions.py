@@ -2,7 +2,7 @@ import pandas
 
 from django.db.models import Q
 
-from pewtils.sampling import compute_sample_weights_from_frame
+from pewanalytics.stats.sampling import compute_sample_weights_from_frame
 from django_pewtils import get_model
 from pewtils import is_not_null
 

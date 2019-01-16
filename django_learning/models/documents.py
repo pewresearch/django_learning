@@ -10,7 +10,7 @@ from django.db.models.signals import class_prepared
 from langdetect import detect
 from pewtils import is_not_null, is_null, decode_text
 from django_pewtils import get_fields_with_model
-from pewtils.nlp import get_hash
+from pewtils import get_hash
 import re
 
 

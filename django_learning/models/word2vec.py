@@ -10,7 +10,7 @@ from django_learning.utils import get_document_types
 
 from pewtils import chunker
 from django_pewtils import get_model
-from pewtils.nlp import TextCleaner, SentenceTokenizer
+from pewanalytics.text import TextCleaner, SentenceTokenizer
 
 
 class Word2VecModel(LoggedExtendedModel):

@@ -1,17 +1,10 @@
 import importlib, copy, pandas, numpy, os
 
 from django.db import models
-from django.db.models import Q
-from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
 
 from picklefield.fields import PickledObjectField
-from langdetect import detect
-from abc import abstractmethod
-from collections import OrderedDict, defaultdict
-from statsmodels.stats.inter_rater import cohens_kappa
+from collections import OrderedDict
 from tempfile import mkdtemp
 from shutil import rmtree
 
@@ -20,25 +13,20 @@ from sklearn.model_selection import KFold
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import f1_score, precision_score, recall_score, brier_score_loss, make_scorer, mean_squared_error, r2_score, matthews_corrcoef, accuracy_score, f1_score, roc_auc_score
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.metrics import classification_report, confusion_matrix
-from scipy.stats import ttest_ind
 
 from django_commander.models import LoggedExtendedModel
 
 from django_learning.settings import S3_CACHE_PATH, LOCAL_CACHE_PATH
-from django_learning.utils import get_document_types, get_pipeline_repr, get_param_repr
+from django_learning.utils import get_pipeline_repr, get_param_repr
 from django_learning.utils.pipelines import pipelines
 from django_learning.utils.dataset_extractors import dataset_extractors
-from django_learning.utils.decorators import require_training_data, require_model, temp_cache_wrapper
+from django_learning.utils.decorators import require_model, temp_cache_wrapper
 from django_learning.utils.feature_extractors import BasicExtractor
 from django_learning.utils.models import models as learning_models
 from django_learning.utils.scoring import compute_scores_from_datasets_as_coders
-from django_learning.utils.scoring_functions import scoring_functions
 
-from pewtils import is_not_null, is_null, decode_text, recursive_update
+from pewtils import is_not_null, is_null, recursive_update
 from django_pewtils import get_model, CacheHandler
-from pewtils.sampling import compute_sample_weights_from_frame, compute_balanced_sample_weights
-from pewtils.stats import wmom
 
 
 class LearningModel(LoggedExtendedModel):

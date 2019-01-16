@@ -1,6 +1,6 @@
 import re, os
 
-from pewtils import extract_attributes_from_folder_modules, extract_json_from_folder, decode_text
+from pewtils import extract_attributes_from_folder_modules
 from django_pewtils import get_model, get_app_settings_folders
 
 

@@ -4,7 +4,7 @@ from django.db.models import Count
 
 from logos.models import CodeVariable, CodeVariableClassifier
 from logos.utils import clean_text, get_congress_stopwords, get_model_by_document_type
-from pewtils import agg_any
+from pewtils.internal import agg_any
 
 from sklearn.metrics import f1_score, make_scorer
 from sklearn.tree import DecisionTreeClassifier

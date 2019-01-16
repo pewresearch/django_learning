@@ -4,6 +4,7 @@ from django.db import models
 from django.contrib.postgres.fields import ArrayField
 
 from picklefield.fields import PickledObjectField
+from corextopic import corextopic as corex_topic
 
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
@@ -13,7 +14,6 @@ from django_learning.models import SamplingFrame
 from pewtils import is_null, is_not_null
 from django_pewtils import get_model
 from django_pewtils.sampling import SampleExtractor
-from pewtils.nlp import corex_topic
 
 
 class TopicModel(LoggedExtendedModel):

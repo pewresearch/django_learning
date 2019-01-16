@@ -10,7 +10,7 @@ from django.conf import settings
 from django_learning.settings import S3_CACHE_PATH
 
 from pewtils import chunker, decode_text
-from pewtils.nlp import TextCleaner, SentenceTokenizer
+from pewanalytics.text import TextCleaner, SentenceTokenizer
 from django_pewtils import CacheHandler, get_model
 from django_pewtils.managers import BasicExtendedManager
 from django_queries.managers import QueryModelManager

@@ -1,43 +1,24 @@
-import importlib, copy, pandas, numpy, time
+import copy, pandas, time
 
 from django.db import models
-from django.db.models import Q, F
-from django.contrib.postgres.fields import ArrayField
-from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
-from picklefield.fields import PickledObjectField
-from langdetect import detect
-from abc import abstractmethod
-from collections import OrderedDict, defaultdict
-from statsmodels.stats.inter_rater import cohens_kappa
 from multiprocessing.pool import Pool
 
 from sklearn.cross_validation import train_test_split, KFold, StratifiedKFold
 from sklearn.grid_search import GridSearchCV
-from sklearn.metrics import f1_score, precision_score, recall_score, brier_score_loss, make_scorer, mean_squared_error, r2_score, matthews_corrcoef, accuracy_score, f1_score, roc_auc_score
-from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.metrics import classification_report, confusion_matrix
-from scipy.stats import ttest_ind
 from tqdm import tqdm
 
 from django_commander.models import LoggedExtendedModel
 
-from django_learning.utils import get_document_types, get_pipeline_repr, get_param_repr
-from django_learning.utils.pipelines import pipelines
 from django_learning.utils.dataset_extractors import dataset_extractors
-from django_learning.utils.decorators import require_training_data, require_model, temp_cache_wrapper
-from django_learning.utils.feature_extractors import BasicExtractor
-from django_learning.utils.scoring import find_probability_threshold, apply_probability_threshold, get_probability_threshold_score_df, get_probability_threshold_from_score_df
-from django_learning.utils.models import models as learning_models
+from django_learning.utils.decorators import require_model
+from django_learning.utils.scoring import apply_probability_threshold, get_probability_threshold_score_df
 from django_learning.models.learning import LearningModel, DocumentLearningModel
 
-from pewtils import is_not_null, is_null, decode_text, recursive_update, chunker
-from django_pewtils import get_model, CacheHandler, reset_django_connection_wrapper, django_multiprocessor
-from pewtils.sampling import compute_sample_weights_from_frame, compute_balanced_sample_weights
-from pewtils.stats import wmom
+from pewtils import is_not_null, is_null, chunker
+from django_pewtils import get_model
 
 
 class ClassificationModel(LearningModel):

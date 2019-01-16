@@ -4,7 +4,7 @@ from tqdm import tqdm
 from django.db.models import Count
 
 from django_learning.models import Document, Entity
-from pewtils.nlp import EntityExtractor
+from pewanalytics.internal.ner import EntityExtractor
 from django.conf import settings
 
 from django_commander.commands import DownloadIterateCommand

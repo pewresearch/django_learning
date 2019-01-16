@@ -3,6 +3,7 @@ beautifulsoup4>=4.5.3
 boto>=2.46.1
 boto3>=1.4.4
 census>=0.8.1
+corextopic
 Cerberus>=1.1
 cffi>=1.9.1
 characteristic>=14.3.0
