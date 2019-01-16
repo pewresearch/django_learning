@@ -1,10 +1,5 @@
-import os, numpy, pandas, inspect, copy
+import pandas, inspect
 
-from tqdm import tqdm
-
-from django.conf import settings
-
-from pewtils.internal import classproperty
 from pewtils import is_not_null
 from django_pewtils import get_model
 
