@@ -89,8 +89,8 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
         raise Exception("All {} combinations must be unique!".format(index_levels))
 
     outcome_values = numpy.unique(dataset[outcome_column])
-    if len(outcome_values) == 1:
-        raise Exception("Your outcome column is constant (only one value)!")
+    # if len(outcome_values) == 1:
+    #     raise Exception("Your outcome column is constant (only one value)!")
 
     pos_labels = []
     if discrete_classes:
