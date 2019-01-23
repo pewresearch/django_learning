@@ -8,9 +8,7 @@ from collections import OrderedDict
 from tempfile import mkdtemp
 from shutil import rmtree
 
-from sklearn.cross_validation import train_test_split
-from sklearn.model_selection import KFold
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import KFold, train_test_split, GridSearchCV
 from sklearn.metrics import f1_score, precision_score, recall_score, brier_score_loss, make_scorer, mean_squared_error, r2_score, matthews_corrcoef, accuracy_score, f1_score, roc_auc_score
 from sklearn.pipeline import Pipeline, FeatureUnion
 

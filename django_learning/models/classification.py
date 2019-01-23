@@ -5,8 +5,7 @@ from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
 from multiprocessing.pool import Pool
 
-from sklearn.cross_validation import train_test_split, KFold, StratifiedKFold
-from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix
 from tqdm import tqdm
 
@@ -189,7 +188,9 @@ class ClassificationModel(LearningModel):
 
         all_fold_scores = []
         if refresh or not self.cv_folds:
-            self.cv_folds = [f for f in StratifiedKFold(dataset[self.dataset_extractor.outcome_column], n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
+            import pdb
+            pdb.set_trace()
+            self.cv_folds = [f for f in StratifiedKFold(dataset[self.dataset_extractor.outcome_column], self.parameters["model"].get("cv", 5), shuffle=True)]
             # self.cv_folds = [f for f in KFold(len(dataset.index), n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
             self.save()
 
