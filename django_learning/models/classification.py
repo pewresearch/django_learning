@@ -188,9 +188,8 @@ class ClassificationModel(LearningModel):
 
         all_fold_scores = []
         if refresh or not self.cv_folds:
-            import pdb
-            pdb.set_trace()
-            self.cv_folds = [f for f in StratifiedKFold(dataset[self.dataset_extractor.outcome_column], self.parameters["model"].get("cv", 5), shuffle=True)]
+            splitter = StratifiedKFold(self.parameters["model"].get("cv", 5), shuffle=True)
+            self.cv_folds = [f for f in splitter.split(dataset, dataset[self.dataset_extractor.outcome_column])]
             # self.cv_folds = [f for f in KFold(len(dataset.index), n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
             self.save()
 
