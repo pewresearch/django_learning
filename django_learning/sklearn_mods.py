@@ -2,8 +2,10 @@ import numbers
 import inspect
 import time
 import warnings
+import numpy as np
 
 from traceback import format_exception_only
+from abc import ABCMeta, abstractmethod
 
 from sklearn.exceptions import FitFailedWarning
 from sklearn.utils._joblib import logger
@@ -12,6 +14,8 @@ from sklearn.utils.multiclass import type_of_target
 from sklearn.model_selection._validation import _index_param_value
 from sklearn.utils.metaestimators import _safe_split
 from sklearn.utils.validation import _num_samples
+from sklearn.externals.six import with_metaclass
+from sklearn.model_selection._split import BaseCrossValidator
 
 
 class _ProbaScorer(_BaseScorer):
@@ -347,3 +351,30 @@ def _multimetric_score(estimator, X_test, y_test, scorers, **score_params):
                              "instead. (scorer=%s)"
                              % (str(score), type(score), name))
     return scores
+
+
+class _BaseKFold(with_metaclass(ABCMeta, BaseCrossValidator)):
+    """Base class for KFold, GroupKFold, and StratifiedKFold"""
+
+    @abstractmethod
+    def __init__(self, n_splits, shuffle, random_state):
+        if not isinstance(n_splits, numbers.Integral):
+            raise ValueError('The number of folds must be of Integral type. '
+                             '%s of type %s was passed.'
+                             % (n_splits, type(n_splits)))
+        n_splits = int(n_splits)
+
+        # if n_splits <= 1:
+        #     raise ValueError(
+        #         "k-fold cross-validation requires at least one"
+        #         " train/test split by setting n_splits=2 or more,"
+        #         " got n_splits={0}.".format(n_splits))
+
+        if not isinstance(shuffle, bool):
+            raise TypeError("shuffle must be True or False;"
+                            " got {0}".format(shuffle))
+
+        self.n_splits = n_splits
+        self.shuffle = shuffle
+        self.random_state = random_state
+
