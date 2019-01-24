@@ -7,6 +7,8 @@ try:
         return {
             "model_class": XGBClassifier(),
             "params": {
+                "max_depth": [6], # default 3
+                "n_estimators": [150], # default 100
                 # 'kernel': ('linear', ),
                 # 'max_iter': (1000, ),
                 # 'penalty': ('l2', ), # can also be 'l1'
