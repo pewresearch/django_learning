@@ -11,6 +11,7 @@ from shutil import rmtree
 from sklearn.model_selection import KFold, train_test_split, GridSearchCV
 from sklearn.metrics import f1_score, precision_score, recall_score, brier_score_loss, make_scorer, mean_squared_error, r2_score, matthews_corrcoef, accuracy_score, f1_score, roc_auc_score
 from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.model_selection import ParameterGrid
 
 from django_commander.models import LoggedExtendedModel
 
@@ -137,7 +138,7 @@ class LearningModel(LoggedExtendedModel):
     def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, num_cores=1, **kwargs):
 
         if is_null(self.dataset):
-            self.extract_dataset()
+            self.extract_dataset(only_load_existing=only_load_existing)
 
         cache_data = None
 
@@ -245,6 +246,11 @@ class LearningModel(LoggedExtendedModel):
 
         fit_params = self._get_fit_params(train_dataset)
 
+        if len(ParameterGrid(fit_params)):
+            grid_search_cv = 2
+        else:
+            grid_search_cv = self.parameters["model"].get("cv", 5)
+
         print "Beginning grid search using %s and %i cores for %s" % (
             str(scoring_function),
             num_cores,
@@ -259,7 +265,7 @@ class LearningModel(LoggedExtendedModel):
             Pipeline(pipeline_steps, memory=sklearn_cache),
             params,
             fit_params=fit_params,
-            cv=self.parameters["model"].get("cv", 5),
+            cv=grid_search_cv,
             n_jobs=num_cores,
             verbose=2,
             scoring=scoring_function
@@ -531,9 +537,9 @@ class DocumentLearningModel(LearningModel):
             self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
         super(DocumentLearningModel, self).save(*args, **kwargs)
 
-    def extract_dataset(self, refresh=False):
+    def extract_dataset(self, refresh=False, **kwargs):
 
-        super(DocumentLearningModel, self).extract_dataset(refresh=refresh)
+        super(DocumentLearningModel, self).extract_dataset(refresh=refresh, **kwargs)
         if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
             try: self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
             except:
