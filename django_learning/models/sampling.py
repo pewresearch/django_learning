@@ -94,13 +94,15 @@ class SamplingFrame(LoggedExtendedModel):
             else:
                 cache_params.pop('bucket', None)
 
-        if not all(
-            map(
-                lambda x: x in cache_params and cache_params[x] is not None,
-                ('aws_access', 'aws_secret', 'bucket')
-            )
-        ):
-            cache_params['use_s3'] = False
+        # FileHandler will fall back to local automatically
+        # AWS creds may not be necessary depending on instance permissions
+        # if not all(
+        #     map(
+        #         lambda x: x in cache_params and cache_params[x] is not None,
+        #         ('aws_access', 'aws_secret', 'bucket')
+        #     )
+        # ):
+        #     cache_params['use_s3'] = False
 
         cache = CacheHandler(
             os.path.join(S3_CACHE_PATH, "sampling_frame_flags"),
