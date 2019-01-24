@@ -1,0 +1,31 @@
+{% extends django_learning_template %}
+
+{% load staticfiles %}
+
+{% block extra_head %}{% endblock %}
+
+{% block modals %}
+
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-primary">
+                <div class="panel-heading">{{ label }}</div>
+                <table class="panel-body table table-condensed">
+                    <tr><th>Text</th><th>Probability</th></tr>
+                    {% for c in classifications %}
+                        <tr>
+                            <td>{{ c.document__text }}</td><td>{{ c.probability }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_body %}{% endblock %}

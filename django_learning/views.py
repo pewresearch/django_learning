@@ -638,16 +638,15 @@ def edit_topic_model(request, model_id):
 def view_document_classification_model(request, model_name):
 
     model = get_model("DocumentClassificationModel", app_name="django_learning").objects.get(name=model_name)
-    # classifier.load_model(only_load_existing=True)
-    # cv_results = model.get_cv_prediction_results(only_load_existing=True)
-    # test_results = model.get_test_prediction_results(only_load_existing=True)
+    cv_results = model.get_cv_prediction_results(only_load_existing=True)
+    test_results = model.get_test_prediction_results(only_load_existing=True)
     classifications = get_model("Classification", app_name="django_learning").objects\
-        .filter(classification_model__name=model.name).values("label__value").annotate(c=Count("pk"))
+        .filter(classification_model__name=model_name).values("label__label", "label__question__name", "label__pk").annotate(c=Count("pk"))
 
     return render(request, "django_learning/document_classification_model.html", {
         "model": model,
-        # "cv_results": cv_results,
-        # "test_results": test_results,
+        "cv_results": cv_results[['outcome_column', 'precision', 'recall', 'alpha', 'cohens_kappa_weighted', 'coder1_unweighted_mean']],
+        "test_results": test_results[['outcome_column', 'precision', 'recall', 'alpha', 'cohens_kappa_weighted', 'coder1_unweighted_mean']],
         "classifications": classifications
     })
 
@@ -655,16 +654,13 @@ def view_document_classification_model(request, model_name):
 def view_document_classifications(request, model_name, label_id):
 
     model = get_model("DocumentClassificationModel", app_name="django_learning").objects.get(name=model_name)
-    # classifier.load_model(only_load_existing=True)
-    # cv_results = model.get_cv_prediction_results(only_load_existing=True)
-    # test_results = model.get_test_prediction_results(only_load_existing=True)
+    label = get_model("Label", app_name="django_learning").objects.get(pk=label_id)
     classifications = get_model("Classification", app_name="django_learning").objects\
-        .filter(classification_model__name=model.name).filter(label_id=label_id).values()
+        .filter(classification_model__name=model_name).filter(label_id=label_id).values("document__text", "probability")[:100]
 
     return render(request, "django_learning/document_classifications.html", {
         "model": model,
-        # "cv_results": cv_results,
-        # "test_results": test_results,
+        "label": label,
         "classifications": classifications
     })
 
