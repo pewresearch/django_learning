@@ -9,11 +9,6 @@ import sklearn.metrics.scorer
 from django_learning.sklearn_mods import _ProbaScorer
 sklearn.metrics.scorer._ProbaScorer = _ProbaScorer
 
-import sklearn.model_selection._split
-from django_learning.sklearn_mods import _BaseKFold
-sklearn.model_selection._split._BaseKFold = _BaseKFold
-sklearn.model_selection._split._BaseKFold.__init__ = _BaseKFold.__init__
-
 import sklearn.model_selection._validation
 from django_learning.sklearn_mods import _fit_and_score
 sklearn.model_selection._validation._fit_and_score = _fit_and_score
