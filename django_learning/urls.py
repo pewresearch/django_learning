@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^sampling_frame/(?P<sampling_frame_name>[\w\_\-]+)', views.view_sampling_frame, name="view_sampling_frame"),
     url(r'^topic_model/(?P<model_id>[0-9]+)', views.edit_topic_model, name="edit_topic_model"),
     url(r'^topic_models', views.view_topic_models, name="view_topic_models"),
-
+    url(r'^document_classification_model/(?P<model_name>[\w\_\-]+)', views.view_document_classification_model, name="view_document_classification_model"),
+    url(r'^document_classifications/(?P<model_name>[\w\_\-]+)/(?P<label_id>[0-9]+)', views.view_document_classification_model, name="view_document_classifications"),
     #url(r'^get_dataframe/(?P<project_name>[\w\_]+)$', views.get_dataframe),
 ]

@@ -634,6 +634,40 @@ def edit_topic_model(request, model_id):
         "topics": topic_model.topics.order_by("num")
     })
 
+@login_required
+def view_document_classification_model(request, model_name):
+
+    model = get_model("DocumentClassificationModel", app_name="django_learning").objects.get(name=model_name)
+    # classifier.load_model(only_load_existing=True)
+    # cv_results = model.get_cv_prediction_results(only_load_existing=True)
+    # test_results = model.get_test_prediction_results(only_load_existing=True)
+    classifications = get_model("Classification", app_name="django_learning").objects\
+        .filter(classification_model__name=model.name).values("label__value").annotate(c=Count("pk"))
+
+    return render(request, "django_learning/document_classification_model.html", {
+        "model": model,
+        # "cv_results": cv_results,
+        # "test_results": test_results,
+        "classifications": classifications
+    })
+
+@login_required
+def view_document_classifications(request, model_name, label_id):
+
+    model = get_model("DocumentClassificationModel", app_name="django_learning").objects.get(name=model_name)
+    # classifier.load_model(only_load_existing=True)
+    # cv_results = model.get_cv_prediction_results(only_load_existing=True)
+    # test_results = model.get_test_prediction_results(only_load_existing=True)
+    classifications = get_model("Classification", app_name="django_learning").objects\
+        .filter(classification_model__name=model.name).filter(label_id=label_id).values()
+
+    return render(request, "django_learning/document_classifications.html", {
+        "model": model,
+        # "cv_results": cv_results,
+        # "test_results": test_results,
+        "classifications": classifications
+    })
+
 # @login_required
 # def get_dataframe(request, project_name):
 #

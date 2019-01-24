@@ -50,6 +50,16 @@
                                     </ul>
                                 </li>
                             </ul>
+                            <ul class="nav navbar-nav">
+                                <li class="dropdown">
+                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Document Classifiers<span class="caret"></span></a>
+                                    <ul class="dropdown-menu">
+                                        {% for model in document_classification_models %}
+                                            <li><a href="{% url 'django_learning:view_document_classification_model' model %}">{{ model }}</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            </ul>
                             <ul class="nav navbar-nav navbar-right">
                                 <li class="dropdown">
                                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{% if request.user %}{{ request.user.coder.name }}{% endif %}<span class="caret"></span></a>
