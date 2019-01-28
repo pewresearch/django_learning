@@ -172,11 +172,27 @@ class ClassificationModel(LearningModel):
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
-            self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_main",
+            self.predict_dataset = self.produce_prediction_dataset(self.test_dataset, cache_key="predict_test",
                                                                    refresh=refresh,
                                                                    only_load_existing=only_load_existing)
             scores = self.compute_prediction_scores(self.test_dataset, predicted_df=self.predict_dataset)
             return scores
+
+    @require_model
+    def get_incorrect_predictions(self, correct_label_id=None, refresh=False, only_load_existing=False):
+
+        self.predict_dataset = None
+        if is_not_null(self.dataset):
+            self.predict_dataset = self.produce_prediction_dataset(self.dataset, cache_key="predict_all",
+                                                                   refresh=refresh,
+                                                                   only_load_existing=only_load_existing)
+        merged = self.dataset.merge(self.predict_dataset[['document_id', 'label_id']], how="left",
+                                          on="document_id", suffixes=("_test", "_predict"))
+        incorrect = merged[merged['label_id_test'] != merged['label_id_predict']]
+        if correct_label_id:
+            incorrect = incorrect[incorrect['label_id_test']==correct_label_id]
+
+        return incorrect
 
     @require_model
     def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
@@ -257,7 +273,7 @@ class ClassificationModel(LearningModel):
 
             predict_dataset = self.produce_prediction_dataset(
                 self.test_dataset,
-                cache_key="predict_main",
+                cache_key="predict_test",
                 refresh=False,
                 only_load_existing=True,
                 ignore_probability_threshold=True
@@ -400,16 +416,6 @@ class ClassificationModel(LearningModel):
             elif self.probability_threshold:
                 print "Probability threshold exists ({}) but you've said to ignore it".format(self.probability_threshold)
         return predicted_df
-
-    # @require_model
-    # def get_incorrect_predictions(self, actual_code=None):
-    #
-    #     df = pandas.concat([self.test_y, self.test_x], axis=1)
-    #     df['prediction'] = self.predict_y
-    #     df = df[df[self.outcome_column] != df['prediction']]
-    #     if actual_code:
-    #         df = df[df[self.outcome_column] == actual_code]
-    #     return df
 
 
 class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
