@@ -1,5 +1,7 @@
 from __future__ import print_function
-import pandas, math, re, numpy, cPickle, copy
+from future import standard_library
+standard_library.install_aliases()
+import pandas, math, re, numpy, pickle, copy
 
 from django.conf import settings
 

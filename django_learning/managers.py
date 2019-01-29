@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import object
 import gensim, random, pandas, os
 
 from collections import defaultdict

@@ -1,3 +1,4 @@
+from builtins import str
 import os
 from setuptools import setup, find_packages
 

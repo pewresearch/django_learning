@@ -1,9 +1,11 @@
 from __future__ import print_function
-import pandas, math, re, numpy, cPickle
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import str
 
 from django.conf import settings
 
-from logos.learning.supervised import DocumentClassificationHandler
 from logos.models import *
 from logos.utils import is_not_null, is_null
 from logos.utils.data import wmom
@@ -19,9 +21,8 @@ from django.core.management.base import BaseCommand, CommandError
 
 from logos.models import *
 
-import pandas, math, re, numpy, cPickle
+import pandas
 
-from logos.learning.supervised import DocumentClassificationHandler
 from logos.models import *
 from logos.utils import is_not_null, is_null
 from logos.utils.data import wmom
@@ -66,7 +67,7 @@ class Command(BaseCommand):
             dfs["turk_full"]['code_id'] = h.train_y
             dfs["turk_full"]['code'] = dfs["turk_full"]['code_id'].map(code_map)
 
-            for dfname, df in dfs.iteritems():
+            for dfname, df in dfs.items():
                 if is_not_null(df):
                     if "press_release" in c.document_types:
                         dfs[dfname]['party'] = dfs[dfname].apply(
@@ -94,7 +95,7 @@ class Command(BaseCommand):
                     "var": c.variable.name,
                     "party": party
                 }
-                for dfname, df in dfs.iteritems():
+                for dfname, df in dfs.items():
                     if is_not_null(df):
                         if is_not_null(party):
                             df = df[df['party'] == party]
@@ -136,7 +137,7 @@ class Command(BaseCommand):
                 mean_results[(c.variable.name, c.document_types[0])].append(result)
 
         results = []
-        for rset in mean_results.values():
+        for rset in list(mean_results.values()):
             results.extend(rset)
         df = pandas.DataFrame(results)
         df = df[["doc_type", "var", "party"] + [c for c in df.columns if "mean" in c]]

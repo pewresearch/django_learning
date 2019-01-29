@@ -1,3 +1,4 @@
+from builtins import str
 import boto, os, pandas
 
 from collections import defaultdict
@@ -82,7 +83,7 @@ class Command(BaseCommand):
                 var = col.split(".")[-1]
                 try: str_code = str(int(row[col]))
                 except: str_code = str(row[col])
-                if str_code in codes[var].keys():
+                if str_code in list(codes[var].keys()):
                     metadata["coder_code_model"].objects.create_or_update(
                         {
                             "%s" % metadata["id_field"]: row[doc_col],

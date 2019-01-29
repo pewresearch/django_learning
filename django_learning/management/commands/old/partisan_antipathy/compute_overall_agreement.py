@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import str
 import numpy, itertools, pandas, copy
 
 from django.conf import settings
@@ -111,7 +112,7 @@ class Command(BaseCommand):
 
                 base_row['num_docs'] = len(dfs['expert'])
 
-                for dfname, df in dfs.iteritems():
+                for dfname, df in dfs.items():
                     if is_not_null(df):
                         if "press_release" in c.document_types:
                             dfs[dfname]['party'] = dfs[dfname].apply(
@@ -126,16 +127,16 @@ class Command(BaseCommand):
                 dataframes[var] = dfs
 
             master_df = {}
-            for var, dfs in dataframes.iteritems():
-                for dfname, df in dfs.iteritems():
+            for var, dfs in dataframes.items():
+                for dfname, df in dfs.items():
                     df = df[["document_id", "code"]]
                     df = df.rename(columns={"code": var})
-                    if dfname not in master_df.keys():
+                    if dfname not in list(master_df.keys()):
                         master_df[dfname] = df
                     else:
                         master_df[dfname] = pandas.merge(master_df[dfname], df, how='outer', on="document_id")
 
-            for dfname, df in master_df.iteritems():
+            for dfname, df in master_df.items():
                 master_df[dfname]['allNA'] = master_df[dfname].apply(lambda x: 1 if all([pandas.isnull(x[var]) for var in var_set]) else 0, axis=1)
                 master_df[dfname] = master_df[dfname][master_df[dfname]['allNA']==0].fillna(0)
                 del master_df[dfname]['allNA']

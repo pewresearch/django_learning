@@ -98,7 +98,7 @@ class Command(DownloadIterateCommand):
 
                 with transaction.atomic():
 
-                    for cat in self.regexes.keys():
+                    for cat in list(self.regexes.keys()):
                         matches = self.regexes[cat].findall(" {0} ".format(text))
                         val = float(len([m for m in matches if m != '']))
                         if val > 0:

@@ -143,9 +143,9 @@ def get_sampling_weights(
             strat_vars.add(stratify_by)
         sampling_searches = params.get("sampling_searches", {})
         if len(sampling_searches) > 0:
-            for search_name in sampling_searches.keys():
+            for search_name in list(sampling_searches.keys()):
                 keyword_weight_columns.add(search_name)
-        for additional_var in params.get("additional_weights", {}).keys():
+        for additional_var in list(params.get("additional_weights", {}).keys()):
             additional_vars.add(additional_var)
 
     frame = sampling_frame.get_sampling_flags(refresh=refresh_flags, sampling_search_subset=keyword_weight_columns)
