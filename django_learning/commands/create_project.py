@@ -1,3 +1,4 @@
+from __future__ import print_function
 from django_commander.commands import BasicCommand
 
 from django_learning.models import Project
@@ -17,7 +18,7 @@ class Command(BasicCommand):
 
         project = Project.objects.create_or_update({"name": self.parameters["project_name"]})
         project.save()
-        print "Created/updated project '{}'".format(project)
+        print("Created/updated project '{}'".format(project))
 
     def cleanup(self):
 

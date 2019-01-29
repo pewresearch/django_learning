@@ -1,3 +1,4 @@
+from __future__ import print_function
 from django_commander.commands import BasicCommand
 
 from django_learning.models import SamplingFrame
@@ -18,7 +19,7 @@ class Command(BasicCommand):
 
         frame, created = SamplingFrame.objects.get_or_create(name=self.parameters['sampling_frame_name'])
         frame.extract_documents(refresh=self.options['refresh'])
-        print frame
+        print(frame)
 
     def cleanup(self):
 

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 
 from pewtils import is_not_null, decode_text
@@ -38,7 +39,7 @@ class Preprocessor(BasicPreprocessor):
                                 final_slist.append(s)
                         slist = final_slist
                     if self.cache:
-                        print "Recomputed stopword set {}, saving to local cache".format(stopword_set)
+                        print("Recomputed stopword set {}, saving to local cache".format(stopword_set))
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
         stopwords = list(set(stopwords))

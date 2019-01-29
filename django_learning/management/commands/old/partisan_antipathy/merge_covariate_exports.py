@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, datetime
 
 from django.conf import settings
@@ -28,7 +29,7 @@ class Command(BaseCommand):
             aws_secret=settings.AWS_SECRET_ACCESS_KEY
         )
 
-        print "Processing Facebook Posts"
+        print("Processing Facebook Posts")
 
         fb_posts = h.read("facebook_post_stats", format="csv")
         # fb_posts = FacebookPost.objects.filter(
@@ -77,7 +78,7 @@ class Command(BaseCommand):
                                                 right_on="fb_post_document_id")
         h.write("facebook_posts_merged", fb_posts_merged, format="csv")
 
-        print "Processing Press Releases"
+        print("Processing Press Releases")
 
         prs = PressRelease.objects.filter(
             document__in=DocumentSampleFrame.objects.get(name="press_releases_jan15_apr16_all_sources").documents.all())
@@ -119,7 +120,7 @@ class Command(BaseCommand):
         # prs_merged.to_csv("../final_data/press_releases_merged.csv")
         h.write("press_releases_merged", prs_merged, format="csv")
 
-        print "Processing Politicians"
+        print("Processing Politicians")
 
         pols = h.read("politician_basic_info", format="csv")
         pols_campaign_stats = h.read("politician_campaign_stats", format="csv")

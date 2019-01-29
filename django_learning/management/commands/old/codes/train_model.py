@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count
@@ -58,7 +59,7 @@ class Command(BaseCommand):
 
         for code_variable in code_vars:
 
-            print "Selecting %s for %s" % (metadata["name_plural"], code_variable.name)
+            print("Selecting %s for %s" % (metadata["name_plural"], code_variable.name))
             # if options["ignore_mturk"]:
             #     prs = list(metadata["coder_code_model"].objects.filter(code__variable=code_variable).filter(coder__is_mturk=False).values())
             # elif options["mturk_only"]:
@@ -89,14 +90,14 @@ class Command(BaseCommand):
 
             df = metadata["coder_code_model"].objects.classification_data(code_variable=code_variable, coder_type='all', consolidate_type=None)
 
-            print "Selected %i %s for %s" % (len(df[metadata["text_field"]]), metadata["name_plural"], code_variable.name)
+            print("Selected %i %s for %s" % (len(df[metadata["text_field"]]), metadata["name_plural"], code_variable.name))
 
-            print "Creating train-test split for %s %s" % (code_variable.name, metadata["name_plural"])
+            print("Creating train-test split for %s %s" % (code_variable.name, metadata["name_plural"]))
             X = df[metadata["text_field"]]
             # y = df['code_id']
             y = df["code__value"]
             X_train, X_test, y_train, y_test, train_ids, test_ids = train_test_split(X, y, y.index, test_size=options["test_percent"], random_state=5)
-            print "Selected %i training cases and %i test cases for %s %s" % (len(y_train), len(y_test), code_variable.name, metadata["id_field"])
+            print("Selected %i training cases and %i test cases for %s %s" % (len(y_train), len(y_test), code_variable.name, metadata["id_field"]))
 
             params = {
                 'vec__sublinear_tf': (False, ),
@@ -178,7 +179,7 @@ class Command(BaseCommand):
                 # scoring_function = "f1_micro"
                 # scoring_function = "f1_weighted"
 
-            print "Beginning %s grid search using %s and %i cores for %s" % (options["model_type"], str(scoring_function), options["num_cores"], code_variable.name)
+            print("Beginning %s grid search using %s and %i cores for %s" % (options["model_type"], str(scoring_function), options["num_cores"], code_variable.name))
             params.update(model_params[options["model_type"]])
             clf = GridSearchCV(
                 model_pipelines[options["model_type"]],
@@ -206,7 +207,7 @@ class Command(BaseCommand):
             code_variable.model.print_report()
             code_variable.model.print_top_features()
 
-            print "Model saved"
+            print("Model saved")
 
 
 # def filter_nouns(text, filter_pos='NN'):

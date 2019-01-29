@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, itertools, numpy
 
 from contextlib import closing
@@ -65,7 +66,7 @@ class Command(BaseCommand):
             if doc_type == "press_release": frame = "press_releases_jan15_apr16_all_sources"
             else: frame = "facebook_posts_jan15_apr16"
             for t in thresholds[code_variable_name]:
-                print "Computing {} for {} at threshold {}".format(code_variable_name, doc_type, t)
+                print("Computing {} for {} at threshold {}".format(code_variable_name, doc_type, t))
                 params = {
                     "codes": {"mturk": {"consolidation_threshold": t}},
                     "documents": {"frames": [frame], "balance_document_types": False, "include_frame_weights": False},

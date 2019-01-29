@@ -1,3 +1,4 @@
+from __future__ import print_function
 import importlib, copy, pandas, numpy, os
 
 from django.db import models
@@ -30,7 +31,7 @@ from django_pewtils import get_model, CacheHandler
 
 class LearningModel(LoggedExtendedModel):
 
-    project = models.ForeignKey("django_learning.Project", related_name="+", null=True)
+    project = models.ForeignKey("django_learning.Project", related_name="+", null=True, on_delete=models.SET_NULL)
     name = models.CharField(max_length=100, unique=True, help_text="Unique name of the classifier")
 
     pipeline_name = models.CharField(max_length=150, null=True, help_text="The named pipeline used to seed the handler's parameters, if any; note that the JSON pipeline file may have changed since this classifier was created; refer to the parameters field to view the exact parameters used to compute the model")
@@ -55,10 +56,10 @@ class LearningModel(LoggedExtendedModel):
         params = {}
         if self.pipeline_name:
             try: params.update(pipelines[self.pipeline_name]())
-            except KeyError: print "WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name)
+            except KeyError: print("WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name))
         try: self.parameters = recursive_update(params, self.parameters if self.parameters else {})
         except (AttributeError, LookupError):
-            print "WARNING: couldn't update parameters from pipeline, it may not exist anymore!"
+            print("WARNING: couldn't update parameters from pipeline, it may not exist anymore!")
 
         self.cache_identifier = "{}_{}".format(self.name, self.pipeline_name)
 
@@ -90,7 +91,7 @@ class LearningModel(LoggedExtendedModel):
                 **self.parameters[key]["parameters"]
             )
         except TypeError:
-            print "WARNING: couldn't identify dataset extractor, it may not exist anymore!"
+            print("WARNING: couldn't identify dataset extractor, it may not exist anymore!")
 
         return dataset_extractor
 
@@ -132,7 +133,7 @@ class LearningModel(LoggedExtendedModel):
         if self.parameters["model"].get("use_sample_weights", False):
             self.dataset["training_weight"] = self.dataset["training_weight"] * self.dataset["sampling_weight"]
         elif "sampling_weight" in self.dataset.columns:
-            print "Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation"
+            print("Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation")
 
     @temp_cache_wrapper
     def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, num_cores=1, **kwargs):
@@ -206,7 +207,7 @@ class LearningModel(LoggedExtendedModel):
 
         df = copy.copy(self.dataset)
 
-        print "Creating train-test split"
+        print("Creating train-test split")
 
         y = df[self.dataset_extractor.outcome_column]
         X_cols = df.columns.tolist()
@@ -214,7 +215,7 @@ class LearningModel(LoggedExtendedModel):
         X = df[X_cols]
         if self.parameters["model"]["test_percent"] == 0.0:
             train_ids, test_ids = y.index, None
-            print "Training on all {} cases".format(len(train_ids))
+            print("Training on all {} cases".format(len(train_ids)))
             # if is_not_null(self.test_dataset):
             if "test_dataset_extractor" in self.parameters.keys():
                 test_ids = [i for i in self.dataset.index if str(i).startswith("test_")]
@@ -226,13 +227,13 @@ class LearningModel(LoggedExtendedModel):
                 # self.test_dataset.index = self.test_dataset.index.map(lambda x: 'test_{}'.format(x))
                 # test_ids = self.test_dataset.index
                 # df = pandas.concat([df, self.test_dataset])
-                print "Adding {} test cases from separate dataset".format(len(test_ids))
+                print("Adding {} test cases from separate dataset".format(len(test_ids)))
         else:
             _, _, _, _, train_ids, test_ids = train_test_split(X, y, y.index, test_size=self.parameters["model"]["test_percent"], random_state=5)
-            print "Selected %i training cases and %i test cases" % (
+            print("Selected %i training cases and %i test cases" % (
                 len(train_ids),
                 len(test_ids)
-            )
+            ))
 
         train_dataset = df.ix[train_ids]
         test_dataset = df.ix[test_ids] if is_not_null(test_ids) and len(test_ids) > 0 else None
@@ -251,15 +252,15 @@ class LearningModel(LoggedExtendedModel):
         else:
             grid_search_cv = self.parameters["model"].get("cv", 5)
 
-        print "Beginning grid search using %s and %i cores for %s" % (
+        print("Beginning grid search using %s and %i cores for %s" % (
             str(scoring_function),
             num_cores,
             self.dataset_extractor.outcome_column
-        )
+        ))
 
         try: sklearn_cache = mkdtemp(prefix="sklearn", dir=os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)))
         except:
-            print "Couldn't create local sklearn cache dir"
+            print("Couldn't create local sklearn cache dir")
             sklearn_cache = None
         model = GridSearchCV(
             Pipeline(pipeline_steps, memory=sklearn_cache),
@@ -275,7 +276,7 @@ class LearningModel(LoggedExtendedModel):
         if sklearn_cache:
             rmtree(sklearn_cache)
 
-        print "Finished training model, best score: {}".format(model.best_score_)
+        print("Finished training model, best score: {}".format(model.best_score_))
 
         cache_data = {
             "model": model,
@@ -289,10 +290,10 @@ class LearningModel(LoggedExtendedModel):
     @require_model
     def describe_model(self):
 
-        print "'{}' results".format(self.dataset_extractor.outcome_column)
+        print("'{}' results".format(self.dataset_extractor.outcome_column))
 
-        print "Best score: {} ({} std.)".format(self.model.best_score_,
-                                                getattr(self.model, "best_score_std_", None))
+        print("Best score: {} ({} std.)".format(self.model.best_score_,
+                                                getattr(self.model, "best_score_std_", None)))
 
         # print "Best parameters:"
         # params = self.model.best_params_
@@ -312,12 +313,12 @@ class LearningModel(LoggedExtendedModel):
 
     def print_test_prediction_report(self):
 
-        print self.get_test_prediction_results()
+        print(self.get_test_prediction_results())
 
     @require_model
     def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
 
-        print "Computing cross-fold predictions"
+        print("Computing cross-fold predictions")
         _final_model = self.model
         _final_model_best_estimator = self.model.best_estimator_
         dataset = copy.copy(self.train_dataset)
@@ -363,7 +364,7 @@ class LearningModel(LoggedExtendedModel):
 
     def print_cv_prediction_report(self):
 
-        print self.get_cv_prediction_results()
+        print(self.get_cv_prediction_results())
 
     def _get_scoring_function(self, func_name, binary_base_code=None):
 
@@ -510,7 +511,7 @@ class LearningModel(LoggedExtendedModel):
 
 class DocumentLearningModel(LearningModel):
 
-    sampling_frame = models.ForeignKey("django_learning.SamplingFrame", related_name="learning_models")
+    sampling_frame = models.ForeignKey("django_learning.SamplingFrame", related_name="learning_models", on_delete=models.CASCADE)
     # question = models.ForeignKey("django_learning.Question", related_name="learning_models")
 
     # INHERITED FIELDS

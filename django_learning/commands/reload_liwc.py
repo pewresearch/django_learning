@@ -1,9 +1,10 @@
+from __future__ import print_function
 import os
 
 from django.apps import apps
 from django.db import migrations, models
 from django.contrib.contenttypes.models import ContentType
-from StringIO import StringIO
+from io import StringIO
 from tqdm import tqdm
 from django_pewtils import get_model
 from pewtils.io import FileHandler
@@ -72,9 +73,9 @@ class Command(BasicCommand):
 
         valid_categories = []
 
-        print "Creating LIWC categories"
+        print("Creating LIWC categories")
         for id, cat in categories.items():
-            print "{}, {}".format(id, cat)
+            print("{}, {}".format(id, cat))
             try:
                 liwc = NgramSet.objects.get(name=cat, dictionary="liwc")
             except NgramSet.DoesNotExist:
@@ -89,11 +90,11 @@ class Command(BasicCommand):
                     categories[cat_id].words.append(word)
                     categories[cat_id].save()
 
-        print "Loading labels"
+        print("Loading labels")
         for cat in categories.values():
             cat.label = _get_label(cat.name, labels)
             cat.save()
-            print cat
+            print(cat)
             valid_categories.append(cat.pk)
 
         invalid_categories = NgramSet.objects.filter(dictionary="liwc").exclude(pk__in=valid_categories)

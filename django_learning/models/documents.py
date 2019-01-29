@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from __future__ import print_function
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import DocumentManager
 from django_queries.models import QueryModel
@@ -171,7 +172,7 @@ class Document(LoggedExtendedModel, QueryModel):
                     if getattr(self, m2m).count() > 0:
                         delete = True
                         if not ignore_warnings:
-                            print "Warning: text for document {} was modified, clearing out {}".format(self.pk, m2m)
+                            print("Warning: text for document {} was modified, clearing out {}".format(self.pk, m2m))
                             # setattr(self, m2m, [])
                             # getattr(self, m2m).clear()
                             import pdb
@@ -182,17 +183,17 @@ class Document(LoggedExtendedModel, QueryModel):
                             except:
                                 getattr(self, m2m).all().delete()
                         else:
-                            print "Manual override, skipping"
+                            print("Manual override, skipping")
                 if self.coded_labels.count() > 0:
                     delete = True
                     if not ignore_warnings:
-                        print "Warning: text for document {} was modified, clearing out coded labels".format(self.pk)
+                        print("Warning: text for document {} was modified, clearing out coded labels".format(self.pk))
                         import pdb
                         pdb.set_trace()
                     if delete:
                         self.codes.all().delete()
                     else:
-                        print "Manual override, skipping"
+                        print("Manual override, skipping")
                 # TODO: reenable
                 # if self.classified_labels.count() > 0:
                 #     print "Warning: text for document {} was modified, clearing out classified labels".format(self.pk)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from __future__ import print_function
 from django_commander.commands import BasicCommand
 from django_learning.models import Project, Sample, Assignment
 from django_learning.mturk import MTurk
@@ -51,14 +52,14 @@ class Command(BasicCommand):
                             a.turk_approved = True
                             a.save()
                         else:
-                            print e
-                            print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
+                            print(e)
+                            print("Couldn't approve assignment (enter 'c' to mark as approved and continue)")
                             import pdb
                             pdb.set_trace()
                     a.turk_approved = True
                     a.save()
                     approved += 1
-            print "{} of {} assignments approved".format(approved, assignments.count())
+            print("{} of {} assignments approved".format(approved, assignments.count()))
             if not self.options["loop"]:
                 break
             time.sleep(self.options["time_sleep"])

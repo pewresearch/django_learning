@@ -20,7 +20,8 @@ django-pandas>=0.4.1
 django-picklefield>=0.3.2
 django-rq>=0.9.5
 django-simple-history>=1.8.2
-django<2.0
+django<2.0; python_version <= '3.0'
+django; python_version > '3.0'
 enum34>=1.1.6
 fuzzywuzzy>=0.15.0
 gensim>=1.0.1
@@ -67,7 +68,7 @@ sphinx>=1.5.3
 ssdeep
 static>=1.1.1
 stopit>=1.1.1
-suds>=0.4
+#suds>=0.4
 tqdm>=4.11.2
 tweepy>=3.5.0
 Twisted>=17.1.0
@@ -87,6 +88,6 @@ django_tables2>=1.4.2
 scikit-learn==0.20.2
 git+ssh://labsdeploy/mobolic/facebook-sdk#egg=facebook-sdk>=3.0.0-alpha
 git+ssh://labsdeploy/pewresearch/pewtils#egg=pewtils
+git+ssh://labsdeploy/pewresearch/django_pewtils#egg=django_pewtils
 git+ssh://labsdeploy/pewresearch/django_commander#egg=django_commander
 git+ssh://labsdeploy/pewresearch/django_queries#egg=django_queries
-git+ssh://labsdeploy/pewresearch/django_pewtils#egg=django_pewtils

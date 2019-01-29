@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy, itertools, pandas, copy
 
 from django.conf import settings
@@ -58,7 +59,7 @@ class Command(BaseCommand):
 
         for doc_type, var_set in var_sets:
 
-            print "{}, {}".format(doc_type, var_set)
+            print("{}, {}".format(doc_type, var_set))
 
             dataframes = {}
             for var in var_set:
@@ -155,12 +156,12 @@ class Command(BaseCommand):
                     rows.append([2, int(row["document_id"]), row[df2]])
                 task = AnnotationTask(data=rows)
                 kappa = task.kappa()
-                print "{} kappa: {} ({} rows)".format(pairname, kappa, len(index_intersect))
+                print("{} kappa: {} ({} rows)".format(pairname, kappa, len(index_intersect)))
                 result[pairname] = kappa
             results.append(result)
 
         results = pandas.DataFrame(results)
-        print results
+        print(results)
 
         if options["original_consensus_subset_only"]:
             suffix = "_consensus_subset"
