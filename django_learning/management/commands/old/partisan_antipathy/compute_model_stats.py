@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, math, re, numpy, cPickle, copy
 
 from django.conf import settings
@@ -33,14 +34,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        print "Computing mean and agreement comparison results"
+        print("Computing mean and agreement comparison results")
 
         finished = []
         rows = []
 
         for c in CodeVariableClassifier.objects.exclude(name__regex="_old").order_by("name"):
 
-            print "\n{}\n".format(c.name)
+            print("\n{}\n".format(c.name))
             base_row = {
                 "classifier": c.name,
                 "threshold": c.parameters["codes"].get("mturk", {}).get("consolidation_threshold", None),
@@ -107,7 +108,7 @@ class Command(BaseCommand):
                         [result_dict[0][0], result_dict[0][1]],
                         [result_dict[1][0], result_dict[1][1]]
                     ])
-                    print "{} kappa: {} ({})".format(pairname, kappa["kappa"], kappa["std_kappa"])
+                    print("{} kappa: {} ({})".format(pairname, kappa["kappa"], kappa["std_kappa"]))
                     base_row["{}_kappa".format(pairname)] = kappa["kappa"]
                     base_row["{}_kappa_err".format(pairname)] = kappa["std_kappa"]
 
@@ -133,7 +134,7 @@ class Command(BaseCommand):
                 # print "Actual mean: {} ({})".format(scores['true_mean_mean'], scores['true_mean_err'])
                 # print "Precision: {} ({})".format(scores['precision_mean'], scores['precision_err'])
                 # print "Recall: {} ({})".format(scores['recall_mean'], scores['recall_err'])
-                print "model_cv_kappa: {} ({})".format(scores['kappa_mean'], scores['kappa_err'])
+                print("model_cv_kappa: {} ({})".format(scores['kappa_mean'], scores['kappa_err']))
                 # print "t-Test pass rate: {}".format(scores['ttest_pass_mean'])
                 # print "\n"
 
@@ -149,7 +150,7 @@ class Command(BaseCommand):
                 # print "Actual mean: {} ({})".format(scores['true_mean'], scores['true_err'])
                 # print "Precision: {}".format(scores['precision'])
                 # print "Recall: {}".format(scores['recall'])
-                print "model_turk_kappa: {} ({})".format(scores['kappa'], scores['kappa_err'])
+                print("model_turk_kappa: {} ({})".format(scores['kappa'], scores['kappa_err']))
                 # print "t-Test pass rate: {}".format(scores['ttest_pass'])
                 # print "\n"
 
@@ -165,7 +166,7 @@ class Command(BaseCommand):
                 # print "Actual mean: {} ({})".format(scores['true_mean'], scores['true_err'])
                 # print "Precision: {}".format(scores['precision'])
                 # print "Recall: {}".format(scores['recall'])
-                print "model_expert_kappa: {} ({})".format(scores['kappa'], scores['kappa_err'])
+                print("model_expert_kappa: {} ({})".format(scores['kappa'], scores['kappa_err']))
                 # print "t-Test pass rate: {}".format(scores['ttest_pass'])
                 # print "\n"
 
@@ -188,7 +189,7 @@ class Command(BaseCommand):
                         # print "Actual mean: {} ({})".format(scores['true_mean_mean'], scores['true_mean_err'])
                         # print "Precision: {} ({})".format(scores['precision_mean'], scores['precision_err'])
                         # print "Recall: {} ({})".format(scores['recall_mean'], scores['recall_err'])
-                        print "model_cv_kappa, {}, {}: {} ({})".format(doc_type, part, scores['kappa_mean'], scores['kappa_err'])
+                        print("model_cv_kappa, {}, {}: {} ({})".format(doc_type, part, scores['kappa_mean'], scores['kappa_err']))
                         # print "t-Test pass rate: {}".format(scores['ttest_pass_mean'])
                         # print "\n"
 

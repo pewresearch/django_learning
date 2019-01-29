@@ -1,3 +1,4 @@
+from __future__ import print_function
 from django_learning.settings import S3_CACHE_PATH
 from django.conf import settings
 from pewtils import is_not_null, is_null, extract_attributes_from_folder_modules
@@ -84,8 +85,8 @@ class DatasetExtractor(object):
                         setattr(self, k, v)
 
         if is_null(cache_data) and not only_load_existing:
-            print "Refreshing dataset: {}".format(self.cache_hash)
-            if hasattr(self, "name") and self.name: print self.name
+            print("Refreshing dataset: {}".format(self.cache_hash))
+            if hasattr(self, "name") and self.name: print(self.name)
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
             self.cache.write(self.cache_hash, cache_data)

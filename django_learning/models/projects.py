@@ -1,3 +1,4 @@
+from __future__ import print_function
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import User
@@ -37,8 +38,8 @@ class Project(LoggedExtendedModel):
         if self.name not in projects.projects.keys():
             reload(projects)
             if self.name not in projects.projects.keys():
-                print self.name
-                print projects.projects.keys()
+                print(self.name)
+                print(projects.projects.keys())
                 import pdb
                 pdb.set_trace()
                 raise Exception("Project '{}' is not defined in any of the known folders".format(self.name))
@@ -139,8 +140,8 @@ class Question(LoggedExtendedModel):
         ('header', 'header')
     )
 
-    qualification_test = models.ForeignKey("django_learning.QualificationTest", related_name="questions", null=True)
-    project = models.ForeignKey("django_learning.Project", related_name="questions", null=True)
+    qualification_test = models.ForeignKey("django_learning.QualificationTest", related_name="questions", null=True, on_delete=models.SET_NULL)
+    project = models.ForeignKey("django_learning.Project", related_name="questions", null=True, on_delete=models.SET_NULL)
 
     name = models.CharField(max_length=250)
     prompt = models.TextField()
@@ -151,7 +152,7 @@ class Question(LoggedExtendedModel):
     optional = models.BooleanField(default=False)
     show_notes = models.BooleanField(default=False)
 
-    dependency = models.ForeignKey("django_learning.Label", related_name="dependencies", null=True)
+    dependency = models.ForeignKey("django_learning.Label", related_name="dependencies", null=True, on_delete=models.SET_NULL)
 
     objects = QuestionManager().as_manager()
 
@@ -223,7 +224,7 @@ class Question(LoggedExtendedModel):
 
 class Label(LoggedExtendedModel):
 
-    question = models.ForeignKey("django_learning.Question", related_name="labels")
+    question = models.ForeignKey("django_learning.Question", related_name="labels", on_delete=models.CASCADE)
     value = models.CharField(max_length=50, db_index=True, help_text="The code value")
     label = models.CharField(max_length=400, help_text="A longer label for the code value")
     priority = models.IntegerField(default=1)
@@ -259,7 +260,7 @@ class Label(LoggedExtendedModel):
 
 class Example(LoggedExtendedModel):
 
-    question = models.ForeignKey("django_learning.Question", related_name="examples")
+    question = models.ForeignKey("django_learning.Question", related_name="examples", on_delete=models.CASCADE)
 
     quote = models.TextField()
     explanation = models.TextField()
@@ -312,8 +313,8 @@ class QualificationTest(LoggedExtendedModel):
 
 class QualificationAssignment(LoggedExtendedModel):
 
-    test = models.ForeignKey("django_learning.QualificationTest", related_name="assignments")
-    coder = models.ForeignKey("django_learning.Coder", related_name="qualification_assignments")
+    test = models.ForeignKey("django_learning.QualificationTest", related_name="assignments", on_delete=models.CASCADE)
+    coder = models.ForeignKey("django_learning.Coder", related_name="qualification_assignments", on_delete=models.CASCADE)
 
     time_started = models.DateTimeField(null=True, auto_now_add=True)
     time_finished = models.DateTimeField(null=True)
@@ -332,7 +333,7 @@ class QualificationAssignment(LoggedExtendedModel):
 
 class HITType(LoggedExtendedModel):
 
-    project = models.ForeignKey("django_learning.Project", related_name="hit_types")
+    project = models.ForeignKey("django_learning.Project", related_name="hit_types", on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
 
     title = models.TextField(null=True)

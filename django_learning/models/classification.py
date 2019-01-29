@@ -1,3 +1,4 @@
+from __future__ import print_function
 import copy, pandas, time
 
 from django.db import models
@@ -31,7 +32,7 @@ class ClassificationModel(LearningModel):
         results = super(ClassificationModel, self)._train_model(pipeline_steps, params, num_cores=num_cores, **kwargs)
         if self.probability_threshold:
             self.probability_threshold = None
-            print "Removed previous probability threshold"
+            print("Removed previous probability threshold")
         self.save()
 
         return results
@@ -51,7 +52,7 @@ class ClassificationModel(LearningModel):
             try:
                 target_weight_per_class = self.dataset['training_weight'].sum() / float(len(self.dataset[self.dataset_extractor.outcome_column].unique()))
             except KeyError:
-                print "Huh..."
+                print("Huh...")
                 import pdb
                 pdb.set_trace()
 
@@ -62,7 +63,7 @@ class ClassificationModel(LearningModel):
 
             # total_weight = sum(class_weights.values())
             # class_weights = {k: float(v) / float(total_weight) for k, v in class_weights.items()}
-            print "Class weights: {}".format(class_weights)
+            print("Class weights: {}".format(class_weights))
             self.dataset["training_weight"] = self.dataset.apply(lambda x: x['training_weight']*class_weights[x[self.dataset_extractor.outcome_column]], axis=1)
 
         # if self.parameters["model"].get("use_class_weights", False):
@@ -110,12 +111,12 @@ class ClassificationModel(LearningModel):
             ))[:-(n + 1):-1]
 
         for class_label, top_n in top_features.iteritems():
-            print class_label
+            print(class_label)
             for c, f in top_n:
                 try:
-                    print "\t%.4f\t\t%-15s" % (c, f)
+                    print("\t%.4f\t\t%-15s" % (c, f))
                 except:
-                    print "Error: {}, {}".format(c, f)
+                    print("Error: {}, {}".format(c, f))
 
     @require_model
     def describe_model(self):
@@ -161,11 +162,11 @@ class ClassificationModel(LearningModel):
                 })
         report = pandas.DataFrame(rows)
 
-        print "Results: {}".format(results)
-        print "Classification report: "
-        print report
-        print "Confusion matrix: "
-        print matrix
+        print("Results: {}".format(results))
+        print("Classification report: ")
+        print(report)
+        print("Confusion matrix: ")
+        print(matrix)
 
     @require_model
     def get_test_prediction_results(self, refresh=False, only_load_existing=False):
@@ -197,7 +198,7 @@ class ClassificationModel(LearningModel):
     @require_model
     def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
 
-        print "Computing cross-fold predictions"
+        print("Computing cross-fold predictions")
         _final_model = self.model
         _final_model_best_estimator = self.model.best_estimator_
         dataset = copy.copy(self.train_dataset)
@@ -260,7 +261,7 @@ class ClassificationModel(LearningModel):
         between the test and CV fold prediction datasets
         """
 
-        print "Scanning CV folds for optimal probability threshold"
+        print("Scanning CV folds for optimal probability threshold")
 
         base_code = self._get_largest_code()
         if base_code: base_code = str(base_code)
@@ -341,7 +342,7 @@ class ClassificationModel(LearningModel):
                 # all_fold_scores.append(fold_scores)
 
             if any([is_null(f) for f in all_fold_scores]):
-                print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+                print("You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first")
                 if save:
                     self.set_probability_threshold(None)
                 return None
@@ -380,10 +381,10 @@ class ClassificationModel(LearningModel):
 
         results = super(ClassificationModel, self).apply_model(data, keep_cols=keep_cols, clear_temp_cache=clear_temp_cache)
         if self.probability_threshold and not disable_probability_threshold_warning:
-            print "Warning: because 'apply_model' is used by model prediction dataset extractors, which cache their results, "
-            print "probability thresholds are not applied, for the sake of efficiency.  If you wish to apply the threshold, "
-            print "use 'produce_prediction_dataset' and pass 'ignore_probability_threshold=False' or manually pass the results "
-            print "to 'django_learning.utils.scoring.apply_probabily_threshold'"
+            print("Warning: because 'apply_model' is used by model prediction dataset extractors, which cache their results, ")
+            print("probability thresholds are not applied, for the sake of efficiency.  If you wish to apply the threshold, ")
+            print("use 'produce_prediction_dataset' and pass 'ignore_probability_threshold=False' or manually pass the results ")
+            print("to 'django_learning.utils.scoring.apply_probabily_threshold'")
         return results
 
     @require_model
@@ -404,7 +405,7 @@ class ClassificationModel(LearningModel):
         if is_not_null(predicted_df):
             if not ignore_probability_threshold:
                 if not self.probability_threshold:
-                    print "No probability threshold is currently set, skipping"
+                    print("No probability threshold is currently set, skipping")
                 else:
                     predicted_df = apply_probability_threshold(
                         predicted_df,
@@ -414,7 +415,7 @@ class ClassificationModel(LearningModel):
                         pos_code=pos_code
                     )
             elif self.probability_threshold:
-                print "Probability threshold exists ({}) but you've said to ignore it".format(self.probability_threshold)
+                print("Probability threshold exists ({}) but you've said to ignore it".format(self.probability_threshold))
         return predicted_df
 
 
@@ -425,7 +426,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         super(DocumentClassificationModel, self).extract_dataset(refresh=refresh, **kwargs)
         for additional_weight in ["balancing_weight"]:
             if additional_weight in self.dataset.columns:
-                print "Mixing {} into the training weights".format(additional_weight)
+                print("Mixing {} into the training weights".format(additional_weight))
                 self.dataset["training_weight"] = self.dataset["training_weight"] * self.dataset[additional_weight]
         self.document_types = self.dataset["document_type"].unique()
 
@@ -455,7 +456,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
 
             if save:
 
-                print "{} predicted documents".format(len(predictions))
+                print("{} predicted documents".format(len(predictions)))
                 Classification.objects.filter(
                     document_id__in=predictions["document_id"],
                     classification_model=self
@@ -470,7 +471,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
                             "probability": row.get("probability", None)
                         })
                     )
-                print "{} classifications to create".format(len(classifications))
+                print("{} classifications to create".format(len(classifications)))
                 Classification.objects.bulk_create(classifications)
 
                 return None
@@ -493,12 +494,12 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         # except:
         #     document_ids = [getattr(d, "pk") for d in documents]
 
-        print "Processing {} documents".format(len(document_ids))
+        print("Processing {} documents".format(len(document_ids)))
 
         pool = Pool(processes=num_cores)
         results = []
         for i, chunk in enumerate(chunker(document_ids, chunk_size)):
-            print "Creating chunk {}".format(i)
+            print("Creating chunk {}".format(i))
             if num_cores == 1: func = pool.apply
             else: func = pool.apply_async
             result = func(_process_document_chunk, args=(
@@ -586,7 +587,7 @@ def _process_document_chunk(
                 refresh=refresh
             )
 
-            print "Done processing chunk %i" % (int(i) + 1)
+            print("Done processing chunk %i" % (int(i) + 1))
 
         else:
             raise Exception("Couldn't load the model, aborting this chunk")
@@ -595,21 +596,21 @@ def _process_document_chunk(
 
     except Exception as e:
 
-        print e
+        print(e)
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        print exc_type
-        print exc_value
-        print exc_traceback
+        print(exc_type)
+        print(exc_value)
+        print(exc_traceback)
         traceback.print_exc(exc_traceback)
         raise
 
 
 class Classification(LoggedExtendedModel):
 
-    document = models.ForeignKey("django_learning.Document", related_name="classifications")
-    label = models.ForeignKey("django_learning.Label", related_name="classifications")
+    document = models.ForeignKey("django_learning.Document", on_delete=models.CASCADE, related_name="classifications")
+    label = models.ForeignKey("django_learning.Label", on_delete=models.CASCADE, related_name="classifications")
 
-    classification_model = models.ForeignKey("django_learning.DocumentClassificationModel", related_name="classifications")
+    classification_model = models.ForeignKey("django_learning.DocumentClassificationModel", related_name="classifications", on_delete=models.CASCADE)
 
     probability = models.FloatField(null=True, help_text="The probability of the assigned label, if applicable")
 

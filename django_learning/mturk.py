@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+from __future__ import print_function
 from boto.mturk.connection import MTurkConnection
 from boto.mturk.qualification import (
     LocaleRequirement,
@@ -49,7 +50,7 @@ class MTurk(object):
 
     def sync_hit_type(self, hit_type):
 
-        print "Compiling qualifications"
+        print("Compiling qualifications")
 
         quals = Qualifications()
 
@@ -85,7 +86,7 @@ class MTurk(object):
         for qualification_test in hit_type_qual_tests.distinct():
             # if hit_type.project.has_qualification:
 
-            print "Creating qualification test"
+            print("Creating qualification test")
 
             qual_test = QuestionForm()
             for q in qualification_test.questions.all():
@@ -157,7 +158,7 @@ class MTurk(object):
                 )
             )
 
-        print "Registering HIT Type"
+        print("Registering HIT Type")
 
         hit_type_id = self.conn.register_hit_type(
             decode_text(hit_type.title),
@@ -174,11 +175,11 @@ class MTurk(object):
             existing_hits = HIT.objects.filter(sample__hit_type=hit_type).filter(turk=True).filter(
                 turk_id__isnull=False)
             if existing_hits.count() > 0:
-                print "Existing HITs detected, syncing and then migrating to new type"
+                print("Existing HITs detected, syncing and then migrating to new type")
                 for s in Sample.objects.filter(pk__in=existing_hits.values_list("sample_id", flat=True)).distinct():
                     self.sync_sample_hits(s)
                 for h in tqdm(existing_hits, desc="Migrating existing HITs"):
-                    print "{}, {}".format(h.turk_id, hit_type.turk_id)
+                    print("{}, {}".format(h.turk_id, hit_type.turk_id))
                     self.conn.change_hit_type_of_hit(h.turk_id, hit_type.turk_id)
 
         hit_type.turk_id = hit_type_id
@@ -199,7 +200,7 @@ class MTurk(object):
                 "sample_unit": su, "turk": True
             })
             if existing and existing.turk_id:
-                print "Skipping existing HIT: {}".format(existing)
+                print("Skipping existing HIT: {}".format(existing))
             else:
 
                 hit = HIT.objects.create_or_update(
@@ -302,8 +303,8 @@ class MTurk(object):
                         try:
                             self.conn.approve_assignment(assignment.turk_id) # a.AssignmentId)
                         except Exception as e:
-                            print e
-                            print "Couldn't approve assignment (enter 'c' to mark as approved and continue)"
+                            print(e)
+                            print("Couldn't approve assignment (enter 'c' to mark as approved and continue)")
                             import pdb
                             pdb.set_trace()
                         assignment.turk_approved = True
@@ -338,7 +339,7 @@ class MTurk(object):
 
     def print_account_balance(self):
 
-        print self.conn.get_account_balance()
+        print(self.conn.get_account_balance())
 
     def clear_hits(self):
 

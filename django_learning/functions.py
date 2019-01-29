@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas
 
 from django.db.models import Q
@@ -152,12 +153,12 @@ def get_sampling_weights(
         keyword_weight_columns = set(["search_{}".format(s) for s in keyword_weight_columns])
         keyword_weight_columns.add("search_none")
     if document_filters:
-        print "Applying frame document filter: {}".format(len(frame))
+        print("Applying frame document filter: {}".format(len(frame)))
         frame = frame.rename(columns={"pk": "document_id"})
         for filter_name, filter_args, filter_kwargs in document_filters:
             frame = dataset_document_filters[filter_name](None, frame, *filter_args, **filter_kwargs)
         frame = frame.rename(columns={"document_id": "pk"})
-        print "Frame is now {}".format(len(frame))
+        print("Frame is now {}".format(len(frame)))
     # if filter_params:
     #     frame = frame[frame["pk"].isin(
     #         filter_queryset_by_params(sampling_frame.documents.all(), filter_params).values_list("pk", flat=True)

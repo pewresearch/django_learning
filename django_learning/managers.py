@@ -1,3 +1,4 @@
+from __future__ import print_function
 import gensim, random, pandas, os
 
 from collections import defaultdict
@@ -152,13 +153,13 @@ class DocumentManager(QueryModelManager):
                 for text in tqdm(self.model.objects.filter(pk__in=chunk).values_list("text", flat=True), desc="Loading documents {0} - {1}".format((i)*chunk_size, (i+1)*chunk_size)):
                     if use_sentences: sentences.extend([cleaner.clean(s).split() for s in tokenizer.tokenize(text)])
                     else: sentences.append(cleaner.clean(text).split())
-                print "Transforming and training"
+                print("Transforming and training")
                 bigram_transformer = gensim.models.Phrases(sentences)
                 if not w2v_model:
                     w2v_model = Word2Vec(bigram_transformer[sentences], size=dimensions, sg=1 if use_skipgrams else 0, window=window_size, min_count=5, workers=workers)
                 else:
                     w2v_model.train(bigram_transformer[sentences])
-                print "{0} documents loaded".format((i+1)*chunk_size)
+                print("{0} documents loaded".format((i+1)*chunk_size))
             w2v_model.init_sims(replace=True)
 
             cache.write("word2vec_{}_{}_{}_{}_{}".format(document_type, dimensions, use_sentences, window_size, use_skipgrams), w2v_model)
@@ -194,12 +195,12 @@ class DocumentManager(QueryModelManager):
                 docs = []
                 for text in tqdm(self.model.objects.filter(pk__in=chunk).values_list("text", flat=True), desc="Loading documents {0} - {1}".format((i)*chunk_size, (i+1)*chunk_size)):
                     docs.append(DocumentWrapper(words=cleaner.clean(text).split()))
-                print "Transforming and training"
+                print("Transforming and training")
                 if not d2v_model:
                     d2v_model = Doc2Vec(docs, size=dimensions, window=5, min_count=5, workers=workers)
                 else:
                     d2v_model.train(docs)
-                print "{0} documents loaded".format((i+1)*chunk_size)
+                print("{0} documents loaded".format((i+1)*chunk_size))
             # d2v_model.init_sims(replace=True)
 
             cache.write("doc2vec_{0}_{1}".format(document_type, dimensions), d2v_model)

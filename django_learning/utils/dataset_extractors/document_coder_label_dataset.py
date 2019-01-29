@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, numpy, pandas, inspect, copy
 
 from django_pewtils import get_model
@@ -117,7 +118,7 @@ class Extractor(DatasetExtractor):
 
             if self.questions.count() > 1:
 
-                print "Multiple questions provided, concatenating labels into single string representation"
+                print("Multiple questions provided, concatenating labels into single string representation")
                 dummies = pandas.get_dummies(dataset[self.outcome_column], prefix="label")
                 label_cols = [c for c in dummies.columns if c.startswith("label_")]
                 dataset = pandas.concat([dataset, dummies], axis=1)
@@ -141,13 +142,13 @@ class Extractor(DatasetExtractor):
             self._add_balancing_weights(dataset)
 
             if self.outcome_column:
-                print "Extracted dataset for {}: outcome_column '{}', discrete='{}', valid_label_ids='{}'".format(
+                print("Extracted dataset for {}: outcome_column '{}', discrete='{}', valid_label_ids='{}'".format(
                     self.outcome_column, self.questions.all(), self.discrete_classes, self.valid_label_ids
-                )
+                ))
             else:
-                print "Extracted dataset for {}: outcome_columns '{}', discrete='{}', valid_label_ids='{}'".format(
+                print("Extracted dataset for {}: outcome_columns '{}', discrete='{}', valid_label_ids='{}'".format(
                     self.outcome_columns, self.questions.all(), self.discrete_classes, self.valid_label_ids
-                )
+                ))
 
         return dataset
 
@@ -257,7 +258,7 @@ class Extractor(DatasetExtractor):
 
         if len(weight_var_names) > 0:
 
-            print "Computing balanced weights across combined variable strata: {}".format(weight_var_names)
+            print("Computing balanced weights across combined variable strata: {}".format(weight_var_names))
 
             weight_vars = []
             for var in weight_var_names:

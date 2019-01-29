@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, math, re, numpy, cPickle, copy
 
 from django.conf import settings
@@ -68,7 +69,7 @@ class Command(BaseCommand):
 
             return df
 
-        print "Computing Kappa thresholds"
+        print("Computing Kappa thresholds")
 
         alphas = []
         for doc_type in ["facebook_post", "press_release"]:
@@ -82,7 +83,7 @@ class Command(BaseCommand):
 
             for var_name in var_names:
 
-                print "{}, {}".format(doc_type, var_name)
+                print("{}, {}".format(doc_type, var_name))
 
                 if "_obama" in var_name or "_dems" in var_name:
                     exclude_filter = Q(
@@ -180,7 +181,7 @@ class Command(BaseCommand):
                         candidates.append((row['kappa'], row['turk_threshold'], row['expert_threshold']))
                     elif row['kappa'] >= (best_row['kappa'] - best_row['kappa_err']):
                         candidates.append((row['kappa'], row['turk_threshold'], row['expert_threshold']))
-                print "{}, {} candidates: {}".format(doctype, var, candidates)
+                print("{}, {} candidates: {}".format(doctype, var, candidates))
                 # print "{}, potential turk thresholds: {}".format(var, set([c[1] for c in candidates]))
                 var_row["{}_num_docs".format(doctype)] = results["num_docs"].mean()
                 var_row["{}_expert_threshold".format(doctype)] = "{}".format(best_row["expert_threshold"])

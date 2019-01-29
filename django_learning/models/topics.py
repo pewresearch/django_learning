@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy, pandas, gensim, random, os
 
 from django.db import models
@@ -19,7 +20,7 @@ from django_pewtils.sampling import SampleExtractor
 class TopicModel(LoggedExtendedModel):
 
     name = models.CharField(max_length=200, unique=True)
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="topic_models")
+    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="topic_models", on_delete=models.CASCADE)
 
     model = PickledObjectField(null=True)
     vectorizer = PickledObjectField(null=True)
@@ -59,7 +60,7 @@ class TopicModel(LoggedExtendedModel):
 
                 self.vectorizer = feature_extractors['tfidf'](**self.parameters["vectorizer"])
 
-                print "Extracting sample for vectorizer"
+                print("Extracting sample for vectorizer")
 
                 frame_ids = self._get_document_ids()
                 random.shuffle(frame_ids)
@@ -73,11 +74,11 @@ class TopicModel(LoggedExtendedModel):
                 self.training_documents = get_model("Document").objects.filter(pk__in=sample_ids)
                 sample = pandas.DataFrame.from_records(self.training_documents.values("pk", "text"))
 
-                print "Training vectorizer on {} documents".format(len(sample))
+                print("Training vectorizer on {} documents".format(len(sample)))
                 self.vectorizer = self.vectorizer.fit(sample)
-                print "{} features extracted from vectorizer".format(len(self.vectorizer.get_feature_names()))
+                print("{} features extracted from vectorizer".format(len(self.vectorizer.get_feature_names())))
 
-            print "Initializing new topic model ({}, {})".format(self.frame, self.parameters["num_topics"])
+            print("Initializing new topic model ({}, {})".format(self.frame, self.parameters["num_topics"]))
             self.model = corex_topic.Corex(n_hidden=self.parameters["num_topics"], seed=42)
             tfidf = self.vectorizer.transform(
                 pandas.DataFrame.from_records(self.training_documents.values("pk", "text"))
@@ -126,7 +127,7 @@ class TopicModel(LoggedExtendedModel):
                         topic=topic,
                         weight=weight
                     )
-                print str(topic)
+                print(str(topic))
 
                 old_topic = old_topic_map.get(i, None)
                 if old_topic:
@@ -318,7 +319,7 @@ class Topic(LoggedExtendedModel):
 
 class TopicNgram(LoggedExtendedModel):
     name = models.CharField(max_length=40, db_index=True)
-    topic = models.ForeignKey("django_learning.Topic", related_name="ngrams")
+    topic = models.ForeignKey("django_learning.Topic", related_name="ngrams", on_delete=models.CASCADE)
     weight = models.FloatField()
 
     def __str__(self):
@@ -326,8 +327,8 @@ class TopicNgram(LoggedExtendedModel):
 
 
 class DocumentTopic(LoggedExtendedModel):
-    topic = models.ForeignKey("django_learning.Topic", related_name="documents")
-    document = models.ForeignKey("django_learning.Document", related_name="topics")
+    topic = models.ForeignKey("django_learning.Topic", related_name="documents", on_delete=models.CASCADE)
+    document = models.ForeignKey("django_learning.Document", related_name="topics", on_delete=models.CASCADE)
     value = models.FloatField()
 
     class Meta:

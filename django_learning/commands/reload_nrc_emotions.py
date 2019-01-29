@@ -1,18 +1,12 @@
+from __future__ import print_function
 import os
 
 from django.apps import apps
-from django.db import migrations, models
-from django.contrib.contenttypes.models import ContentType
-from StringIO import StringIO
-from tqdm import tqdm
-from django_pewtils import get_model
 from pewtils.io import FileHandler
 
 from django_learning.settings import BASE_DIR
 
 from django_commander.commands import BasicCommand
-
-from django_learning.models import SamplingFrame
 
 
 class Command(BasicCommand):
@@ -40,7 +34,7 @@ class Command(BasicCommand):
                 # "congressman" is in there, but congresswoman isn't - so I'm adding it
                 nrc_set.words.append("congresswoman")
                 nrc_set.save()
-            print nrc_set
+            print(nrc_set)
 
     def cleanup(self):
 
