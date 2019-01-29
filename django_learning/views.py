@@ -1,6 +1,9 @@
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
 import random, datetime, os
 
-from StringIO import StringIO
+from io import StringIO
 
 from django.shortcuts import render, redirect
 from django.template import RequestContext
@@ -40,11 +43,11 @@ def home(request):
     projects = request.user.coder.projects.all() | request.user.coder.admin_projects.all()
     projects = projects.distinct()
     existing_project_names = list(Project.objects.values_list("name", flat=True))
-    uncreated_projects = [p for p in project_configs.keys() if p not in existing_project_names]
+    uncreated_projects = [p for p in list(project_configs.keys()) if p not in existing_project_names]
 
     sampling_frames = SamplingFrame.objects.all()
     existing_sampling_frame_names = list(SamplingFrame.objects.values_list("name", flat=True))
-    uncreated_sampling_frames = [s for s in sampling_frame_configs.keys() if s not in existing_sampling_frame_names]
+    uncreated_sampling_frames = [s for s in list(sampling_frame_configs.keys()) if s not in existing_sampling_frame_names]
 
     return render(request, 'django_learning/index.html', {
         "projects": projects,
@@ -123,7 +126,7 @@ def edit_project_coders(request, project_name, mode):
                 if status == "active": active_coders.append(coder.pk)
                 else: inactive_coders.append(coder.pk)
 
-            for coder_id, status in request.POST.iteritems():
+            for coder_id, status in request.POST.items():
                 if not coder_id.startswith("new") and not coder_id.startswith("csrf"):
                     coder = Coder.objects.get(pk=coder_id)
                     if status == "active": active_coders.append(coder.pk)
@@ -311,7 +314,7 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
             assignment.time_finished = datetime.datetime.now()
             assignment.save()
 
-            for field in request.POST.keys():
+            for field in list(request.POST.keys()):
                 try:
                     question = qual_test.questions.get(name=field)
                     question.update_assignment_response(assignment, request.POST.get(field))
@@ -510,7 +513,7 @@ def _save_response(request, overwrite=False):
             assignment = Assignment.objects.get(hit=hit, coder=request.user.coder)
         if not assignment.time_finished or overwrite:
 
-            for field in request.POST.keys():
+            for field in list(request.POST.keys()):
                 try:
                     question = hit.sample.project.questions.get(name=field)
                     question.update_assignment_response(assignment, request.POST.get(field), notes=request.POST.get("{}_notes".format(field), None))
@@ -524,14 +527,14 @@ def _save_response(request, overwrite=False):
                             assignment.save()
                 except RequiredResponseException:
                     incomplete = True
-            for q in hit.sample.project.questions.exclude(name__in=request.POST.keys()):
+            for q in hit.sample.project.questions.exclude(name__in=list(request.POST.keys())):
                 default_labels = q.labels.filter(select_as_default=True)
                 if default_labels.count() > 0:
                     if q.multiple:
                         q.update_assignment_resposne(assignment, list(default_labels.values_list("pk", flat=True)))
                     elif default_labels.count() == 1:
                         q.update_assignment_response(assignment, default_labels[0].pk)
-            if "uncodeable" not in request.POST.keys():
+            if "uncodeable" not in list(request.POST.keys()):
                 assignment.uncodeable = False
                 assignment.save()
             if not overwrite and not incomplete:

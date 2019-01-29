@@ -21,10 +21,10 @@ from django_learning.models import SamplingFrame
 def _get_label(key, val, label=""):
 
     if type(val) == dict:
-        if key in val.keys():
+        if key in list(val.keys()):
             return "%s > %s" % (label, val[key])
         else:
-            for k, v in val.iteritems():
+            for k, v in val.items():
                 if label: k = "%s > %s" % (label, k)
                 subval = _get_label(key, v, k)
                 if subval:
@@ -74,7 +74,7 @@ class Command(BasicCommand):
         valid_categories = []
 
         print("Creating LIWC categories")
-        for id, cat in categories.items():
+        for id, cat in list(categories.items()):
             print("{}, {}".format(id, cat))
             try:
                 liwc = NgramSet.objects.get(name=cat, dictionary="liwc")
@@ -84,14 +84,14 @@ class Command(BasicCommand):
             categories[id].words = []
             categories[id].save()
 
-        for word, word_categories in tqdm(words.items(), desc="Loading words"):
+        for word, word_categories in tqdm(list(words.items()), desc="Loading words"):
             for cat_id in word_categories:
                 if word not in categories[cat_id].words:
                     categories[cat_id].words.append(word)
                     categories[cat_id].save()
 
         print("Loading labels")
-        for cat in categories.values():
+        for cat in list(categories.values()):
             cat.label = _get_label(cat.name, labels)
             cat.save()
             print(cat)

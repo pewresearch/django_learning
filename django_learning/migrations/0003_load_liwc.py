@@ -1,9 +1,11 @@
+from future import standard_library
+standard_library.install_aliases()
 import os
 
 from django.apps import apps as global_apps
 from django.db import migrations, models
 from django.contrib.contenttypes.models import ContentType
-from StringIO import StringIO
+from io import StringIO
 from tqdm import tqdm
 from django_pewtils import get_model
 from pewtils.io import FileHandler

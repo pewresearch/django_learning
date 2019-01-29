@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import str
+from builtins import zip
 import numbers
 import inspect
 import time
@@ -55,7 +57,7 @@ class _ProbaScorer(_BaseScorer):
                                  ' but need classifier with two'
                                  ' classes for {} scoring'.format(
                                      y_pred.shape, self._score_func.__name__))
-        elif len(clf.classes_) > 1 and "pos_label" in self._kwargs.keys():
+        elif len(clf.classes_) > 1 and "pos_label" in list(self._kwargs.keys()):
             for i, label in enumerate(clf.classes_):
                 if label == self._kwargs["pos_label"]:
                     y_pred = [p[i] for p in y_pred]
@@ -176,7 +178,7 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
     # Adjust length of sample weights
     fit_params = fit_params if fit_params is not None else {}
     fit_params = dict([(k, _index_param_value(X, v, train))
-                      for k, v in fit_params.items()])
+                      for k, v in list(fit_params.items())])
 
     train_scores = {}
     if parameters is not None:
@@ -188,7 +190,7 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
     X_test, y_test = _safe_split(estimator, X, y, test, train)
 
     is_multimetric = not callable(scorer)
-    n_scorers = len(scorer.keys()) if is_multimetric else 1
+    n_scorers = len(list(scorer.keys())) if is_multimetric else 1
 
     score_params_train = {}
     score_params_test = {}
@@ -240,11 +242,11 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
             raise
         elif isinstance(error_score, numbers.Number):
             if is_multimetric:
-                test_scores = dict(zip(scorer.keys(),
-                                   [error_score, ] * n_scorers))
+                test_scores = dict(list(zip(list(scorer.keys()),
+                                   [error_score, ] * n_scorers)))
                 if return_train_score:
-                    train_scores = dict(zip(scorer.keys(),
-                                        [error_score, ] * n_scorers))
+                    train_scores = dict(list(zip(list(scorer.keys()),
+                                        [error_score, ] * n_scorers)))
             else:
                 test_scores = error_score
                 if return_train_score:
@@ -329,10 +331,10 @@ def _multimetric_score(estimator, X_test, y_test, scorers, **score_params):
         "Using django_learning.sklearn_mods._multimetric_score instead of sklearn.model_selection._validation._multimetric_score")
     scores = {}
 
-    for name, scorer in scorers.items():
+    for name, scorer in list(scorers.items()):
 
         score_param_names = inspect.getargspec(scorer._score_func).args
-        scorer_params = {k: v for k, v in score_params.items() if k in score_param_names}
+        scorer_params = {k: v for k, v in list(score_params.items()) if k in score_param_names}
         if y_test is None:
             score = scorer(estimator, X_test, **scorer_params)
         else:

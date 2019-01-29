@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import str
 import pandas
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count

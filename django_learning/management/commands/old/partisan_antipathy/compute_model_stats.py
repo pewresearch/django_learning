@@ -1,5 +1,9 @@
 from __future__ import print_function
-import pandas, math, re, numpy, cPickle, copy
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import zip
+import pandas, math, re, numpy, pickle, copy
 
 from django.conf import settings
 
@@ -75,7 +79,7 @@ class Command(BaseCommand):
 
             base_row['num_docs'] = len(dfs['expert'])
 
-            for dfname, df in dfs.iteritems():
+            for dfname, df in dfs.items():
                 if is_not_null(df):
                     if "press_release" in c.document_types:
                         dfs[dfname]['party'] = dfs[dfname].apply(
@@ -178,7 +182,7 @@ class Command(BaseCommand):
                 partition_scores = c.get_code_cv_training_scores(partition_by=partition,
                                                                  restrict_document_type=doc_type, min_support=50)
                 if partition_scores:
-                    for part, scores in partition_scores.iteritems():
+                    for part, scores in partition_scores.items():
                         row = copy.copy(base_row)
                         row["partition"] = "{}_{}".format(doc_type, part)
                         row["scope"] = "cross_val_folds"

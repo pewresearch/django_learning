@@ -82,7 +82,7 @@ class Command(BaseCommand):
 
         prs = PressRelease.objects.filter(
             document__in=DocumentSampleFrame.objects.get(name="press_releases_jan15_apr16_all_sources").documents.all())
-        prs = pandas.DataFrame.from_records(prs.values())
+        prs = pandas.DataFrame.from_records(list(prs.values()))
         prs.columns = ["pr_{}".format(c) for c in prs.columns]
 
         pr_documents = DocumentSampleFrame.objects.get(name="press_releases_jan15_apr16_all_sources").documents.values(
