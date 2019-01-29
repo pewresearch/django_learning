@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, math, re, numpy, cPickle, copy
 
 from django.conf import settings
@@ -60,7 +61,7 @@ class Command(BaseCommand):
 
         if options["var_name"] == "expresses_anger":
 
-            print "NOTE: filtering down to anger AND opposition (we hard-coded it this way for the report)"
+            print("NOTE: filtering down to anger AND opposition (we hard-coded it this way for the report)")
             opposition_ids = []
             for var in ["oppose_obama", "oppose_dems", "oppose_reps"]:
                 opposition_ids.extend(
@@ -75,7 +76,7 @@ class Command(BaseCommand):
 
         elif options["var_name"] == "bipartisanship":
 
-            print "NOTE: filtering out anger and opposition (we hard-coded it this way for the report)"
+            print("NOTE: filtering out anger and opposition (we hard-coded it this way for the report)")
             opposition_ids = []
             for var in ["oppose_obama", "oppose_dems", "oppose_reps", "expresses_anger"]:
                 opposition_ids.extend(

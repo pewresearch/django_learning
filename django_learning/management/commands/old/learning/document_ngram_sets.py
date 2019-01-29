@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re, random
 
 from tqdm import tqdm
@@ -114,7 +115,7 @@ class Command(DownloadIterateCommand):
                                 return_object=False
                             )
         except Exception as e:
-            print e
+            print(e)
 
     def cleanup(self):
 

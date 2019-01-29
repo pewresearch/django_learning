@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy, pandas, random, gensim
 
 from django.db import models
@@ -15,7 +16,7 @@ from pewanalytics.text import TextCleaner, SentenceTokenizer
 
 class Word2VecModel(LoggedExtendedModel):
 
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="word2vec_models")
+    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="word2vec_models", on_delete=models.CASCADE)
 
     window_size = models.IntegerField(default=10)
     use_skipgrams = models.BooleanField(default=False)
@@ -51,7 +52,7 @@ class Word2VecModel(LoggedExtendedModel):
             tokenizer = SentenceTokenizer()
             w2v_model = self.model
 
-            print "Extracting document IDs"
+            print("Extracting document IDs")
             doc_ids = self.frame.documents \
                 .filter(is_clean=True) \
                 .filter(text__isnull=False)
@@ -70,7 +71,7 @@ class Word2VecModel(LoggedExtendedModel):
                         sentences.extend([cleaner.clean(s).split() for s in tokenizer.tokenize(text)])
                     else:
                         sentences.append(cleaner.clean(text).split())
-                print "Transforming and training"
+                print("Transforming and training")
                 bigram_transformer = gensim.models.Phrases(sentences)
 
                 if not w2v_model:
@@ -85,7 +86,7 @@ class Word2VecModel(LoggedExtendedModel):
                 else:
                     w2v_model.train(bigram_transformer[sentences])
 
-                print "{0} documents loaded, saving model".format((i + 1) * chunk_size)
+                print("{0} documents loaded, saving model".format((i + 1) * chunk_size))
 
                 self.model = w2v_model
                 self.save()
@@ -94,7 +95,7 @@ class Word2VecModel(LoggedExtendedModel):
                 if doc_limit and (i + 1) * chunk_size >= doc_limit:
                     break
 
-            print "Finished updating model"
+            print("Finished updating model")
 
     def finalize_model(self):
 
@@ -104,7 +105,7 @@ class Word2VecModel(LoggedExtendedModel):
         self.finalized = True
         self.save()
 
-        print "Finalized model"
+        print("Finalized model")
 
     def clear_model(self):
 

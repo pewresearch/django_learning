@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, time
 
 from tqdm import tqdm
@@ -31,8 +32,8 @@ class Extractor(BasicExtractor):
                     new_row.extend(model.infer_vector(text.split()))
                 self.set_row_cache(str(row['pk']), new_row)
             if type(new_row) != list:
-                print "WAHH!"
-                print new_row
+                print("WAHH!")
+                print(new_row)
             vecs.append(new_row)
 
         return pandas.DataFrame(vecs, columns=self.get_feature_names())
@@ -42,7 +43,7 @@ class Extractor(BasicExtractor):
         if not self.models and self.params["document_types"]:
             self.models = {}
             for doc_type in self.params["document_types"]:
-                print "Loading Doc2Vec {} model".format(doc_type)
+                print("Loading Doc2Vec {} model".format(doc_type))
                 self.models[doc_type] = self.get_row_cache("model")
                 if self.models[doc_type] == None:
                     try: self.models[doc_type] = get_model("Document").objects.doc2vec(doc_type)
@@ -50,7 +51,7 @@ class Extractor(BasicExtractor):
                         time.sleep(1)
                         self.models[doc_type] = get_model("Document").objects.doc2vec(doc_type)
                         if self.models[doc_type] == None:
-                            print "Couldn't load doc2vec model!"
+                            print("Couldn't load doc2vec model!")
                             raise Exception
                     self.set_row_cache("model", self.models[doc_type])
 

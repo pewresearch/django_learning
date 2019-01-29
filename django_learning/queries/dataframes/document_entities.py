@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas
 
 from django.db.models import Count
@@ -24,7 +25,7 @@ class DataFrame(DataFrameQuery):
 
     def _extract_dataframe(self):
 
-        print "Extracting top 1000 entities"
+        print("Extracting top 1000 entities")
 
         docs = self.queryset
         if "document_type" in self.parameters.keys(): docs = docs.filter(**{"{}__isnull".format(self.parameters["document_type"]): False})

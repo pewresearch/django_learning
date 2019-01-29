@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, math, re, numpy, cPickle
 
 from django.conf import settings
@@ -49,7 +50,7 @@ class Command(BaseCommand):
         mean_results = defaultdict(list)
         for c in CodeVariableClassifier.objects.all():
 
-            print c.name
+            print(c.name)
             h = c.handler
             h.load_model()
 
@@ -87,7 +88,7 @@ class Command(BaseCommand):
             else:
                 parties = [None, "R", "D"]
             for party in parties:
-                print "{}, {}".format(c.name, party)
+                print("{}, {}".format(c.name, party))
                 result = {
                     "doc_type": c.document_types[0],
                     "var": c.variable.name,

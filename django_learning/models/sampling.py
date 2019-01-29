@@ -1,3 +1,4 @@
+from __future__ import print_function
 import itertools
 import math
 import os
@@ -45,7 +46,7 @@ class SamplingFrame(LoggedExtendedModel):
 
     def extract_documents(self, refresh=False):
 
-        print "Extracting sample frame '{}'".format(self.name)
+        print("Extracting sample frame '{}'".format(self.name))
         if self.documents.count() == 0 or refresh:
 
             params = self.config
@@ -54,15 +55,15 @@ class SamplingFrame(LoggedExtendedModel):
                 objs = filter_queryset_by_params(objs, params)
                 self.documents = objs
                 self.save()
-                print "Extracted {} documents for frame '{}'".format(self.documents.count(), self.name)
+                print("Extracted {} documents for frame '{}'".format(self.documents.count(), self.name))
             else:
-                print "Error!  No frame named '{}' was found".format(self.name)
+                print("Error!  No frame named '{}' was found".format(self.name))
 
             self.get_sampling_flags(refresh=True)
 
         else:
 
-            print "If you want to overwrite the current frame, you need to explicitly declare refresh=True"
+            print("If you want to overwrite the current frame, you need to explicitly declare refresh=True")
 
     def get_sampling_flags(self, refresh=False, sampling_search_subset=None):
         cache_params = {
@@ -113,7 +114,7 @@ class SamplingFrame(LoggedExtendedModel):
         if not refresh:
             frame = cache.read(self.name)
             if is_not_null(frame):
-                print "Loaded frame sampling flags from cache"
+                print("Loaded frame sampling flags from cache")
 
         sampling_searches = []
         stratification_variables = []
@@ -130,7 +131,7 @@ class SamplingFrame(LoggedExtendedModel):
 
         if is_null(frame) or refresh:
 
-            print "Recomputing frame sampling flags"
+            print("Recomputing frame sampling flags")
 
             vals = ["pk", "text"] + stratification_variables + [a['field_lookup'] for a in additional_variables.values()]
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))
@@ -167,13 +168,13 @@ class Sample(LoggedExtendedModel):
     )
 
     name = models.CharField(max_length=100)
-    project = models.ForeignKey("django_learning.Project", related_name="samples")
+    project = models.ForeignKey("django_learning.Project", related_name="samples", on_delete=models.CASCADE)
 
-    hit_type = models.ForeignKey("django_learning.HITType", related_name="samples")
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="samples")
+    hit_type = models.ForeignKey("django_learning.HITType", related_name="samples", on_delete=models.SET_NULL, null=True)
+    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="samples", on_delete=models.CASCADE)
     sampling_method = models.CharField(max_length=200, null=True, default="random")
 
-    parent = models.ForeignKey("django_learning.Sample", related_name="subsamples", null=True)
+    parent = models.ForeignKey("django_learning.Sample", related_name="subsamples", null=True, on_delete=models.SET_NULL)
 
     documents = models.ManyToManyField("django_learning.Document", through="django_learning.SampleUnit", related_name="samples")
 
@@ -220,10 +221,10 @@ class Sample(LoggedExtendedModel):
         frame_ids = self.frame.documents.values_list("pk", flat=True)
         bad_ids = [id for id in override_doc_ids if id not in frame_ids]
         if len(bad_ids) > 0:
-            print "Warning: sample is out of sync with its frame; {} documents are now out-of-scope".format(len(bad_ids))
+            print("Warning: sample is out of sync with its frame; {} documents are now out-of-scope".format(len(bad_ids)))
             override_doc_ids = [id for id in override_doc_ids if id in frame_ids]
-            print "{} documents will remain in the sample".format(len(override_doc_ids))
-            print "Press 'c' to continue and remove them (and any associated codes) from the sample, otherwise 'q' to quit"
+            print("{} documents will remain in the sample".format(len(override_doc_ids)))
+            print("Press 'c' to continue and remove them (and any associated codes) from the sample, otherwise 'q' to quit")
             import pdb
             pdb.set_trace()
             SampleUnit.objects.filter(sample=self, document_id__in=bad_ids).delete()
@@ -238,7 +239,7 @@ class Sample(LoggedExtendedModel):
     ):
 
         if clear_existing_documents:
-            print "Clearing out existing documents"
+            print("Clearing out existing documents")
             self.document_units.all().delete()
 
         if recompute_weights:
@@ -248,7 +249,7 @@ class Sample(LoggedExtendedModel):
         params = self.get_params()
         if params:
 
-            print "Extracting sampling frame"
+            print("Extracting sampling frame")
 
             docs = self.frame.documents.all()
             if size and size < 1 and size > 0:
@@ -270,7 +271,7 @@ class Sample(LoggedExtendedModel):
 
             if is_null(override_doc_ids):
 
-                print "Extracting sample"
+                print("Extracting sample")
 
                 sample_chunks = []
                 if not use_keyword_searches:
@@ -326,7 +327,7 @@ class Sample(LoggedExtendedModel):
 
             else:
 
-                print "Override document IDs passed, skipping sample extraction"
+                print("Override document IDs passed, skipping sample extraction")
                 sample_ids = override_doc_ids
 
             if stratify_by:
@@ -337,21 +338,21 @@ class Sample(LoggedExtendedModel):
             weight_vars = list(set(weight_vars))
             df = frame[frame['pk'].isin(sample_ids)]
             if not skip_weighting:
-                print "Computing weights"
+                print("Computing weights")
                 df['weight'] = list(compute_sample_weights_from_frame(frame, df, weight_vars))
             else:
                 df['weight'] = 1.0
 
-            print "Saving documents"
+            print("Saving documents")
 
             if self.documents.count() > 0:
                 new_docs = set(df["pk"].values).difference(set(list(self.documents.values_list("pk", flat=True))))
                 if len(new_docs) > 0:
-                    print "Warning: you're going to add {} additional documents to a sample that already has {} documents".format(
+                    print("Warning: you're going to add {} additional documents to a sample that already has {} documents".format(
                         len(list(new_docs)),
                         self.documents.count()
-                    )
-                    print "Please press 'c' to continue, or 'q' to cancel the operation"
+                    ))
+                    print("Please press 'c' to continue, or 'q' to cancel the operation")
                     import pdb
                     pdb.set_trace()
 
@@ -367,7 +368,7 @@ class Sample(LoggedExtendedModel):
 
         else:
 
-            print "Error!  No module named '{}' was found".format(self.name)
+            print("Error!  No module named '{}' was found".format(self.name))
 
     # def extract_subsample(self, pct, training=False, override_doc_ids=None):
 
@@ -412,8 +413,8 @@ class Sample(LoggedExtendedModel):
 
 class SampleUnit(LoggedExtendedModel):
 
-    document = models.ForeignKey("django_learning.Document", related_name="sample_units")
-    sample = models.ForeignKey("django_learning.Sample", related_name="document_units")
+    document = models.ForeignKey("django_learning.Document", related_name="sample_units", on_delete=models.CASCADE)
+    sample = models.ForeignKey("django_learning.Sample", related_name="document_units", on_delete=models.CASCADE)
     weight = models.FloatField(default=1.0)
 
     class Meta:

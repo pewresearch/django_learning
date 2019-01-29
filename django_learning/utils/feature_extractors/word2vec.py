@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas, time, numpy, copy
 
 from tqdm import tqdm
@@ -30,7 +31,7 @@ class Extractor(BasicExtractor):
         if not self.models and self.params["document_types"]:
             self.models = {}
             for doc_type in self.params["document_types"]:
-                print "Loading Word2Vec {} model".format(doc_type)
+                print("Loading Word2Vec {} model".format(doc_type))
                 try:
                     self.models[doc_type] = get_model("Word2VecModel").objects.get(
                         document_type=doc_type,
@@ -39,7 +40,7 @@ class Extractor(BasicExtractor):
                         politicians_only=self.params.get("politicians_only", True)
                     )
                 except:
-                    print "Couldn't load {} Word2Vec model!".format(doc_type)
+                    print("Couldn't load {} Word2Vec model!".format(doc_type))
                     raise Exception
 
         return self

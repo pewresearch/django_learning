@@ -1,3 +1,4 @@
+from __future__ import print_function
 import random, pandas, numpy, importlib
 
 from tqdm import tqdm
@@ -63,7 +64,7 @@ class Command(DownloadIterateCommand):
 
     def parse_and_save(self, pol_id):
 
-        print "Politician {0}".format(pol_id)
+        print("Politician {0}".format(pol_id))
 
         search_scope = {"{0}__politician_id".format(self.parameters["document_type"]): pol_id}
 
@@ -72,13 +73,13 @@ class Command(DownloadIterateCommand):
             .filter(**search_scope)\
             .filter(is_clean=True)
 
-        print "Resetting document fragment links"
+        print("Resetting document fragment links")
 
         docs.reset_document_fragments()
 
         if not self.options["only_use_existing_fragments"]:
 
-            print "Extracting fragments from scratch"
+            print("Extracting fragments from scratch")
 
             doc_df = pandas.DataFrame(list(docs.values("pk", "text", "date")))
 
@@ -120,7 +121,7 @@ class Command(DownloadIterateCommand):
                         return_object=False
                     )
 
-        print "Applying fragments"
+        print("Applying fragments")
 
         fragments = DocumentFragment.objects.filter(document_type=self.parameters["document_type"], scope=search_scope)
         for f in tqdm(fragments, desc="Scanning for fragments"):
@@ -128,7 +129,7 @@ class Command(DownloadIterateCommand):
                 if has_fragment(d.text, f.text):
                     d.document_fragments.add(f)
 
-        print "Removing old fragments"
+        print("Removing old fragments")
 
         DocumentFragment.objects\
             .filter(document_type=self.parameters["document_type"], scope=search_scope)\

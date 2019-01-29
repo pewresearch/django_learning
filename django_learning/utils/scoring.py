@@ -1,3 +1,4 @@
+from __future__ import print_function
 import itertools, numpy, pandas, copy
 
 from collections import defaultdict
@@ -376,14 +377,14 @@ def apply_probability_threshold(predicted_df, threshold, outcome_column="label_i
     predicted_df = copy.copy(predicted_df)
     if base_code == None:
         base_code = predicted_df[outcome_column].value_counts().sort_values(ascending=False).index[0]
-        print "apply_probability_threshold: 'base_code' not provided, setting base_code to most frequent code"
+        print("apply_probability_threshold: 'base_code' not provided, setting base_code to most frequent code")
     if not pos_code:
         if len(predicted_df[outcome_column].unique()) == 2:
             try: pos_code = set(predicted_df[outcome_column].unique()).difference(set([base_code])).pop()
             except KeyError: pos_code = None
         else:
-            print "Probability thresholding currently only works with binary classifications; setting all predictions to base_code"
-            print "Pass a pos_code if you wish to override it"
+            print("Probability thresholding currently only works with binary classifications; setting all predictions to base_code")
+            print("Pass a pos_code if you wish to override it")
     predicted_df["probability"] = predicted_df.apply(lambda x: x['probability'] if x[outcome_column] != base_code else 1.0 - x['probability'], axis=1)
     if pos_code: predicted_df[outcome_column] = predicted_df.apply(lambda x: pos_code if x['probability'] >= threshold else base_code, axis=1)
     else: predicted_df[outcome_column] = base_code

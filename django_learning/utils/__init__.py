@@ -63,7 +63,7 @@ def get_param_repr(params):
             val["name"] = decode_text(params.name)
         elif hasattr(params, "func_name"):
             function = True
-            val["name"] = params.func_name
+            val["name"] = params.__name__
         if function and hasattr(params, "params"):
             val["params"] = get_param_repr(params.params)
             return val
