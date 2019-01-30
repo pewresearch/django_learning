@@ -2,7 +2,7 @@ from __future__ import print_function
 import os, numpy, pandas, inspect, copy
 
 from django_pewtils import get_model
-from pewtils.sampling import compute_balanced_sample_weights
+from pewanalytics.stats.sampling import compute_balanced_sample_weights
 
 from django_learning.utils.dataset_code_filters import dataset_code_filters
 from django_learning.utils.dataset_document_filters import dataset_document_filters
