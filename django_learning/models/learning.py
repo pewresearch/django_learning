@@ -41,6 +41,7 @@ class LearningModel(LoggedExtendedModel):
     cv_folds_test = PickledObjectField(null=True)
 
     cache_hash =  models.CharField(max_length=256, null=True)
+    # dataset_cache_hash = models.CharField(max_length=256, null=True)
 
     class Meta:
 
@@ -109,7 +110,15 @@ class LearningModel(LoggedExtendedModel):
 
     def extract_dataset(self, refresh=False, **kwargs):
 
+        # if not refresh and self.dataset_cache_hash:
+        #     self.dataset = self.cache.read(self.dataset_cache_hash)
+        #
+        # if is_null(self.dataset) and not kwargs.get("only_load_existing", False):
+
         self.dataset = self.dataset_extractor.extract(refresh=refresh, **kwargs)
+        if len(self.dataset) == 0:
+            print("Dataset returned no data; forcing cache refresh and trying again")
+            self.dataset = self.dataset_extractor.extract(refresh=True, **kwargs)
         if hasattr(self.dataset_extractor, "project") and self.dataset_extractor.project:
             self.project = get_model("Project", app_name="django_learning").objects.get(name=self.dataset_extractor.project.name)
             self.save()
@@ -134,6 +143,10 @@ class LearningModel(LoggedExtendedModel):
             self.dataset["training_weight"] = self.dataset["training_weight"] * self.dataset["sampling_weight"]
         elif "sampling_weight" in self.dataset.columns:
             print("Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation")
+
+        # self.cache.write(self.dataset_extractor.cache_hash, self.dataset)
+        # self.cache_hash = self.dataset_extractor.cache_hash
+        # self.save()
 
     @temp_cache_wrapper
     def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, num_cores=1, **kwargs):

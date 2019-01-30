@@ -539,7 +539,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
             list(doc_ids),
             save=save,
             document_filters=document_filters,
-            refresh=refresh,
+            refresh=True,
             num_cores=num_cores,
             chunk_size=chunk_size
         )
