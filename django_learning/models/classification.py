@@ -17,7 +17,7 @@ from django_learning.utils.decorators import require_model
 from django_learning.utils.scoring import apply_probability_threshold, get_probability_threshold_score_df
 from django_learning.models.learning import LearningModel, DocumentLearningModel
 
-from pewtils import is_not_null, is_null, chunker
+from pewtils import is_not_null, is_null, chunk_list
 from django_pewtils import get_model
 
 
@@ -498,7 +498,7 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
 
         pool = Pool(processes=num_cores)
         results = []
-        for i, chunk in enumerate(chunker(document_ids, chunk_size)):
+        for i, chunk in enumerate(chunk_list(document_ids, chunk_size)):
             print("Creating chunk {}".format(i))
             if num_cores == 1: func = pool.apply
             else: func = pool.apply_async

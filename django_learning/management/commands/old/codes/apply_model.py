@@ -4,7 +4,7 @@
 # from multiprocessing.pool import Pool
 #
 # from democracy.models import CodeVariable, CodeVariableClassifier
-# from democracy.utils import get_model_by_document_type, chunker
+# from democracy.utils import get_model_by_document_type, chunk_list
 #
 #
 # class Command(BaseCommand):
@@ -40,7 +40,7 @@
 #                 )
 #                 print "Model loaded; now processing %i %s" % (len(document_ids), options["document_type"])
 #                 pool = Pool(processes=options["num_cores"])
-#                 for i, chunk in enumerate(chunker(document_ids, options["chunk_size"])):
+#                 for i, chunk in enumerate(chunk_list(document_ids, options["chunk_size"])):
 #                     print "Creating chunk %i of %i" % (i+1, (i+1)*options["chunk_size"])
 #                     #pool.apply_async(_process_document_chunk, args=(code_variable.model.pk, chunk, i, options["document_type"]))
 #                     _process_document_chunk(code_variable.model.pk, chunk, i, options["document_type"])

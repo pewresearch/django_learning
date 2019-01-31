@@ -14,7 +14,7 @@
 #
 # from logos.learning.utils.decorators import require_model, require_training_data, temp_cache_wrapper
 # from logos.utils import is_not_null, is_null
-# from logos.utils.data import chunker, compute_sample_weights_from_frame, compute_balanced_sample_weights, wmom
+# from logos.utils.data import chunk_list, compute_sample_weights_from_frame, compute_balanced_sample_weights, wmom
 # from logos.utils.database import get_model
 # from logos.utils.text import decode_text
 # from .classification_handler import ClassificationHandler

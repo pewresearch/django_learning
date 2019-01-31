@@ -11,7 +11,7 @@ from django.db.models import Count, F
 from django.conf import settings
 from django_learning.settings import S3_CACHE_PATH
 
-from pewtils import chunker, decode_text
+from pewtils import chunk_list, decode_text
 from pewanalytics.text import TextCleaner, SentenceTokenizer
 from django_pewtils import CacheHandler, get_model
 from django_pewtils.managers import BasicExtendedManager
@@ -149,7 +149,7 @@ class DocumentManager(QueryModelManager):
             doc_ids = list(self.model.objects.filter(**{"{0}__isnull".format(document_type): False}).values_list("pk", flat=True))
             random.shuffle(doc_ids)
             w2v_model = None
-            for i, chunk in enumerate(chunker(doc_ids, chunk_size)):
+            for i, chunk in enumerate(chunk_list(doc_ids, chunk_size)):
                 sentences = []
                 for text in tqdm(self.model.objects.filter(pk__in=chunk).values_list("text", flat=True), desc="Loading documents {0} - {1}".format((i)*chunk_size, (i+1)*chunk_size)):
                     if use_sentences: sentences.extend([cleaner.clean(s).split() for s in tokenizer.tokenize(text)])
@@ -192,7 +192,7 @@ class DocumentManager(QueryModelManager):
             doc_ids = list(self.model.objects.filter(**{"{0}__isnull".format(document_type): False}).values_list("pk", flat=True))
             random.shuffle(doc_ids)
             d2v_model = None
-            for i, chunk in enumerate(chunker(doc_ids, chunk_size)):
+            for i, chunk in enumerate(chunk_list(doc_ids, chunk_size)):
                 docs = []
                 for text in tqdm(self.model.objects.filter(pk__in=chunk).values_list("text", flat=True), desc="Loading documents {0} - {1}".format((i)*chunk_size, (i+1)*chunk_size)):
                     docs.append(DocumentWrapper(words=cleaner.clean(text).split()))
