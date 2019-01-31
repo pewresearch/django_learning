@@ -6,7 +6,7 @@
 #
 # from django.core.management.base import BaseCommand, CommandError
 #
-# from democracy.utils import clean_text, decode_text, chunker, get_congress_stopwords, get_model_by_document_type
+# from democracy.utils import clean_text, decode_text, chunk_list, get_congress_stopwords, get_model_by_document_type
 # from democracy.models import *
 #
 #
@@ -51,7 +51,7 @@
 #
 #         print "Model loaded; now processing %i %s" % (len(document_ids), options["document_type"])
 #         pool = Pool(processes=options["num_workers"])
-#         for i, chunk in enumerate(chunker(document_ids, options["chunk_size"])):
+#         for i, chunk in enumerate(chunk_list(document_ids, options["chunk_size"])):
 #             print "Creating chunk %i of %i" % (i+1, (i+1)*options["chunk_size"])
 #             pool.apply_async(_process_document_chunk, args=(model.pk, chunk, topics, i, options["document_type"]))
 #             # _process_document_chunk(model.pk, chunk, topics, i, options["document_type"])
@@ -254,7 +254,7 @@
 # # )
 # #
 # # press_release_ids = PressRelease.objects.exclude(clean_text=None).values_list("pk", flat=True)
-# # for i, chunk in enumerate(chunker(press_release_ids, chunk_size)):
+# # for i, chunk in enumerate(chunk_list(press_release_ids, chunk_size)):
 # #     print "Updating model with chunk %i (%i total)" % (i+1, (i+1)*chunk_size)
 # #     matrix = gensim.matutils.Sparse2Corpus(vectorizer.transform(list(PressRelease.objects.filter(pk__in=chunk).values_list("clean_text", flat=True))), documents_columns=False)
 # #     model.update(matrix)

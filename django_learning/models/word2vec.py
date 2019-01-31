@@ -9,7 +9,7 @@ from django_learning.utils.preprocessors import preprocessors
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
 
-from pewtils import chunker
+from pewtils import chunk_list
 from django_pewtils import get_model
 from pewanalytics.text import TextCleaner, SentenceTokenizer
 
@@ -59,7 +59,7 @@ class Word2VecModel(LoggedExtendedModel):
             doc_ids = list(doc_ids.values_list("pk", flat=True))
             random.shuffle(doc_ids)
 
-            for i, chunk in tqdm(enumerate(chunker(doc_ids, chunk_size)), desc="Processing document chunks"):
+            for i, chunk in tqdm(enumerate(chunk_list(doc_ids, chunk_size)), desc="Processing document chunks"):
 
                 chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
 

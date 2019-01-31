@@ -5,7 +5,7 @@
 #
 # from django.core.management.base import BaseCommand, CommandError
 #
-# from democracy.utils import extract_sample_from_model, clean_text, decode_text, chunker, get_congress_stopwords, get_model_by_document_type
+# from democracy.utils import extract_sample_from_model, clean_text, decode_text, chunk_list, get_congress_stopwords, get_model_by_document_type
 # from democracy.models import *
 #
 #
@@ -124,7 +124,7 @@
 #                 document_ids = document_ids[:document_limit]
 #             print "Model will now update using %i new %s" % (len(document_ids), metadata["name_plural"])
 #
-#             for i, chunk in enumerate(chunker(document_ids, chunk_size)):
+#             for i, chunk in enumerate(chunk_list(document_ids, chunk_size)):
 #                 print "Updating model with chunk %i (%i total)" % (i+1, int((i+1)*chunk_size))
 #                 matrix = gensim.matutils.Sparse2Corpus(
 #                     model.vectorizer.transform(
@@ -280,7 +280,7 @@
 # # )
 # #
 # # press_release_ids = PressRelease.objects.exclude(clean_text=None).values_list("pk", flat=True)
-# # for i, chunk in enumerate(chunker(press_release_ids, chunk_size)):
+# # for i, chunk in enumerate(chunk_list(press_release_ids, chunk_size)):
 # #     print "Updating model with chunk %i (%i total)" % (i+1, (i+1)*chunk_size)
 # #     matrix = gensim.matutils.Sparse2Corpus(vectorizer.transform(list(PressRelease.objects.filter(pk__in=chunk).values_list("clean_text", flat=True))), documents_columns=False)
 # #     model.update(matrix)

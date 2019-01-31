@@ -8,7 +8,7 @@
 #
 # from logos.learning.utils.decorators import require_model, require_training_data, temp_cache_wrapper
 # from logos.utils import is_not_null, is_null
-# from logos.utils.data import chunker, compute_sample_weights_from_frame, compute_balanced_sample_weights
+# from logos.utils.data import chunk_list, compute_sample_weights_from_frame, compute_balanced_sample_weights
 # from logos.utils.database import get_model
 # from logos.utils.text import decode_text
 # from .classification_handler import ClassificationHandler
@@ -678,7 +678,7 @@
 #             except: document_ids = [getattr(d, "pk") for d in documents]
 #
 #             print "Processing {} {}".format(len(document_ids), self.document_types)
-#             for i, chunk in enumerate(chunker(document_ids, chunk_size)):
+#             for i, chunk in enumerate(chunk_list(document_ids, chunk_size)):
 #                 codes = self.apply_model(get_model("Document").objects.filter(pk__in=chunk))
 #                 print "Processing {} of {} ({}, {})".format((i+1)*chunk_size, len(document_ids), self.code_variable.name, self.document_types)
 #                 for index, row in codes.iterrows():
@@ -693,7 +693,7 @@
 #                     )
 #
 #             # pool = Pool(processes=num_cores)
-#             # for i, chunk in enumerate(chunker(document_ids, chunk_size)):
+#             # for i, chunk in enumerate(chunk_list(document_ids, chunk_size)):
 #             #     print "Creating chunk %i of %i" % (i+1, (i+1)*chunk_size)
 #             #     pool.apply_async(_process_document_chunk, args=(self.saved_model.pk, chunk, i))
 #             #     # _process_document_chunk(self.saved_model.pk, chunk, i)

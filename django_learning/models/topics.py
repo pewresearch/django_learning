@@ -165,7 +165,7 @@ class TopicModel(LoggedExtendedModel):
         #     doc_ids = list(set(doc_ids) - set(self.training_documents.values_list("pk", flat=True)))
         # random.shuffle(doc_ids)
         #
-        # for i, chunk in tqdm(enumerate(chunker(doc_ids, self.chunk_size)), desc="Processing document chunks"):
+        # for i, chunk in tqdm(enumerate(chunk_list(doc_ids, self.chunk_size)), desc="Processing document chunks"):
         #
         #     print "Updating model with chunk %i (%i total)" % (i + 1, int((i + 1) * self.chunk_size))
         #     chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
@@ -195,7 +195,7 @@ class TopicModel(LoggedExtendedModel):
     #     if doc_limit: doc_ids = doc_ids[:doc_limit]
     #
     #     lda_model = self.model
-    #     for i, chunk in tqdm(enumerate(chunker(doc_ids, self.chunk_size)), desc="Processing document chunks"):
+    #     for i, chunk in tqdm(enumerate(chunk_list(doc_ids, self.chunk_size)), desc="Processing document chunks"):
     #         print "Updating model with chunk %i (%i total)" % (i + 1, int((i + 1) * self.chunk_size))
     #         chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
     #         matrix = self.vectorizer.transform(
