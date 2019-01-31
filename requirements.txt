@@ -20,8 +20,8 @@ django-pandas>=0.4.1
 django-picklefield>=0.3.2
 django-rq>=0.9.5
 django-simple-history>=1.8.2
-django<2.0; python_version <= '3.0'
-django; python_version > '3.0'
+django<2.0; python_version < '3.0'
+django>=2.1; python_version >= '3.0'
 enum34>=1.1.6
 fuzzywuzzy>=0.15.0
 gensim>=1.0.1
