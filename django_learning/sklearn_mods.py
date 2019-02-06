@@ -46,7 +46,6 @@ class _ProbaScorer(_BaseScorer):
         score : float
             Score function applied to prediction of estimator on X.
         """
-        print("Using django_learning.sklearn_mods._ProbaScorer instead of sklearn.metrics.scorer._ProbaScorer")
         y_type = type_of_target(y)
         y_pred = clf.predict_proba(X)
         if y_type == "binary":
@@ -166,7 +165,6 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
     estimator : estimator object
         The fitted estimator
     """
-    print("Using django_learning.sklearn_mods._fit_and_score instead of sklearn.model_selection._validation._fit_and_score")
     # if verbose > 1:
     #     if parameters is None:
     #         msg = ''
@@ -204,7 +202,8 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
             score_params_test["sample_weight"] = X_test['sampling_weight']
             print("DETECTED DJANGO_LEARNING SAMPLING WEIGHTS, PASSING TO SCORERS")
     except Exception as e:
-        print("COULDN'T CHECK FOR DJANGO_LEARNING SAMPLING WEIGHTS")
+        pass
+        # print("COULDN'T CHECK FOR DJANGO_LEARNING SAMPLING WEIGHTS")
     # if is_multimetric:
     #     score_param_names = []
     #     for name, func in scorer.items():
@@ -300,8 +299,6 @@ def _score(estimator, X_test, y_test, scorer, is_multimetric=False, **score_para
     Will return a single float if is_multimetric is False and a dict of floats,
     if is_multimetric is True
     """
-    print(
-        "Using django_learning.sklearn_mods._score instead of sklearn.model_selection._validation._score")
     if is_multimetric:
         return _multimetric_score(estimator, X_test, y_test, scorer, **score_params)
     else:
@@ -327,8 +324,6 @@ def _score(estimator, X_test, y_test, scorer, is_multimetric=False, **score_para
 
 def _multimetric_score(estimator, X_test, y_test, scorers, **score_params):
     """Return a dict of score for multimetric scoring"""
-    print(
-        "Using django_learning.sklearn_mods._multimetric_score instead of sklearn.model_selection._validation._multimetric_score")
     scores = {}
 
     for name, scorer in list(scorers.items()):
