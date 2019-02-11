@@ -24,19 +24,15 @@ class Extractor(BasicExtractor):
 
     def transform(self, X, **transform_params):
 
-        # print "Preprocessing text (transform)"
-        # if "text" not in X.columns and "document_id" in X.columns:
-        #     X['text'] = X['document_id'].map(lambda x: get_model("Document", app_name="django_learning").objects.get(pk=x).text)
         text = X['text']
         for p in self.get_preprocessors():
             text = text.apply(p.run)
 
-        # print "Transforming text to TF-IDF matrix (transform)"
         ngrams = self.vectorizer.transform(text, **transform_params)
 
         if hasattr(self, "normalize_document_types") and self.normalize_document_types:
 
-            # print "Normalizing across document types (transform)"
+            # Normalizing across document types (transform)
             ngrams = pandas.DataFrame(ngrams.todense(), index=X.index)
             for doctype, group in X.groupby("document_type"):
                 for col in ngrams.columns:
@@ -46,17 +42,15 @@ class Extractor(BasicExtractor):
 
     def fit(self, X, y=None, **fit_params):
 
-        # print "Preprocessing text (fit)"
         text = X['text']
         for p in self.get_preprocessors():
             text = text.apply(p.run)
 
-        # print "Fitting TF-IDF matrix (fit)"
         self.vectorizer.fit(text, y, **fit_params)
 
         if hasattr(self, "normalize_document_types") and self.normalize_document_types:
 
-            # print "Computing normalization parameters (fit)"
+            # Computing normalization parameters (fit)
             ngrams = pandas.DataFrame(self.vectorizer.transform(text).todense(), index=X.index)
             self.mean_mapper = defaultdict(dict)
             self.std_mapper = defaultdict(dict)
@@ -65,8 +59,6 @@ class Extractor(BasicExtractor):
                     mean, err, std = wmom(ngrams[col][group.index], group["sampling_weight"], calcerr=True, sdev=True)
                     self.mean_mapper[doctype][col] = mean
                     self.std_mapper[doctype][col] = std
-            # self.mean_mapper[doctype] = ngrams[group.index].mean(axis=1).to_dict()
-            # self.std_mapper[doctype] = ngrams[group.index].std(axis=1).to_dict()
 
         return self
 

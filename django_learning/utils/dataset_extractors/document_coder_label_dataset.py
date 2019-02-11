@@ -76,11 +76,11 @@ class Extractor(DatasetExtractor):
 
     def set_outcome_column(self, outcome_col):
 
-        if outcome_col == self.outcome_column: pass
-        elif self.outcome_columns and outcome_col in self.outcome_columns:
-            self.outcome_column = outcome_col
-        else:
-            raise Exception("'{}' is not a valid outcome column for this dataset".format(outcome_col))
+        if outcome_col != self.outcome_column:
+            if self.outcome_columns and outcome_col in self.outcome_columns:
+                self.outcome_column = outcome_col
+            else:
+                raise Exception("'{}' is not a valid outcome column for this dataset".format(outcome_col))
 
     def get_hash(self, **kwargs):
 
