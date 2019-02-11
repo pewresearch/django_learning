@@ -29,14 +29,6 @@ from pewtils import is_not_null
 from django_pewtils import get_model
 
 
-# def render_hit(request, hit_id):
-#
-#     hit = HIT.objects.get(pk=hit_id)
-#     return render_to_response("hit_templates/hit.html", {
-#         "hit": hit,
-#         "questions": hit.questions.order_by("priority")
-#     }, context_instance=RequestContext(request))
-
 @login_required
 def home(request):
 
@@ -444,13 +436,10 @@ def code_assignment(request, project_name, sample_name, assignment_id=None, skip
 
                 else:
                     return render(request, "django_learning/alert.html", {"message": "No available assignments for this sample!"})
-                    # return view_project(request, project_name)
 
         else:
-            # return view_project(request, project_name)
             return render(request, "django_learning/alert.html", {"message": "You're not qualified to work on these assignments."})
     else:
-        # return view_project(request, project_name)
         return render(request, "django_learning/alert.html", {"message": "You're not currently registered as an active coder on this project."})
 
 
@@ -467,11 +456,6 @@ def _render_assignment(request, project, sample, assignment, remaining_count=Non
 
     if assignment.hit.template_name:
         template = "{}.html".format(assignment.hit.template_name)
-        # for folder in settings.DJANGO_LEARNING_HIT_TEMPLATE_DIRS:
-        #     path = os.path.join(folder, "{}.html".format(hit.template_name))
-        #     if os.path.exists(path):
-        #         template = path
-        # # template = "custom_hits/{}.html".format(hit.template_name)
     else:
         template = "django_learning/hit.html"
 
@@ -521,10 +505,9 @@ def _save_response(request, overwrite=False):
                     if field == "notes":
                         assignment.notes = request.POST.get(field)
                         assignment.save()
-                    elif field == "uncodeable":
-                        if int(request.POST.get(field)) == 1:
-                            assignment.uncodeable = True
-                            assignment.save()
+                    elif field == "uncodeable" and int(request.POST.get(field)) == 1:
+                        assignment.uncodeable = True
+                        assignment.save()
                 except RequiredResponseException:
                     incomplete = True
             for q in hit.sample.project.questions.exclude(name__in=list(request.POST.keys())):

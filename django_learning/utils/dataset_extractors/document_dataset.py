@@ -39,9 +39,7 @@ class Extractor(DocumentCoderDatasetExtractor):
                     max_col, max_val = sorted([(col, x[col]) for col in self.outcome_columns if col != "label_{}".format(self.base_class_id)], key=lambda x: x[1], reverse=True)[0]
                 else:
                     max_col, max_val = sorted([(col, x[col]) for col in self.outcome_columns], key=lambda x: x[1], reverse=True)[0]
-                if not self.threshold:
-                    return max_col.split("_")[-1]
-                elif max_val >= self.threshold:
+                if not self.threshold or max_val >= self.threshold:
                     return max_col.split("_")[-1]
                 else:
                     return str(self.base_class_id)

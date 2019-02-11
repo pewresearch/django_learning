@@ -33,7 +33,7 @@ class Command(BasicCommand):
                 "{}@pewresearch.org".format(self.parameters["coder_name"]),
                 "pass"
             )
-        coder = get_model("Coder").objects.create_or_update(
+        get_model("Coder").objects.create_or_update(
             {"name": self.parameters["coder_name"]},
             {"is_mturk": False, "user": user}
         )

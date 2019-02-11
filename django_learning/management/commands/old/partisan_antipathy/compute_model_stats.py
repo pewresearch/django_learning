@@ -52,7 +52,6 @@ class Command(BaseCommand):
                 "classifier_id": c.pk,
                 "document_types": c.document_types
             }
-            # print base_row
 
             h = c.handler
             h.load_model()
