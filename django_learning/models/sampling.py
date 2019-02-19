@@ -259,7 +259,10 @@ class Sample(LoggedExtendedModel):
                 docs = docs.exclude(pk__in=existing_doc_ids)
 
             stratify_by = params.get("stratify_by", None)
-            frame = self.frame.get_sampling_flags(sampling_search_subset=params.get('sampling_searches', None))
+            try:
+                frame = self.frame.get_sampling_flags(sampling_search_subset=params.get('sampling_searches', None))
+            except KeyError:
+                frame = self.frame.get_sampling_flags(sampling_search_subset=params.get('sampling_searches', None), refresh=True)
             frame = frame[frame["pk"].isin(list(docs.values_list("pk", flat=True)))]
 
             weight_vars = []
