@@ -54,17 +54,9 @@ class LearningModel(LoggedExtendedModel):
 
         super(LearningModel, self).__init__(*args, **kwargs)
 
-        params = {}
-        if self.pipeline_name:
-            try: params.update(pipelines[self.pipeline_name]())
-            except KeyError: print("WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name))
-        try: self.parameters = recursive_update(params, self.parameters if self.parameters else {})
-        except (AttributeError, LookupError):
-            print("WARNING: couldn't update parameters from pipeline, it may not exist anymore!")
-
         self.cache_identifier = "{}_{}".format(self.name, self.pipeline_name)
 
-        self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
+        # self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
         self.dataset = None
 
         self.model = None
@@ -84,6 +76,28 @@ class LearningModel(LoggedExtendedModel):
             use_s3=False
         )
 
+    def _refresh_parameters(self, key=None):
+
+        params = {}
+        if self.pipeline_name:
+            try:
+                params.update(pipelines[self.pipeline_name]())
+            except KeyError:
+                print("WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name))
+        try:
+            params = recursive_update(params, self.parameters if self.parameters else {})
+        except (AttributeError, LookupError):
+            print("WARNING: couldn't update parameters from pipeline, it may not exist anymore!")
+
+        if key:
+            self.parameters[key] = params[key]
+        else:
+            self.parameters = params
+        self.save()
+        self.refresh_from_db() # do a handshake
+        if key: print("Refreshed {} parameters".format(key))
+        else: print("Refreshed all parameters")
+
     def _get_dataset_extractor(self, key):
 
         dataset_extractor = None
@@ -98,15 +112,8 @@ class LearningModel(LoggedExtendedModel):
 
     def save(self, *args, **kwargs):
 
-        # params = {}
-        # if self.pipeline_name:
-        #     params.update(pipelines[self.pipeline_name]())
-        # self.parameters = recursive_update(params, self.parameters if self.parameters else {})
-        #
-        # self.parameters['pipeline']['steps'] = [(k, v) for k, v in self.parameters['pipeline']['steps'] if k != 'model']
-        # # TODO: figure out where this bug is occuring, but for now we'll deal with extra "model" params sneaking in
-
         super(LearningModel, self).save(*args, **kwargs)
+        self.refresh_from_db() # pickles and unpickles self.parameters so it remains in a consistent format
 
     def extract_dataset(self, refresh=False, **kwargs):
 
@@ -115,9 +122,14 @@ class LearningModel(LoggedExtendedModel):
         #
         # if is_null(self.dataset) and not kwargs.get("only_load_existing", False):
 
+        if refresh:
+            self._refresh_parameters()  # pickles and unpickles self.parameters so it remains in a consistent format
+        self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
         self.dataset = self.dataset_extractor.extract(refresh=refresh, **kwargs)
         if len(self.dataset) == 0:
             print("Dataset returned no data; forcing cache refresh and trying again")
+            self._refresh_parameters()  # looks like we're actually refreshing, so we'll grab the latest parameters
+            self.dataset_extractor = self._get_dataset_extractor("dataset_extractor") # update the extractor with latest params
             self.dataset = self.dataset_extractor.extract(refresh=True, **kwargs)
         if hasattr(self.dataset_extractor, "project") and self.dataset_extractor.project:
             self.project = get_model("Project", app_name="django_learning").objects.get(name=self.dataset_extractor.project.name)
@@ -163,6 +175,9 @@ class LearningModel(LoggedExtendedModel):
             # (e.g. from django_learning.utils.scoring_functions import scoring_functions)
 
         if is_null(cache_data) and not only_load_existing:
+
+            self._refresh_parameters("model") # refresh the model and pipeline parameters (but not the dataset ones)
+            self._refresh_parameters("pipeline")
 
             pipeline_steps = copy.copy(self.parameters['pipeline']['steps'])
             params = self._collapse_pipeline_params(
@@ -547,20 +562,22 @@ class DocumentLearningModel(LearningModel):
 
     def save(self, *args, **kwargs):
 
-        if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
-            self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+        # if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
+        #     self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
         super(DocumentLearningModel, self).save(*args, **kwargs)
 
     def extract_dataset(self, refresh=False, **kwargs):
 
         super(DocumentLearningModel, self).extract_dataset(refresh=refresh, **kwargs)
         if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
-            try: self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
-            except:
-                # TODO: this is very hacky and needs to be fixed
-                from django_pewtils import reset_django_connection
-                reset_django_connection("logos")
-                self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+            self.sampling_frame = self.dataset_extractor.sampling_frame
             self.save()
+            # try: self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+            # except:
+            #     # TODO: this is very hacky and needs to be fixed
+            #     from django_pewtils import reset_django_connection
+            #     reset_django_connection("logos")
+            #     self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
+            # self.save()
 
 
