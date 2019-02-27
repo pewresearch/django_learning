@@ -113,8 +113,8 @@ class SamplingFrame(LoggedExtendedModel):
         frame = None
         if not refresh:
             frame = cache.read(self.name)
-            if is_not_null(frame):
-                print("Loaded frame sampling flags from cache")
+            # if is_not_null(frame):
+            #     print("Loaded frame sampling flags from cache")
 
         sampling_searches = []
         stratification_variables = []
@@ -131,7 +131,7 @@ class SamplingFrame(LoggedExtendedModel):
 
         if is_null(frame) or refresh:
 
-            print("Recomputing frame sampling flags")
+            # print("Recomputing frame sampling flags")
 
             vals = ["pk", "text"] + stratification_variables + [a['field_lookup'] for a in additional_variables.values()]
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))
