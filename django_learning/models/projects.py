@@ -173,6 +173,15 @@ class Question(LoggedExtendedModel):
         else:
             return False
 
+    def all_dependencies(self):
+
+        label_ids = []
+        dependency = self.dependency
+        while dependency:
+            label_ids.append(dependency.pk)
+            dependency = dependency.question.dependency
+        return get_model("Label", app_name="django_learning").objects.filter(pk__in=label_ids)
+
     def update_assignment_response(self, assignment, label_values, notes=None):
 
         existing = assignment.codes.filter(label__question=self)
