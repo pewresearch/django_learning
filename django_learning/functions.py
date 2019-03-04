@@ -153,12 +153,12 @@ def get_sampling_weights(
         keyword_weight_columns = set(["search_{}".format(s) for s in keyword_weight_columns])
         keyword_weight_columns.add("search_none")
     if document_filters:
-        print("Applying frame document filter: {}".format(len(frame)))
+        # print("Applying frame document filter: {}".format(len(frame)))
         frame = frame.rename(columns={"pk": "document_id"})
         for filter_name, filter_args, filter_kwargs in document_filters:
             frame = dataset_document_filters[filter_name](None, frame, *filter_args, **filter_kwargs)
         frame = frame.rename(columns={"document_id": "pk"})
-        print("Frame is now {}".format(len(frame)))
+        # print("Frame is now {}".format(len(frame)))
     # if filter_params:
     #     frame = frame[frame["pk"].isin(
     #         filter_queryset_by_params(sampling_frame.documents.all(), filter_params).values_list("pk", flat=True)
@@ -184,7 +184,7 @@ def get_sampling_weights(
         frame['search_none'] = ~frame[actual_keywords].max(axis=1)
     full_sample = frame[frame['pk'].isin(list(
         get_model("SampleUnit", app_name="django_learning").objects.filter(sample__in=samples).values_list(
-            "document_id", flat=True)))]
+            "document_id", flat=True)))].reset_index()
 
     if len(keyword_weight_columns) > 0:
         keyword_weight = compute_sample_weights_from_frame(frame, full_sample, list(keyword_weight_columns))
