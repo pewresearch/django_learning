@@ -2,7 +2,8 @@ from __future__ import print_function
 import re
 
 from pewtils import is_not_null, decode_text
-from pewanalytics.text import TextCleaner, SentenceTokenizer, is_probable_stopword
+from pewanalytics.text import TextCleaner, SentenceTokenizer
+from pewanalytics.internal.stopwords import is_probable_stopword
 
 from django_learning.utils.stopword_sets import stopword_sets
 from django_learning.utils.stopword_whitelists import stopword_whitelists

@@ -48,6 +48,12 @@ class SamplingFrame(LoggedExtendedModel):
         print("Extracting sample frame '{}'".format(self.name))
         if self.documents.count() == 0 or refresh:
 
+            if self.samples.count() > 0:
+                print("Warning: you already have samples extracted from this sampling frame")
+                print("Updating the frame will require re-syncing the existing samples and may result in data loss.")
+                print("Press 'c' to continue, otherwise 'q' to quit and abort")
+                import pdb
+                pdb.set_trace()
             params = self.config
             if params:
                 objs = get_model("Document").objects.all()
@@ -59,6 +65,8 @@ class SamplingFrame(LoggedExtendedModel):
                 print("Error!  No frame named '{}' was found".format(self.name))
 
             self.get_sampling_flags(refresh=True)
+            for s in self.samples.all():
+                s.sync_with_frame()
 
         else:
 
@@ -112,8 +120,8 @@ class SamplingFrame(LoggedExtendedModel):
         frame = None
         if not refresh:
             frame = cache.read(self.name)
-            if is_not_null(frame):
-                print("Loaded frame sampling flags from cache")
+            # if is_not_null(frame):
+            #     print("Loaded frame sampling flags from cache")
 
         sampling_searches = []
         stratification_variables = []
@@ -130,7 +138,7 @@ class SamplingFrame(LoggedExtendedModel):
 
         if is_null(frame) or refresh:
 
-            print("Recomputing frame sampling flags")
+            # print("Recomputing frame sampling flags")
 
             vals = ["pk", "text"] + stratification_variables + [a['field_lookup'] for a in additional_variables.values()]
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))

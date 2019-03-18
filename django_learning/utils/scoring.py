@@ -183,9 +183,13 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
             for valname, val in zip(["mean", "err", "std"], list(weighted)):
                 row["{}_{}".format(labelsetname, valname)] = val
 
-        unweighted = wmom(labelset.astype(int), [1.0 for x in labelset], calcerr=True, sdev=True)
-        for valname, val in zip(["mean", "err", "std"], list(unweighted)):
-            row["{}_unweighted_{}".format(labelsetname, valname)] = val
+        try:
+            unweighted = wmom(labelset.astype(int), [1.0 for x in labelset], calcerr=True, sdev=True)
+        except ValueError:
+            unweighted = None
+        if unweighted:
+            for valname, val in zip(["mean", "err", "std"], list(unweighted)):
+                row["{}_unweighted_{}".format(labelsetname, valname)] = val
 
     # if len(numpy.unique(coder_df[outcome_column])) == 2: # and sum(coder1_df[outcome_column]) > 0 and sum(coder2_df[outcome_column]) > 0:
 

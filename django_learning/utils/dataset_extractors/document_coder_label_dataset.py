@@ -141,14 +141,14 @@ class Extractor(DatasetExtractor):
             dataset = self._add_document_data(dataset)
             self._add_balancing_weights(dataset)
 
-            if self.outcome_column:
-                print("Extracted dataset for {}: outcome_column '{}', discrete='{}', valid_label_ids='{}'".format(
-                    self.outcome_column, self.questions.all(), self.discrete_classes, self.valid_label_ids
-                ))
-            else:
-                print("Extracted dataset for {}: outcome_columns '{}', discrete='{}', valid_label_ids='{}'".format(
-                    self.outcome_columns, self.questions.all(), self.discrete_classes, self.valid_label_ids
-                ))
+            # if self.outcome_column:
+            #     print("Extracted dataset for {}: outcome_column '{}', discrete='{}', valid_label_ids='{}'".format(
+            #         self.outcome_column, self.questions.all(), self.discrete_classes, self.valid_label_ids
+            #     ))
+            # else:
+            #     print("Extracted dataset for {}: outcome_columns '{}', discrete='{}', valid_label_ids='{}'".format(
+            #         self.outcome_columns, self.questions.all(), self.discrete_classes, self.valid_label_ids
+            #     ))
 
         return dataset
 

@@ -152,7 +152,10 @@
                         {% for q in questions %}
                             <tr id="tr_{{ q.name }}" data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}">
                                 {% if q.display == 'header' %}
-                                    <th colspan="2">
+                                    </tr>
+                                    </table>
+                                    <table class="panel-body table table-condensed">
+                                    <th colspan="2" id="{{ q.name }}" {% if q.dependency %}data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}>
                                         {% if q.tooltip %}<a href="#" data-toggle="tooltip" title="{{ q.tooltip }}">{{ q.prompt }}</a>
                                         {% else %}<a>{{ q.prompt }}</a>
                                         {% endif %}
@@ -182,7 +185,7 @@
                                         </td>
                                     {% elif q.display == 'number' %}
                                         <td class="form-group">
-                                            <input class="zoom" type="number" name="{{ q.name }}"
+                                            <input class="zoom" type="number" name="{{ q.name }}" id="{{ q.name }}"
                                                    {% if q.existing_value %}value="{{ q.existing_value }}"{% endif %}
                                                    {% if not q.optional %}required{% endif %}
                                                    {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
@@ -190,13 +193,13 @@
                                         </td>
                                     {% elif q.display == 'dropdown' %}
                                         <td class="form-group">
-                                            <select class="form-control" name="{{ q.name }}"
+                                            <select class="form-control" name="{{ q.name }}" id="{{ q.name }}"
                                                     {% if not q.optional %}required{% endif %}
                                                     {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                             >
                                                 <option value="" disabled {% if q.existing_label_ids|length == 0 %}selected{% endif %}>---</option>
                                                 {% for label in q.labels.all %}
-                                                    <option value="{{ label.pk }}"
+                                                    <option value="{{ label.pk }}" id="{{ q.name }}_{{ label.value }}"
                                                             {% if label.select_as_default and not assignment.time_finished %}selected="selected"
                                                             {% elif label.pk in q.existing_label_ids %}selected="selected"
                                                             {% endif %}
@@ -264,50 +267,51 @@
 
             {% for q in questions %}
 
+
                 {% if q.dependency %}
 
                     $('*[data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}"]').hide();
                     $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
 
-                    {% for label in q.labels.all %}
-                        $("#{{ q.dependency.question.name }}_{{ label.value }}").change(function() {
-                            console.log("change detected");
-                            if($("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':checked') | $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':selected')) {
-                                console.log("is checked");
+                    {% if q.dependency.question.display == "dropdown" %}
+                        $(document).on('change','#{{q.dependency.question.name}}',function(){
+                           if($("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':selected')) {
                                 $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
                                 $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
                             } else {
-                                console.log("is not checked");
                                 $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
                                 $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
-                                {% for l in q.labels.all %}
-                                    $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
-                                    $("#{{ q.name }}_{{ l.value }}").prop("selected", false);
+                                {% for label in q.labels.all %}
+                                    $("#{{ q.name }}_{{ label.value }}").prop("checked", false);
+                                    $("#{{ q.name }}_{{ label.value }}").prop("selected", false);
+                                    $("#{{ q.name }}_{{ label.value }}").trigger("change");
+                                    $("#{{ q.name }}").trigger("change");
                                 {% endfor %}
-                            }
-                        });
-                    {% endfor %}
-
-                    {% if q.dependency.question.dependency %}
+                            };
+                          });
+                    {% else %}
                         {% for label in q.dependency.question.labels.all %}
-                            $("#{{ q.dependency.question.dependency.question.name }}_{{ label.value }}").change(function() {
-                                if($("#{{ q.dependency.question.dependency.question.name }}_{{ q.dependency.question.dependency.value }}").is(':checked') | $("#{{ q.dependency.question.dependency.question.name }}_{{ q.dependency.question.dependency.value }}").is(':selected')) {
+                            $("#{{ q.dependency.question.name }}_{{ label.value }}").change(function() {
+                                if($("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':checked') | $("#{{ q.dependency.question.name }}_{{ q.dependency.value }}").is(':selected')) {
                                     $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").show();
                                     $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', true);
                                 } else {
                                     $("*[data-visibility='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").hide();
                                     $("*[data-required='{{ q.dependency.question.name }}_{{ q.dependency.value }}']").attr('required', false);
-                                    {% for l in q.labels.all %}
-                                        $("#{{ q.name }}_{{ l.value }}").prop("checked", false);
-                                        $("#{{ q.name }}_{{ l.value }}").prop("selected", false);
+                                    {% for label in q.labels.all %}
+                                        $("#{{ q.name }}_{{ label.value }}").prop("checked", false);
+                                        $("#{{ q.name }}_{{ label.value }}").prop("selected", false);
+                                        $("#{{ q.name }}_{{ label.value }}").trigger("change");
+                                        $("#{{ q.name }}").trigger("change");
                                     {% endfor %}
-                                }
+                                };
                             });
                         {% endfor %}
 
-                    {% endif %}
 
+                    {% endif %}
                 {% endif %}
+
             {% endfor %}
 
         });
