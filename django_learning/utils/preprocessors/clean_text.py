@@ -51,7 +51,7 @@ class Preprocessor(BasicPreprocessor):
         replacers = []
         for r in self.params.get("regex_replacers", []):
             replacers.extend(regex_replacers[r]())
-        kwargs = {"decode_text": True, "stopwords": stopwords, "strip_html": True, "replacers": replacers}
+        kwargs = {"stopwords": stopwords, "strip_html": True, "replacers": replacers}
         kwargs.update({k: v for k, v in self.params.items() if k not in ["regex_replacers", "stopword_sets", "regex_filters",
                                                                          "cache_identifier", "stopword_whitelists", "refresh_stopwords",
                                                                          "override_stopword_check"]})
