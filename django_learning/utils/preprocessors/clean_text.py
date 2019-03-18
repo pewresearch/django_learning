@@ -73,9 +73,6 @@ class Preprocessor(BasicPreprocessor):
         clean_text = None
         if self.cache:
             clean_text = self.get_row_cache(key_text)
-            if clean_text:
-                pass
-                # print "Loaded from cache"
 
         if not clean_text:
 
@@ -86,24 +83,8 @@ class Preprocessor(BasicPreprocessor):
                     if is_not_null(sent) and filter.search(sent):
                         final_tokens.append(sent)
                 text = " ".join(final_tokens)
-                    # sent = self.cleaner.clean(sent)
-                    # if self.re_search.match(sent):
-                    #     final_tokens.append(sent)
-                # tokens = self.cleaner.clean(sent).split()
-                # for i, token in enumerate(tokens):
-                #     if self.re_search.match(token):
-                #         final_tokens.extend(tokens[max([0, i-self.params['token_window_size']]):min([len(tokens), i+self.params['token_window_size']])])
 
-            # found_stopwords = self.stopword_regex.findall(text)
-            # text = self.stopword_regex.sub('', text)
             clean_text = self.cleaner.clean(text)
-            # print text
-            # print "Stopwords removed: {}".format(set(found_stopwords))
-            # probable_stopwords = set()
-            # for w in text.split():
-            #     if is_probable_stopword(w):
-            #         probable_stopwords.add(w)
-            # print probable_stopwords
 
             if self.cache:
                 self.set_row_cache(key_text, clean_text)

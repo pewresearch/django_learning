@@ -51,7 +51,6 @@ class TopicModel(LoggedExtendedModel):
 
     def load_model(self, refresh_model=False, refresh_vectorizer=False):
 
-        # vocab_dict = dict([(i, s) for i, s in enumerate(self.vectorizer.get_feature_names())])
         if refresh_model or is_null(self.model):
 
             if refresh_vectorizer or is_null(self.vectorizer):
@@ -147,88 +146,6 @@ class TopicModel(LoggedExtendedModel):
         return pandas.concat([df, topic_df], axis=1)
 
 
-        # lda_model = self.model
-        # if not lda_model:
-        #     lda_model = gensim.models.ldamulticore.LdaMulticore(
-        #         chunksize=self.chunk_size,
-        #         passes=self.passes,
-        #         decay=self.decay,
-        #         offset=self.offset,
-        #         num_topics=self.num_topics,
-        #         workers=self.workers,
-        #         id2word=vocab_dict
-        #     )
-        #
-        # print "Extracting document IDs"
-        # doc_ids = self._get_document_ids()
-        # if not recycle_existing:
-        #     doc_ids = list(set(doc_ids) - set(self.training_documents.values_list("pk", flat=True)))
-        # random.shuffle(doc_ids)
-        #
-        # for i, chunk in tqdm(enumerate(chunk_list(doc_ids, self.chunk_size)), desc="Processing document chunks"):
-        #
-        #     print "Updating model with chunk %i (%i total)" % (i + 1, int((i + 1) * self.chunk_size))
-        #     chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
-        #     matrix = self.vectorizer.transform(
-        #         pandas.DataFrame.from_records(chunk_docs.values("pk", "text"))
-        #     )
-        #     matrix = gensim.matutils.Sparse2Corpus(matrix, documents_columns=False)
-        #     lda_model.update(matrix)
-        #
-        #     self.model = lda_model
-        #     self.save()
-        #     self.training_documents.add(*chunk_docs)
-        #
-        #     print self.model.show_topics(self.num_topics)
-        #
-        #     self.update_topics()
-        #
-        #     if doc_limit and (i + 1) * self.chunk_size >= doc_limit:
-        #         break
-        #
-        # print "Finished updating model"
-
-    # def apply_model(self, min_probability=.5, doc_limit=None):
-    #
-    #     doc_ids = self._get_document_ids()
-    #     random.shuffle(doc_ids)
-    #     if doc_limit: doc_ids = doc_ids[:doc_limit]
-    #
-    #     lda_model = self.model
-    #     for i, chunk in tqdm(enumerate(chunk_list(doc_ids, self.chunk_size)), desc="Processing document chunks"):
-    #         print "Updating model with chunk %i (%i total)" % (i + 1, int((i + 1) * self.chunk_size))
-    #         chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
-    #         matrix = self.vectorizer.transform(
-    #             pandas.DataFrame.from_records(chunk_docs.values("pk", "text"))
-    #         )
-    #         matrix = gensim.matutils.Sparse2Corpus(matrix, documents_columns=False)
-    #         for doc, bow in zip(chunk_docs, matrix):
-    #             doc.topics.filter(topic__model=self).delete()
-    #             doc_topics = lda_model.get_document_topics(bow, minimum_probability=min_probability)
-    #             for topic, weight in doc_topics:
-    #                 get_model("DocumentTopic").objects.create_or_update(
-    #                     {"document": doc, "topic": self.topics.get(num=topic), "value": weight},
-    #                     return_object=False,
-    #                     save_nulls=True,
-    #                     search_nulls=False
-    #                 )
-    #
-    #                 # def top_n_documents(self, n=10, document_type=None):
-    #                 #     doc_topics = DocumentTopic.objects.all()
-    #                 #     if document_type: doc_topics = doc_topics.filter(**{"document__{0}_id__isnull".format(document_type): False})
-    #                 #     return doc_topics.filter(topic__model=self).order_by("-value")[:n]
-    #                 #
-    #                 # def topic_distribution(self):
-    #                 #
-    #                 #     df = pandas.DataFrame(
-    #                 #         list(DocumentTopic.objects.filter(topic__model=self).values("topic_id", "value"))
-    #                 #     )
-    #                 #     data = []
-    #                 #     for index, row in df.groupby("topic_id").agg({"value": numpy.average}).sort("value").iterrows():
-    #                 #         data.append((Topic.objects.get(pk=index), row["value"]))
-    #                 #     return data
-
-
 class Topic(LoggedExtendedModel):
     """
     A topic extracted by a topic model.
@@ -291,12 +208,6 @@ class Topic(LoggedExtendedModel):
 
     def top_n_documents(self, n=10):
         return self.documents.order_by("-value")[:n]
-
-    # def top_n_tweets(self, n=10):
-    #     return self.tweets.order_by("-value")[:n]
-    #
-    # def top_n_bills(self, n=10):
-    #     return self.bills.order_by("-value")[:n]
 
     def coef_avg(self):
         return numpy.average(list(self.ngrams.values_list("weight", flat=True)))
