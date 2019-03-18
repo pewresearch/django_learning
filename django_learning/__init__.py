@@ -18,3 +18,8 @@ sklearn.model_selection._validation._multimetric_score = _multimetric_score
 sklearn.model_selection._validation._fit_and_score = _fit_and_score
 import sklearn.model_selection._search
 sklearn.model_selection._search._fit_and_score = _fit_and_score
+
+print("Using django_learning.sklearn_mods._ProbaScorer instead of sklearn.metrics.scorer._ProbaScorer")
+print("Using django_learning.sklearn_mods._fit_and_score instead of sklearn.model_selection._validation._fit_and_score")
+print("Using django_learning.sklearn_mods._score instead of sklearn.model_selection._validation._score")
+print("Using django_learning.sklearn_mods._multimetric_score instead of sklearn.model_selection._validation._multimetric_score")
