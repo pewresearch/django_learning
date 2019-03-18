@@ -207,14 +207,13 @@ class ClassificationModel(LearningModel):
         if refresh or not self.cv_folds:
             splitter = StratifiedKFold(self.parameters["model"].get("cv", 5), shuffle=True)
             self.cv_folds = [f for f in splitter.split(dataset, dataset[self.dataset_extractor.outcome_column])]
-            # self.cv_folds = [f for f in KFold(len(dataset.index), n_folds=self.parameters["model"].get("cv", 5), shuffle=True)]
             self.save()
 
         for i, folds in tqdm(enumerate(self.cv_folds), desc="Producing CV predictions"):
             fold_train_index, fold_test_index = folds
             # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
-            fold_train_dataset = dataset.ix[pandas.Series(dataset.index).iloc[fold_train_index].values]  # self.dataset.ix[fold_train_index]
-            fold_test_dataset = dataset.ix[pandas.Series(dataset.index).iloc[fold_test_index].values]  # self.dataset.ix[fold_test_index]
+            fold_train_dataset = dataset.ix[pandas.Series(dataset.index).iloc[fold_train_index].values]
+            fold_test_dataset = dataset.ix[pandas.Series(dataset.index).iloc[fold_test_index].values]
 
             fold_predict_dataset = None
             if not refresh:
@@ -489,11 +488,6 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         chunk_size=1000
     ):
 
-        # try:
-        #     document_ids = list(documents.values_list("pk", flat=True))
-        # except:
-        #     document_ids = [getattr(d, "pk") for d in documents]
-
         print("Processing {} documents".format(len(document_ids)))
 
         pool = Pool(processes=num_cores)
@@ -616,19 +610,19 @@ class Classification(LoggedExtendedModel):
 
     def validate_unique(self, *args, **kwargs):
        super(Classification, self).validate_unique(*args, **kwargs)
-       if not self.pk:
-           if not self.label.question.multiple:
-               if self.model.objects\
-                       .filter(label__question=self.label.question)\
-                       .filter(document=self.document)\
-                       .exists():
-                   raise ValidationError(
-                       {
-                           NON_FIELD_ERRORS: [
-                               'Classification with the same variable already exists'
-                           ],
-                       }
-                   )
+       if not self.pk \
+               and not self.label.question.multiple \
+               and self.model.objects\
+                   .filter(label__question=self.label.question)\
+                   .filter(document=self.document)\
+                   .exists():
+           raise ValidationError(
+               {
+                   NON_FIELD_ERRORS: [
+                       'Classification with the same variable already exists'
+                   ],
+               }
+           )
 
     def __repr__(self):
         return "<Classification label={0}, document={1}>".format(

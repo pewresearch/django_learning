@@ -95,9 +95,6 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
 
     pos_labels = []
     if discrete_classes:
-        # if len(outcome_values) == 2:
-        #     pos_labels = [dataset[outcome_column].value_counts().index[-1]]
-        # else:
         pos_labels = outcome_values
 
     scores = []
@@ -136,10 +133,6 @@ def compute_overall_scores_from_dataset(dataset, document_column, outcome_column
     except (ZeroDivisionError, ValueError):
         alpha = None
 
-    # min_coder = dataset.groupby(coder_column).count()[document_column].sort_values().index[0]
-    # doc_subset = dataset[dataset[coder_column]==min_coder][document_column].unique()
-    # dataset = dataset[dataset[document_column].isin(doc_subset)]
-
     grouped = dataset.groupby(document_column).count()
     complete_docs = grouped[grouped[coder_column]==len(dataset[coder_column].unique())].index
     dataset = dataset[dataset[document_column].isin(complete_docs)]
@@ -163,8 +156,6 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
     coder1_df.index = coder1_df[document_column]
     coder2_df = coder_df[coder_df[coder_column] == coder2]
     coder2_df.index = coder2_df[document_column]
-    # coder2_df = coder2_df.ix[coder1_df.index]
-    # coder12_df = coder1_df.join(coder2_df, how="inner", lsuffix="1", rsuffix="2")
     coder1_df = coder1_df[coder1_df.index.isin(coder2_df.index)]
     coder2_df = coder2_df[coder2_df.index.isin(coder1_df.index)].ix[coder1_df.index]
 
@@ -181,7 +172,6 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
         ("coder2", coder2_df[outcome_column])
     ]:
 
-        # unweighted = wmom(codeset, [1.0 for x in codeset], calcerr=True, sdev=True)
         try:
             weighted = wmom(labelset, coder1_df[weight_column], calcerr=True, sdev=True)
         except TypeError:
@@ -190,8 +180,6 @@ def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder
             except ValueError:
                 weighted = None
         if weighted:
-            # for valname, val in zip(["mean", "err", "std"], list(unweighted)):
-            #     row["{}_{}".format(codesetname, valname)] = val
             for valname, val in zip(["mean", "err", "std"], list(weighted)):
                 row["{}_{}".format(labelsetname, valname)] = val
 
@@ -342,7 +330,6 @@ def get_probability_threshold_score_df(
 
 def get_probability_threshold_from_score_df(score_df, metric="precision_recall_min"):
 
-    # score_df = score_df[(score_df['coder1_mean']>0.0)&(score_df['coder2_mean']>0.0)]
     sorted_df = score_df.groupby("threshold").agg({metric: min}).sort_values(metric, ascending=False)
     max_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.max()
     min_threshold = sorted_df[sorted_df[metric] == sorted_df[metric].max()].index.min()
