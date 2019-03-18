@@ -1,5 +1,4 @@
-from future import standard_library
-standard_library.install_aliases()
+
 import os
 
 from django.apps import apps as global_apps
