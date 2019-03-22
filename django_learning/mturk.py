@@ -31,10 +31,13 @@ from django.template.loader import render_to_string
 from pewtils import is_not_null, decode_text
 from tqdm import tqdm
 import re
+from pewtils import decode_text
 
 
 class MTurk(object):
+
     def __init__(self, sandbox=True):
+
         self.sandbox = sandbox
 
         if sandbox:
@@ -236,8 +239,21 @@ class MTurk(object):
                     hit.turk_id = response[0].HITId
                     hit.save()
                 except Exception as e:
-                    import pdb
-                    pdb.set_trace()
+                    try:
+                        html = decode_text(html)
+                        turk_hit = HTMLQuestion(html, "1000")
+                        response = self.conn.create_hit(
+                            question=turk_hit,
+                            max_assignments=num_coders,
+                            lifetime=sample.hit_type.lifetime_days * 60 * 60 * 24,
+                            hit_type=sample.hit_type.turk_id
+                        )
+                        hit.turk_id = response[0].HITId
+                        hit.save()
+                    except Exception as e:
+                        print(e)
+                        import pdb
+                        pdb.set_trace()
 
     def sync_sample_hits(self, sample, resync=False, approve=True):
 
