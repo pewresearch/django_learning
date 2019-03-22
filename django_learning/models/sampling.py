@@ -31,7 +31,6 @@ class SamplingFrame(LoggedExtendedModel):
 
     def __str__(self):
 
-        # return "{}, {} documents".format(self.name, self.documents.count())
         return self.name
 
     def save(self, *args, **kwargs):
@@ -324,7 +323,6 @@ class Sample(LoggedExtendedModel):
 
                 sample_ids = list(set(list(itertools.chain(*sample_chunks))))
                 if len(sample_ids) < size:
-                    # fill_ids = list(frame[~frame["pk"].isin(sample_ids)]["pk"].values)
                     fill_ids = list(docs.values_list("pk", flat=True))
                     random.shuffle(fill_ids)
                     while len(sample_ids) < size:
@@ -377,46 +375,6 @@ class Sample(LoggedExtendedModel):
         else:
 
             print("Error!  No module named '{}' was found".format(self.name))
-
-    # def extract_subsample(self, pct, training=False, override_doc_ids=None):
-
-    #     frame = pandas.DataFrame.from_records(self.documents.values("pk"))
-
-    #     if is_not_null(override_doc_ids):
-
-    #         print "Override document IDs passed, skipping sample extraction"
-    #         sample_ids = override_doc_ids
-
-    #     else:
-
-    #         size = int(float(self.documents.count()) * pct)
-    #         sample_ids = SampleExtractor(sampling_strategy="random", id_col="pk").extract(frame, sample_size=int(size))
-
-    #     print "Computing weights"
-
-    #     df = frame[frame['pk'].isin(sample_ids)]
-    #     df['weight'] = compute_sample_weights_from_frame(frame, df, [])
-
-    #     print "Creating subsample"
-
-    #     subsample = get_model("DocumentSample").objects.create(
-    #         parent=self,
-    #         method="random",
-    #         frame=None,
-    #         training=training
-    #     )
-    #     subsample.code_variables = self.code_variables.all()
-    #     subsample.save()
-
-    #     print "Saving documents"
-
-    #     for index, row in df.iterrows():
-    #         DocumentSampleDocument.objects.create_or_update(
-    #             {"document_id": row["pk"], "sample": subsample},
-    #             {"weight": row["weight"]},
-    #             return_object=False,
-    #             save_nulls=False
-    #         )
 
 
 class SampleUnit(LoggedExtendedModel):

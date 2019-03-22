@@ -64,7 +64,6 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
             key = decode_text(key)
             cache_key = str(self.name) + self.param_repr + str(key)
             return self.cache.read(cache_key)
-            # return load_disk_cache(cache_key, folders=["learning", "feature_extractors", self.params['cache_identifier']], use_s3=False)
         else:
             return None
 
@@ -74,7 +73,6 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
             key = decode_text(key)
             cache_key = str(self.name) + self.param_repr + str(key)
             self.cache.write(cache_key, data)
-            # set_disk_cache(cache_key, data, folders=["learning", "feature_extractors", self.params['cache_identifier']], use_s3=False)
 
     def get_preprocessors(self):
 

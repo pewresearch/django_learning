@@ -26,11 +26,9 @@ def temp_cache_wrapper(func):
             clear_temp_cache = options.pop("clear_temp_cache")
         else: clear_temp_cache = True
         if clear_temp_cache:
-            #print "Clearing temporary feature extractor cache {}, {}".format(str(func), str(options))
             self.temp_cache.clear()
         results = func(self, *args, **options)
         if clear_temp_cache:
-            #print "Clearing temporary feature extractor cache {}, {}".format(str(func), str(options))
             self.temp_cache.clear()
         return results
     return wrapper

@@ -284,23 +284,22 @@ class MTurk(object):
                         for answer in a.answers[0]:
                             question = answer.qid
                             code_ids = answer.fields
-                            if question == "hit_id":
-                                pass
-                            elif question == "notes":
-                                assignment.notes = code_ids[0]
-                                assignment.save()
-                            elif question == "uncodeable" and "1" in code_ids:
-                                assignment.uncodeable = True
-                                assignment.save()
-                            else:
-                                try:
-                                    q = hit.sample.project.questions.get(name=question)
-                                except:
-                                    q = None
-                                if q:
-                                    if len(code_ids) < 2 and not q.multiple:
-                                        code_ids = code_ids[0]
-                                    q.update_assignment_response(assignment, code_ids)
+                            if question != "hit_id":
+                                if question == "notes":
+                                    assignment.notes = code_ids[0]
+                                    assignment.save()
+                                elif question == "uncodeable" and "1" in code_ids:
+                                    assignment.uncodeable = True
+                                    assignment.save()
+                                else:
+                                    try:
+                                        q = hit.sample.project.questions.get(name=question)
+                                    except:
+                                        q = None
+                                    if q:
+                                        if len(code_ids) < 2 and not q.multiple:
+                                            code_ids = code_ids[0]
+                                        q.update_assignment_response(assignment, code_ids)
 
                         form_questions = [ans.qid for ans in a.answers[0]]
                         for q in hit.sample.project.questions\

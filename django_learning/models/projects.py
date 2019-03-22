@@ -331,7 +331,6 @@ class QualificationAssignment(LoggedExtendedModel):
     turk_status = models.CharField(max_length=40, null=True)
 
     is_qualified = models.NullBooleanField()
-    # results = models.PickleFileField()
 
     def save(self, *args, **kwargs):
 
