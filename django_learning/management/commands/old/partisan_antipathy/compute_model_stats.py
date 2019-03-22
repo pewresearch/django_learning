@@ -1,6 +1,5 @@
 from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
+
 from builtins import str
 from builtins import zip
 import pandas, math, re, numpy, pickle, copy
@@ -52,7 +51,6 @@ class Command(BaseCommand):
                 "classifier_id": c.pk,
                 "document_types": c.document_types
             }
-            # print base_row
 
             h = c.handler
             h.load_model()

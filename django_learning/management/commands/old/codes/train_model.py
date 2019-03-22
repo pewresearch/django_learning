@@ -47,12 +47,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        # doc_model = get_model_by_document_type(options["document_type"])
-        # metadata = doc_model.objects.metadata()
         doc_model, metadata = get_model_by_document_type(options["document_type"])
 
         if options["code_variable"] == "all":
-            # code_vars = CodeVariable.objects.all()
             code_vars_names = metadata["coder_code_model"].objects.available_codes()
             code_vars = CodeVariable.objects.get(name__in=code_vars_names)
         else:
@@ -95,7 +92,6 @@ class Command(BaseCommand):
 
             print("Creating train-test split for %s %s" % (code_variable.name, metadata["name_plural"]))
             X = df[metadata["text_field"]]
-            # y = df['code_id']
             y = df["code__value"]
             X_train, X_test, y_train, y_test, train_ids, test_ids = train_test_split(X, y, y.index, test_size=options["test_percent"], random_state=5)
             print("Selected %i training cases and %i test cases for %s %s" % (len(y_train), len(y_test), code_variable.name, metadata["id_field"]))
