@@ -390,6 +390,30 @@ class MTurk(object):
         #     self.conn.update_qualification_score(q.QualificationTypeId, coder.name, 0)
         #     # self.conn.revoke_qualification(coder.name, q.QualificationTypeId, reason="Sorry, your responses were to inconsistent with our own - thank you for the assignments that you've already completed, and keep an eye out for new samples on other projects.")
 
+    def find_missing_hits(self, hit_type_id):
+
+        good_hits = HIT.objects.filter(turk=True).filter(turk_id__isnull=False).values_list("turk_id", flat=True)
+        bad_hits = HIT.objects.filter(turk=True).filter(turk_id__isnull=True)
+        actual_hits = []
+        for hit in self.conn.get_all_hits():
+            if hit.HITId not in good_hits and hit.HITTypeId == hit_type_id:
+                actual_hits.append(hit)
+        counter = 0
+        for hit in actual_hits:
+            hit_id = None
+            for a in self.conn.get_assignments(hit.HITId, page_size=10):
+                for answer in a.answers[0]:
+                    if answer.qid == "hit_id":
+                        hit_id = answer.fields[0]
+                        break
+                if hit_id:
+                    break
+            db_hit = bad_hits.get(pk=hit_id)
+            db_hit.turk_id = hit.HITId
+            db_hit.save()
+            counter += 1
+        print("Found {} missing HITs and restored their turk_ids".format(counter))
+
     def _get_hit_assignments(self, hit_id):
 
         assignments = self.conn.get_assignments(hit_id, page_size=10)
