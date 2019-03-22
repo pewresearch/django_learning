@@ -202,7 +202,7 @@ class Question(LoggedExtendedModel):
             ]
             labels = self.labels.filter(pk__in=[l.pk for l in labels])
         elif self.display in ["text", "date"]:
-            try: self.labels.get(value="open_response")
+            try: labels = self.labels.filter(value="open_response")
             except:
                 label = Label.objects.create(question=self, value="open_response")
                 self.labels.add(label)
