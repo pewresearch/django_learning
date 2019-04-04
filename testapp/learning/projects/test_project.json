@@ -1,0 +1,39 @@
+{
+  "instructions": "",
+  "qualification_tests": [],
+  "admins": [
+    "pvankessel"
+  ],
+  "coders": [
+    {
+      "name": "pvankessel",
+      "is_admin": true
+    }
+  ],
+  "questions": [
+    {
+      "prompt": "Is the movie review good or bad?",
+      "name": "removed",
+      "display": "radio",
+      "labels": [
+        {
+          "label": "Good",
+          "value": "1",
+          "pointers": []
+        },
+        {
+          "label": "Bad",
+          "value": "0",
+          "pointers": []
+        }
+      ],
+      "tooltip": "",
+      "examples": [
+        {
+          "quote": "",
+          "explanation": ""
+        }
+      ]
+    }
+  ]
+}
