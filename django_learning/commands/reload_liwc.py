@@ -54,7 +54,7 @@ class Command(BasicCommand):
 
         liwc_data = h.read("liwc2007", format="dic")
 
-        for line in StringIO(liwc_data):
+        for line in StringIO(unicode(liwc_data)):
 
             line = line.strip("\r\n")
 
