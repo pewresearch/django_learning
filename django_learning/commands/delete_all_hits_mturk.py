@@ -11,12 +11,13 @@ class Command(BasicCommand):
 
     @staticmethod
     def add_arguments(parser):
+        parser.add_argument("--sandbox", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        mturk = MTurk(sandbox=True)
-        mturk.clear_hits()
+        mturk = MTurk(sandbox=self.options["sandbox"])
+        mturk.delete_all_hits()
 
     def cleanup(self):
 
