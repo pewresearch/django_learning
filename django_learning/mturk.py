@@ -4,36 +4,19 @@ from __future__ import print_function
 from builtins import str
 from builtins import range
 from builtins import object
-from boto.mturk.connection import MTurkConnection
-from boto.mturk.qualification import (
-    LocaleRequirement,
-    NumberHitsApprovedRequirement,
-    PercentAssignmentsApprovedRequirement,
-    Qualifications,
-    Requirement
-)
-from boto.mturk.question import Question as TurkQuestion
-from boto.mturk.question import (
-    AnswerSpecification,
-    FreeTextAnswer,
-    HTMLQuestion,
-    LengthConstraint,
-    NumericConstraint,
-    Overview,
-    QuestionContent,
-    QuestionForm,
-    RegExConstraint,
-    SelectionAnswer
-)
+
 from django_learning.models import *
 from django.conf import settings
 from django.template.loader import render_to_string
 from pewtils import is_not_null, decode_text
 from tqdm import tqdm
-import re
+from xml.dom.minidom import parseString
+import re, datetime, boto3, random, time
 from pewtils import decode_text
 
 
+
+# TODO: FREEZE PIP REQUIREMENTS FOR BOTO AND URLLIB3
 class MTurk(object):
 
     def __init__(self, sandbox=True):
@@ -41,152 +24,208 @@ class MTurk(object):
         self.sandbox = sandbox
 
         if sandbox:
-            mturk_host = "mechanicalturk.sandbox.amazonaws.com"
+            mturk_host = "https://mturk-requester-sandbox.us-east-1.amazonaws.com"
         else:
-            mturk_host = "mechanicalturk.amazonaws.com"
+            mturk_host = "https://mturk-requester.us-east-1.amazonaws.com"
 
-        mturk_params = { 'host': mturk_host }
+        mturk_params = {'endpoint_url': mturk_host}
 
         if getattr(settings, 'MTURK_API_ACCESS', None) is not None \
             and getattr(settings, 'MTURK_API_SECRET', None) is not None:
                 mturk_params['aws_access_key_id'] = settings.MTURK_API_ACCESS
                 mturk_params['aws_secret_access_key'] = settings.MTURK_API_SECRET
 
-        self.conn = MTurkConnection(**mturk_params)
+        self.conn = boto3.client('mturk', **mturk_params)
+
+    def paginate_endpoint(self, endpoint, object_key, **kwargs):
+
+        results = []
+        for page in self.conn.get_paginator(endpoint).paginate(**kwargs):
+            results.extend(page[object_key])
+        return results
 
     def sync_hit_type(self, hit_type):
 
         print("Compiling qualifications")
 
-        quals = Qualifications()
-
-        if not self.sandbox:
-
-            quals.add(MasterRequirement(sandbox=False))
-
-            quals.add(
-                PercentAssignmentsApprovedRequirement(
-                    comparator="GreaterThan",
-                    integer_value=str(int(hit_type.min_approve_pct * 100)),
-                    required_to_preview=True
-                )
-            )
-            quals.add(
-                NumberHitsApprovedRequirement(
-                    comparator="GreaterThan",
-                    integer_value=str(hit_type.min_approve_cnt),
-                    required_to_preview=True
-                )
-            )
-            quals.add(
-                LocaleRequirement(
-                    "EqualTo",
-                    "US",
-                    required_to_preview=True
-                )
-            )
+        if self.sandbox:
+            requirements = []
+        else:
+            requirements = [
+                {
+                    "QualificationTypeId": "2ARFPLSP75KLA8M8DH1HTEQVJT3SY6" if self.sandbox else "2F1QJWKUDD8XADTFD2Q0G6UTO95ALH",
+                    "Comparator": "Exists",
+                    "ActionsGuarded": "DiscoverPreviewAndAccept" if not self.sandbox else "Accept"
+                },
+                {
+                    # Worker_Locale
+                    "QualificationTypeId": "00000000000000000071",
+                    "Comparator": "EqualTo",
+                    "LocaleValues": [
+                        {
+                            "Country": "US"
+                        }
+                    ],
+                    "ActionsGuarded": "DiscoverPreviewAndAccept" if not self.sandbox else "Accept"
+                },
+                {   # Worker_​PercentAssignmentsApproved
+                    "QualificationTypeId": "000000000000000000L0",
+                    "Comparator": "GreaterThan",
+                    "IntegerValues": [
+                        int(hit_type.min_approve_pct * 100)
+                    ],
+                    "ActionsGuarded": "DiscoverPreviewAndAccept" if not self.sandbox else "Accept"
+                },
+                {
+                    # Worker_NumberHITsApproved
+                    "QualificationTypeId": "00000000000000000040",
+                    "Comparator": "GreaterThan",
+                    "IntegerValues": [
+                        hit_type.min_approve_cnt
+                    ],
+                    "ActionsGuarded": "DiscoverPreviewAndAccept" if not self.sandbox else "Accept"
+                }
+                # {
+                #     # Worker_Adult
+                #     "QualificationTypeId": "00000000000000000060",
+                #     "Comparator": "EqualTo",
+                #     "IntegerValues": [
+                #         1
+                #     ],
+                #     "ActionsGuarded": "DiscoverPreviewAndAccept" if not self.sandbox else "Accept"
+                # }
+            ]
 
         hit_type_qual_tests = hit_type.project.qualification_tests.all() | hit_type.qualification_tests.all()
 
-        qual_id = None
         for qualification_test in hit_type_qual_tests.distinct():
-            # if hit_type.project.has_qualification:
 
             print("Creating qualification test")
 
-            qual_test = QuestionForm()
+            all_question_xml = []
             for q in qualification_test.questions.all():
-                content = QuestionContent()
-                content.append_field("Title", decode_text(q.prompt))
-                if q.display == "radio":
-                    labels = [(l.label, l.pk) for l in q.labels.all()]
-                    form = AnswerSpecification(
-                        SelectionAnswer(
-                            min=1,
-                            max=1,
-                            selections=labels,
-                            type='text',
-                            style='radiobutton',
-                            other=False
-                        )
-                    )
-                elif q.display == "number":
-                    form = AnswerSpecification(
-                        FreeTextAnswer(
-                            constraints=[
-                                LengthConstraint(min_length=1, max_length=100),
-                                RegExConstraint(r'[0-9]+', error_text="Please enter a number.")
-                                # NumericConstraint(min_value=1, max_value=100)
-                            ],
-                            default="",
-                            num_lines=1
-                        )
-                    )
-                turk_question = TurkQuestion(
-                    identifier=q.name,
-                    content=content,
-                    is_required=True,
-                    answer_spec=form
-                )
-                qual_test.append(turk_question)
 
-            existing_quals = [q for q in self.conn.search_qualification_types(qualification_test.name) if
-                              q.Name == qualification_test.name]
+                answer_xml = None
+                if q.display == "radio":
+                    selection_xml = "\n".join(["""
+                                            <Selection>
+                                                <SelectionIdentifier>{pk}</SelectionIdentifier>
+                                                <Text>{label}</Text>
+                                            </Selection>
+                                        """.format(pk=l.pk, label=l.label) for l in q.labels.all()])
+                    answer_xml = """
+                        <SelectionAnswer>
+                            <StyleSuggestion>radiobutton</StyleSuggestion>
+                            <Selections>
+                                {selections}
+                            </Selections>
+                        </SelectionAnswer>
+                    """.format(selections=selection_xml)
+
+                elif q.display == "number":
+                    answer_xml = """
+                        <SelectionAnswer>
+                            <FreeTextAnswer>
+                                <Constraints>
+                                    <Length minLength="1" maxLength="100"/>
+                                    <AnswerFormRegex regex="[0-9]+" errorText="Please enter a number."/>
+                                </Constraints>
+                                <DefaultText></DefaultText>
+                                <NumberOfLinesSuggestion>1</NumberOfLinesSuggestion>
+                            </FreeTextAnswer>
+                        </SelectionAnswer>
+                    """
+
+                if answer_xml:
+                    question_xml = """
+                                    <Question>
+                                        <QuestionIdentifier>{identifier}</QuestionIdentifier>
+                                        <DisplayName></DisplayName>
+                                        <IsRequired>true</IsRequired>
+                                        <QuestionContent>
+                                            <Text>{prompt}</Text>
+                                        </QuestionContent>
+                                        <AnswerSpecification>
+                                            {answer_spec}
+                                        </AnswerSpecification>
+                                    </Question>
+                                    """.format(
+                        identifier=q.name,
+                        prompt=decode_text(q.prompt),
+                        answer_spec=answer_xml
+                    )
+                    all_question_xml.append(question_xml)
+
+            test_xml = """
+                <QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2017-11-06/QuestionForm.xsd>
+                    {all_question_xml}
+                </QuestionForm>
+
+            """.format(all_question_xml="".join(all_question_xml))
+
+            results = self.paginate_endpoint("list_qualification_types", 'QualificationTypes', MustBeRequestable=True, Query=qualification_test.name)
+            existing_quals = [q for q in results if q['Name'] == qualification_test.name]
             if len(existing_quals) > 0:
-                qual_id = existing_quals[0].QualificationTypeId
+                qual_id = existing_quals[0]['QualificationTypeId']
                 self.conn.update_qualification_type(
-                    qual_id,
-                    description="You must answer a few quick questions before qualifying for these HITs.",
-                    status="Active",
-                    retry_delay=None,
-                    test_duration=qualification_test.duration_minutes * 60,
-                    auto_granted=False,
-                    test=qual_test
+                    QualificationTypeId=qual_id,
+                    Description="You must answer a few quick questions before qualifying for these HITs.",
+                    QualificationTypeStatus="Active",
+                    RetryDelayInSeconds=None,
+                    TestDurationInSeconds=qualification_test.duration_minutes * 60,
+                    AutoGranted=False,
+                    Test=test_xml
                 )
             else:
                 qual_id = self.conn.create_qualification_type(
-                    qualification_test.name,
-                    "You must answer a few quick questions before qualifying for these HITs.",
-                    "Active",
-                    keywords=qualification_test.keywords,
-                    retry_delay=None,
-                    test_duration=qualification_test.duration_minutes * 60,
-                    auto_granted=False,
-                    test=qual_test
+                    Name=qualification_test.name,
+                    Description="You must answer a few quick questions before qualifying for these HITs.",
+                    QualificationTypeStatus="Active",
+                    Keywords=",".join(qualification_test.keywords),
+                    RetryDelayInSeconds=None,
+                    TestDurationInSeconds=qualification_test.duration_minutes * 60,
+                    AutoGranted=False,
+                    Test=test_xml
                 )[0].QualificationTypeId
+            qualification_test.turk_id = qual_id
+            qualification_test.save()
 
-            quals.add(
-                Requirement(
-                    qual_id,
-                    comparator="EqualTo",
-                    integer_value=1,
-                    required_to_preview=False
-                )
-            )
+            requirements.append({
+                "QualificationTypeId": qual_id,
+                "Comparator": "Exists",
+                "ActionsGuarded": "Accept"
+            })
 
         print("Registering HIT Type")
 
-        hit_type_id = self.conn.register_hit_type(
-            decode_text(hit_type.title),
-            decode_text(hit_type.description),
-            hit_type.price,
-            hit_type.duration_minutes * 60,
-            keywords=hit_type.keywords,
-            approval_delay=hit_type.approval_wait_hours * 60 * 60,
-            qual_req=quals
-        )[0].HITTypeId
+        hit_type_id = self.conn.create_hit_type(
+            Title="{}{}".format(decode_text(hit_type.title), " (SANDBOX)" if self.sandbox else ""),
+            Description=decode_text(hit_type.description),
+            Reward=str(hit_type.price),
+            AssignmentDurationInSeconds=hit_type.duration_minutes * 60,
+            Keywords=",".join(hit_type.keywords),
+            AutoApprovalDelayInSeconds=hit_type.approval_wait_hours * 60 * 60,
+            QualificationRequirements=requirements
+        )['HITTypeId']
+        # From the Boto3 docs: "If you register a HIT type with values that match an existing HIT type, the HIT type ID of the existing type will be returned."
 
         if is_not_null(hit_type.turk_id) and hit_type.turk_id != hit_type_id:
 
-            existing_hits = HIT.objects.filter(sample__hit_type=hit_type).filter(turk=True).filter(
-                turk_id__isnull=False)
+            existing_hits = HIT.objects\
+                .filter(sample__hit_type=hit_type)\
+                .filter(turk=True)\
+                .filter(turk_id__isnull=False)
             if existing_hits.count() > 0:
                 print("Existing HITs detected, syncing and then migrating to new type")
+                print("TRIGGERED")
                 for s in Sample.objects.filter(pk__in=existing_hits.values_list("sample_id", flat=True)).distinct():
                     self.sync_sample_hits(s)
                 for h in tqdm(existing_hits, desc="Migrating existing HITs"):
-                    print("{}, {}".format(h.turk_id, hit_type.turk_id))
-                    self.conn.change_hit_type_of_hit(h.turk_id, hit_type.turk_id)
+                    print("{}, {} -> {}".format(h.turk_id, hit_type.turk_id, hit_type_id))
+                    self.conn.update_hit_type_of_hit(
+                        HITId=h.turk_id,
+                        HITTypeId=hit_type_id
+                    )
 
         hit_type.turk_id = hit_type_id
         hit_type.save()
@@ -217,216 +256,314 @@ class MTurk(object):
                     }
                 )
 
+                html = render_to_string(template_path, {
+                    "project": sample.project,
+                    "sample": sample,
+                    "hit": hit,
+                    "questions": hit.sample.project.questions.order_by("priority"),
+                    "django_learning_template": "django_learning/_template.html"
+                # settings.DJANGO_LEARNING_BASE_TEMPLATE
+                })
+                # html = re.sub("\t{2,}", " ", html)
+                # html = re.sub("\n{2,}", "\n\n", html)
+                # html = re.sub("\r{2,}", "\r\r", html)
+                html = re.sub("[^\S\r\n]{2,}", " ", html)
+                turk_hit = """
+                    <HTMLQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2011-11-11/HTMLQuestion.xsd">
+                        <HTMLContent><![CDATA[
+                            <!DOCTYPE html>
+                                {}
+                            </html>
+                        ]]></HTMLContent>
+                        <FrameHeight>0</FrameHeight>
+                    </HTMLQuestion>
+                """.format(html)
                 try:
-                    html = render_to_string(template_path, {
-                        "project": sample.project,
-                        "sample": sample,
-                        "hit": hit,
-                        "questions": hit.sample.project.questions.order_by("priority"),
-                        "django_learning_template": "django_learning/_template.html" # settings.DJANGO_LEARNING_BASE_TEMPLATE
-                    })
-                    # html = re.sub("\t{2,}", " ", html)
-                    # html = re.sub("\n{2,}", "\n\n", html)
-                    # html = re.sub("\r{2,}", "\r\r", html)
-                    html = re.sub("[^\S\r\n]{2,}", " ", html)
-                    turk_hit = HTMLQuestion(html, "1000")
-                    response = self.conn.create_hit(
-                        question=turk_hit,
-                        max_assignments=num_coders,
-                        lifetime=sample.hit_type.lifetime_days * 60 * 60 * 24,
-                        hit_type=sample.hit_type.turk_id
+                    response = self.conn.create_hit_with_hit_type(
+                        Question=turk_hit,
+                        MaxAssignments=num_coders,
+                        LifetimeInSeconds=sample.hit_type.lifetime_days * 60 * 60 * 24,
+                        HITTypeId=sample.hit_type.turk_id
                     )
-                    hit.turk_id = response[0].HITId
+                    hit.turk_id = response['HIT']['HITId']
                     hit.save()
                 except Exception as e:
                     try:
-                        html = decode_text(html)
-                        turk_hit = HTMLQuestion(html, "1000")
-                        response = self.conn.create_hit(
-                            question=turk_hit,
-                            max_assignments=num_coders,
-                            lifetime=sample.hit_type.lifetime_days * 60 * 60 * 24,
-                            hit_type=sample.hit_type.turk_id
+                        turk_hit = decode_text(turk_hit)
+                        response = self.conn.create_hit_with_hit_type(
+                            Question=turk_hit,
+                            MaxAssignments=num_coders,
+                            LifetimeInSeconds=sample.hit_type.lifetime_days * 60 * 60 * 24,
+                            HITTypeId=sample.hit_type.turk_id
                         )
-                        hit.turk_id = response[0].HITId
+                        hit.turk_id = response['HIT']['HITId']
                         hit.save()
                     except Exception as e:
                         print(e)
                         import pdb
                         pdb.set_trace()
 
-    def sync_sample_hits(self, sample, resync=False, approve=True):
+    def _parse_answer_xml(self, a):
+
+        answer_xml = parseString(a)
+        answer_dict = {}
+        for answer in answer_xml.getElementsByTagName("QuestionFormAnswers")[0].childNodes:
+            try:
+                keynode = answer.getElementsByTagName("QuestionIdentifier")[0].firstChild
+                key = keynode.nodeValue if keynode else None
+            except:
+                import pdb
+                pdb.set_trace()
+            if key:
+                try:
+                    valuenode = answer.getElementsByTagName("FreeText")[0].firstChild
+                    value = valuenode.nodeValue if valuenode else None
+                except:
+                    import pdb
+                    pdb.set_trace()
+                answer_dict[key] = value
+
+        return answer_dict
+
+    def _save_assignment(self, hit, a, resync=False):
+
+        coder = Coder.objects.create_or_update({"name": a['WorkerId']}, {"is_mturk": True})
+        hit.sample.project.coders.add(coder)
+        # time_spent = (datetime.datetime.strptime(a.SubmitTime, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(a.AcceptTime, "%Y-%m-%dT%H:%M:%SZ")).seconds
+        # if time_spent >= 10:
+        assignment = Assignment.objects.get_if_exists({"hit": hit, "coder": coder})
+        if not assignment or not assignment.time_finished or resync:
+            assignment = Assignment.objects.create_or_update(
+                {"hit": hit, "coder": coder},
+                {
+                    "turk_id": a['AssignmentId'],
+                    "time_started": a['AcceptTime'],
+                    "turk_status": a['AssignmentStatus']
+                }
+            )
+
+
+            answer = self._parse_answer_xml(a['Answer'])
+            for question, value in answer.items():
+                if question in ["hit_id", "assignment_id"]:
+                    pass
+                elif question == "notes":
+                    assignment.notes = value
+                    assignment.save()
+                elif question == "uncodeable" and value == "1":
+                    assignment.uncodeable = True
+                    assignment.save()
+                else:
+                    try:
+                        q = hit.sample.project.questions.get(name=question)
+                    except:
+                        q = None
+                    if q:
+                        if q.multiple:
+                            value = value.split("|")
+                        notes = answer.get("{}_notes".format(question), None)
+                        q.update_assignment_response(assignment, value, notes=notes)
+            for q in hit.sample.project.questions\
+                    .exclude(name__in=answer.keys())\
+                    .exclude(display="header"):
+                q.update_assignment_response(assignment, None)
+
+            if not assignment.time_finished:
+                assignment.time_finished = a['SubmitTime']
+                assignment.save()
+            else:
+                assignment.save()
+
+        if assignment and assignment.turk_status == "Approved":
+            assignment.turk_approved = True
+            assignment.save()
+
+        return assignment
+
+    def _approve_assignment(self, assignment):
+
+        if assignment and not assignment.turk_approved:
+            try:
+                self.conn.approve_assignment(
+                    AssignmentId=assignment.turk_id,
+                    OverrideRejection=True
+                )
+                status = self.conn.get_assignment(AssignmentId=assignment.turk_id)['Assignment']['AssignmentStatus']
+                assignment.turk_status = status
+                assignment.turk_approved = (status == "Approved")
+                assignment.save()
+            except Exception as e:
+                print(e)
+                print("Couldn't approve assignment (enter 'c' to mark as approved and continue)")
+                import pdb
+                pdb.set_trace()
+
+    def sync_sample_hits(self, sample, resync=False, approve=True, approve_probability=1.0):
+
+        self._find_missing_hits(sample.hit_type.turk_id)
 
         sample_qual_tests = sample.project.qualification_tests.all() | sample.hit_type.qualification_tests.all()
         for qual_test in sample_qual_tests.distinct():
             self.sync_qualification_test(qual_test)
 
         for hit in tqdm(self._update_and_yield_sample_hits(sample), desc="Syncing HITs"):
-
             if hit.turk_id and (hit.assignments.filter(time_finished__isnull=False).count() < hit.num_coders or resync):
-
-                for a in self._get_hit_assignments(str(hit.turk_id)):
-
-                    coder = Coder.objects.create_or_update({"name": a.WorkerId}, {"is_mturk": True})
-                    sample.project.coders.add(coder)
-                    # time_spent = (datetime.datetime.strptime(a.SubmitTime, "%Y-%m-%dT%H:%M:%SZ") - datetime.datetime.strptime(a.AcceptTime, "%Y-%m-%dT%H:%M:%SZ")).seconds
-                    # if time_spent >= 10:
-                    assignment = Assignment.objects.get_if_exists({"hit": hit, "coder": coder})
-                    if not assignment or not assignment.time_finished or resync:
-                        assignment = Assignment.objects.create_or_update(
-                            {"hit": hit, "coder": coder},
-                            {
-                                "turk_id": a.AssignmentId,
-                                "time_started": a.AcceptTime,
-                                "turk_status": a.AssignmentStatus
-                            }
-                        )
-                        for answer in a.answers[0]:
-                            question = answer.qid
-                            code_ids = answer.fields
-                            if question != "hit_id":
-                                if question == "notes":
-                                    assignment.notes = code_ids[0]
-                                    assignment.save()
-                                elif question == "uncodeable" and "1" in code_ids:
-                                    assignment.uncodeable = True
-                                    assignment.save()
-                                else:
-                                    try:
-                                        q = hit.sample.project.questions.get(name=question)
-                                    except:
-                                        q = None
-                                    if q:
-                                        if len(code_ids) < 2 and not q.multiple:
-                                            code_ids = code_ids[0]
-                                        q.update_assignment_response(assignment, code_ids)
-
-                        form_questions = [ans.qid for ans in a.answers[0]]
-                        for q in hit.sample.project.questions\
-                                .exclude(name__in=form_questions)\
-                                .exclude(display="header"):
-                            q.update_assignment_response(assignment, None)
-
-                        if not assignment.time_finished:
-                            assignment.time_finished = a.SubmitTime
-                            assignment.save()
-                        else:
-                            assignment.save()
-
-                    if assignment and assignment.turk_status == "Approved":
-                        assignment.turk_approved = True
-                        assignment.save()
-
-                    if approve and assignment and not assignment.turk_approved:
-                        try:
-                            self.conn.approve_assignment(assignment.turk_id) # a.AssignmentId)
-                        except Exception as e:
-                            print(e)
-                            print("Couldn't approve assignment (enter 'c' to mark as approved and continue)")
-                            import pdb
-                            pdb.set_trace()
-                        assignment.turk_approved = True
-                        assignment.save()
-
-    def sync_qualification_test(self, qual_test):
-
-        for a in self._get_qualification_requests(qual_test):
-
-            coder = Coder.objects.create_or_update({"name": a.SubjectId}, {"is_mturk": True})
-            assignment = QualificationAssignment.objects.create_or_update(
-                {"test": qual_test, "coder": coder},
-                {
-                    "turk_id": a.QualificationRequestId,
-                    "time_finished": a.SubmitTime
-                }
-            )
-            for answer in a.answers[0]:
-                question = answer.qid
-                code_ids = answer.fields
-                try:
-                    q = qual_test.questions.get(name=question)
-                except:
-                    q = None
-                if q:
-                    if len(code_ids) < 2 and not q.multiple:
-                        code_ids = code_ids[0]
-                    q.update_assignment_response(assignment, code_ids)
-
-            if coder.is_qualified(qual_test):  # and coder not in sample.project.inactive_coders.all():
-                self.conn.grant_qualification(a.QualificationRequestId)
+                for a in self.paginate_endpoint("list_assignments_for_hit", 'Assignments', HITId=str(hit.turk_id)):
+                    assignment = self._save_assignment(hit, a, resync=resync)
+                    if not assignment.turk_approved and approve:
+                        if random.random() >= (1.0 - approve_probability):
+                            self._approve_assignment(assignment)
 
     def print_account_balance(self):
 
         print(self.conn.get_account_balance())
 
-    def clear_hits(self):
+    def _expire_hits(self, hit_ids):
 
-        for hit in HIT.objects.filter(turk=True):
-            try:
-                self.conn.expire_hit(hit.turk_id)
-            except:
-                pass
-            try:
-                self.conn.dispose_hit(hit.turk_id)
-            except:
-                pass
+        if len(hit_ids) > 0:
+            if not self.sandbox:
+                print("WARNING: you are about to expire {} HITs, are you sure?".format(len(hit_ids)))
+                import pdb
+                pdb.set_trace()
+            for hit_id in hit_ids:
+                self.conn.update_expiration_for_hit(
+                    HITId=hit_id,
+                    ExpireAt=datetime.datetime.now()
+                )
 
-        # for hit_type_id in HITType.objects.values_list("turk_id", flat=True).distinct():
-        #     pass
+    def expire_all_hits(self):
 
-        # for sample in Sample.objects.all():
-        #     qual_identifier = "{}_{}_{}".format(sample.project.name, sample.name, "qualification")
-        #     existing_quals = mturk.search_qualification_types(qual_identifier)
-        #     for q in existing_quals:
-        #         mturk.dispose_qualification_type(q.QualificationTypeId)
+        hit_ids = [hit['HITId'] for hit in self.paginate_endpoint("list_hits", "HITs")]
+        self._expire_hits(hit_ids)
 
-    def revoke_qualification(self, qual_test, coder):
+    def expire_sample_hits(self, sample):
 
-        self.conn.update_qualification_score(qual_test.turk_id, coder.name, 0)
-        # qual_identifier = "{}_{}".format(sample.project.name, sample.hit_type.name)
-        # existing_quals = self.conn.search_qualification_types(qual_identifier)
-        # for q in existing_quals:
-        #     self.conn.update_qualification_score(q.QualificationTypeId, coder.name, 0)
-        #     # self.conn.revoke_qualification(coder.name, q.QualificationTypeId, reason="Sorry, your responses were to inconsistent with our own - thank you for the assignments that you've already completed, and keep an eye out for new samples on other projects.")
+        self.sync_sample_hits(sample)
+        hit_ids = sample.hits.filter(turk=True).filter(turk_id__isnull=False).values_list("turk_id", flat=True)
+        self._expire_hits(hit_ids)
 
-    def find_missing_hits(self, hit_type_id):
+    def _delete_hits(self, hit_ids):
+
+        if len(hit_ids) > 0:
+            if not self.sandbox:
+                print("WARNING: you are about to delete {} HITs, are you sure?".format(len(hit_ids)))
+                print("If there are any unapproved assignments, they will be automatically approved before the HIT is deleted")
+                import pdb
+                pdb.set_trace()
+
+            for hit_id in hit_ids:
+
+                for a in self.paginate_endpoint("list_assignments_for_hit", 'Assignments', HITId=str(hit_id)):
+                    if a['AssignmentStatus'] == "Submitted":
+                        self.conn.approve_assignment(
+                            AssignmentId=a['AssignmentId'],
+                            OverrideRejection=True
+                        )
+                try:
+                    self.conn.update_expiration_for_hit(
+                        HITId=hit_id,
+                        ExpireAt=datetime.datetime.now()
+                    )
+                    try: self.conn.delete_hit(HITId=hit_id)
+                    except:
+                        time.sleep(10)
+                        self.conn.delete_hit(HITId=hit_id)
+                    hit = HIT.objects.get(turk_id=hit_id)
+                    hit.turk_id = None
+                    hit.turk_status = "Deleted"
+                    hit.save()
+                except Exception as e:
+                    print(e)
+                    import pdb
+                    pdb.set_trace()
+
+    def delete_all_hits(self):
+
+        hit_ids = [hit['HITId'] for hit in self.paginate_endpoint("list_hits", "HITs")]
+        self._delete_hits(hit_ids)
+
+    def delete_sample_hits(self, sample):
+
+        self.sync_sample_hits(sample)
+        hit_ids = sample.hits.filter(turk=True).filter(turk_id__isnull=False).values_list("turk_id", flat=True)
+        self._delete_hits(hit_ids)
+
+    # TODO: get the functions below working
+    # def sync_qualification_test(self, qual_test):
+    #
+    #     existing_quals = self.paginate_endpoint("list_qualification_types", 'QualificationTypes', Query=qual_test.name)
+    #     for q in existing_quals:
+    #         if q['Name'] == qual_test.name:
+    #             requests = self.paginate_endpoints("get_qualification_requests", 'QualificationRequests', QualificationTypeId=q.QualificationTypeId)
+    #
+    #             for a in requests:
+    #
+    #                 coder = Coder.objects.create_or_update({"name": a['SubjectId']}, {"is_mturk": True})
+    #                 assignment = QualificationAssignment.objects.create_or_update(
+    #                     {"test": qual_test, "coder": coder},
+    #                     {
+    #                         "turk_id": a.['QualificationRequestId'],
+    #                         "time_finished": a['SubmitTime']
+    #                     }
+    #                 )
+    #                 for answer in a['answers'][0]:
+    #                     question = answer['qid']
+    #                     code_ids = answer['fields']
+    #                     try:
+    #                         q = qual_test.questions.get(name=question)
+    #                     except:
+    #                         q = None
+    #                     if q:
+    #                         if len(code_ids) < 2 and not q.multiple:
+    #                             code_ids = code_ids[0]
+    #                         q.update_assignment_response(assignment, code_ids)
+    #
+    #                 if coder.is_qualified(qual_test):  # and coder not in sample.project.inactive_coders.all():
+    #                     self.conn.accept_qualification_request(
+    #                         QualificationRequestId=a['QualificationRequestId']
+    #                     )
+    #
+    # def revoke_qualification(self, qual_test, coder):
+    #
+    #     self.conn.disassociate_qualification_from_worker(
+    #         QualificationTypeId=qual_test.turk_id,
+    #         WorkerId=coder.name,
+    #     )
+    #     # qual_identifier = "{}_{}".format(sample.project.name, sample.hit_type.name)
+    #     # existing_quals = self.conn.search_qualification_types(qual_identifier)
+    #     # for q in existing_quals:
+    #     #     self.conn.update_qualification_score(q.QualificationTypeId, coder.name, 0)
+    #     #     # self.conn.revoke_qualification(coder.name, q.QualificationTypeId, reason="Sorry, your responses were to inconsistent with our own - thank you for the assignments that you've already completed, and keep an eye out for new samples on other projects.")
+
+    def _find_missing_hits(self, hit_type_id):
 
         good_hits = HIT.objects.filter(turk=True).filter(turk_id__isnull=False).values_list("turk_id", flat=True)
         bad_hits = HIT.objects.filter(turk=True).filter(turk_id__isnull=True)
         actual_hits = []
-        for hit in self.conn.get_all_hits():
-            if hit.HITId not in good_hits and hit.HITTypeId == hit_type_id:
+        for hit in self.paginate_endpoint("list_hits", "HITs"):
+            if hit['HITId'] not in good_hits and hit['HITTypeId'] == hit_type_id:
                 actual_hits.append(hit)
         counter = 0
         for hit in actual_hits:
             hit_id = None
-            for a in self.conn.get_assignments(hit.HITId, page_size=10):
-                for answer in a.answers[0]:
-                    if answer.qid == "hit_id":
-                        hit_id = answer.fields[0]
-                        break
+            for a in self.paginate_endpoint("list_assignments_for_hit", "Assignments", HITId=hit['HITId']):
+                answer = self._parse_answer_xml(a['Answer'])
+                hit_id = answer.get("hit_id", None)
                 if hit_id:
                     break
-            db_hit = bad_hits.get(pk=hit_id)
-            db_hit.turk_id = hit.HITId
-            db_hit.save()
-            counter += 1
+            if hit_id:
+                db_hit = bad_hits.get(pk=hit_id)
+                db_hit.turk_id = hit['HITId']
+                db_hit.save()
+                counter += 1
         print("Found {} missing HITs and restored their turk_ids".format(counter))
-
-    def _get_hit_assignments(self, hit_id):
-
-        assignments = self.conn.get_assignments(hit_id, page_size=10)
-        for a in assignments: yield a
-        for page_num in range(2, int(int(assignments.TotalNumResults) / 10) + 1):
-            for a in self.conn.get_assignments(str(self.conn.turk_id), page_size=10, page_number=page_num):
-                yield a
 
     def _update_and_yield_sample_hits(self, sample):
 
         for hit in sample.hits.filter(turk=True).filter(turk_id__isnull=False):
             try:
-                h = self.conn.get_hit(str(hit.turk_id))[0]
-                hit.turk_status = h.HITStatus
+                h = self.conn.get_hit(HITId=str(hit.turk_id))['HIT']
+                hit.turk_status = h['HITStatus']
                 hit.save()
             except Exception as e:
                 if e.error_code == "AWS.MechanicalTurk.HITDoesNotExist":
@@ -437,17 +574,6 @@ class MTurk(object):
                     raise
             yield hit
 
-    def _get_qualification_requests(self, qualification_test):
-
-        existing_quals = self.conn.search_qualification_types(qualification_test.name)
-        for q in existing_quals:
-            if q.Name == qualification_test.name:
-                requests = self.conn.get_qualification_requests(q.QualificationTypeId, page_size=10)
-                for r in requests: yield r
-                for page_num in range(2, int(int(requests.TotalNumResults) / 10) + 1):
-                    for r in self.conn.get_qualification_requests(q.QualificationTypeId, page_size=10, page_number=page_num):
-                        yield r
-
     # def sync_qualification_test(self, qual_test):
     #
     #     for c in tqdm(hit_type.project.coders.filter(turk=True), desc="Updating qualification for all existing coders"):
@@ -457,13 +583,3 @@ class MTurk(object):
     #         else:
     #             try: self.conn.assign_qualification(hit_type.qualification_turk_id, c.name, 0)
     #             except: self.conn.update_qualification_score(hit_type.qualification_turk_id, c.name, 0)
-
-
-class MasterRequirement(Requirement):
-
-    def __init__(self, sandbox=False, required_to_preview=False):
-        comparator = "Exists"
-        sandbox_qualification_type_id = "2ARFPLSP75KLA8M8DH1HTEQVJT3SY6"
-        production_qualification_type_id = "2F1QJWKUDD8XADTFD2Q0G6UTO95ALH"
-        qualification_type_id = production_qualification_type_id if not sandbox else sandbox_qualification_type_id
-        super(MasterRequirement, self).__init__(qualification_type_id=qualification_type_id, comparator=comparator, required_to_preview=required_to_preview)
