@@ -27,11 +27,12 @@ class Extractor(DatasetExtractor):
         ignore_stratification_weights = kwargs.get("ignore_stratification_weights", None)
         weight_column = kwargs.get("weight_column", "sampling_weight")
         exclude_consensus_ignore = kwargs.get("exclude_consensus_ignore", False)
+        sandbox = kwargs.get("sandbox", False)
         # frame_filter_params = kwargs.get("frame_filter_params", False)
 
         super(Extractor, self).__init__(**kwargs)
 
-        self.project = get_model("Project", app_name="django_learning").objects.get(name=project_name)
+        self.project = get_model("Project", app_name="django_learning").objects.filter(sandbox=sandbox).get(name=project_name)
         self.samples = self.project.samples.filter(name__in=sample_names)
         self.questions = self.project.questions.filter(name__in=question_names)
         self.labels = get_model("Label", app_name="django_learning").objects.filter(question__in=self.questions.all())
