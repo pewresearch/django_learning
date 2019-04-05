@@ -8,8 +8,16 @@ APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__)).decode('utf-8
 SITE_NAME = "testapp"
 
 INSTALLED_APPS = [
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
+'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.sites',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.redirects',
+    'django.contrib.sitemaps',
+    'django.contrib.admin',
+    'django.contrib.admindocs',
     "django_commander",
     "django_learning",
     "testapp"
@@ -21,7 +29,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': None,
+        'PASSWORD': '',
         'HOST': 'localhost',
         'PORT': '',
     }
