@@ -10,6 +10,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from pewtils import is_not_null, decode_text
 from tqdm import tqdm
+from collections import defaultdict
 from xml.dom.minidom import parseString
 import re, datetime, boto3, random, time
 from pewtils import decode_text
@@ -96,9 +97,7 @@ class MTurk(object):
                 # }
             ]
 
-        hit_type_qual_tests = hit_type.project.qualification_tests.all() | hit_type.qualification_tests.all()
-
-        for qualification_test in hit_type_qual_tests.distinct():
+        for qualification_test in hit_type.project.qualification_tests.all():
 
             print("Creating qualification test")
 
@@ -157,21 +156,20 @@ class MTurk(object):
                     all_question_xml.append(question_xml)
 
             test_xml = """
-                <QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2017-11-06/QuestionForm.xsd>
+                <QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2017-11-06/QuestionForm.xsd">
                     {all_question_xml}
                 </QuestionForm>
 
             """.format(all_question_xml="".join(all_question_xml))
 
-            results = self.paginate_endpoint("list_qualification_types", 'QualificationTypes', MustBeRequestable=True, Query=qualification_test.name)
-            existing_quals = [q for q in results if q['Name'] == qualification_test.name]
+            results = self.paginate_endpoint("list_qualification_types", 'QualificationTypes', MustBeRequestable=True, Query=qualification_test.name, MustBeOwnedByCaller=True)
+            existing_quals = [q for q in results if q['Name'] == qualification_test.name and q['QualificationTypeStatus'] != "Disposing"]
             if len(existing_quals) > 0:
                 qual_id = existing_quals[0]['QualificationTypeId']
                 self.conn.update_qualification_type(
                     QualificationTypeId=qual_id,
                     Description="You must answer a few quick questions before qualifying for these HITs.",
                     QualificationTypeStatus="Active",
-                    RetryDelayInSeconds=None,
                     TestDurationInSeconds=qualification_test.duration_minutes * 60,
                     AutoGranted=False,
                     Test=test_xml
@@ -182,11 +180,10 @@ class MTurk(object):
                     Description="You must answer a few quick questions before qualifying for these HITs.",
                     QualificationTypeStatus="Active",
                     Keywords=",".join(qualification_test.keywords),
-                    RetryDelayInSeconds=None,
                     TestDurationInSeconds=qualification_test.duration_minutes * 60,
                     AutoGranted=False,
                     Test=test_xml
-                )[0].QualificationTypeId
+                )['QualificationType']['QualificationTypeId']
             qualification_test.turk_id = qual_id
             qualification_test.save()
 
@@ -303,7 +300,10 @@ class MTurk(object):
                         import pdb
                         pdb.set_trace()
 
-    def _parse_answer_xml(self, a):
+    def _parse_answer_xml(self, a, qual_test=False):
+
+        if qual_test: answer_tag = "SelectionIdentifier"
+        else: answer_tag = "FreeText"
 
         answer_xml = parseString(a)
         answer_dict = {}
@@ -312,11 +312,10 @@ class MTurk(object):
                 keynode = answer.getElementsByTagName("QuestionIdentifier")[0].firstChild
                 key = keynode.nodeValue if keynode else None
             except:
-                import pdb
-                pdb.set_trace()
+                key = None
             if key:
                 try:
-                    valuenode = answer.getElementsByTagName("FreeText")[0].firstChild
+                    valuenode = answer.getElementsByTagName(answer_tag)[0].firstChild
                     value = valuenode.nodeValue if valuenode else None
                 except:
                     import pdb
@@ -402,8 +401,7 @@ class MTurk(object):
 
         self._find_missing_hits(sample.hit_type.turk_id)
 
-        sample_qual_tests = sample.project.qualification_tests.all() | sample.hit_type.qualification_tests.all()
-        for qual_test in sample_qual_tests.distinct():
+        for qual_test in sample.project.qualification_tests.all().distinct():
             self.sync_qualification_test(qual_test)
 
         for hit in tqdm(self._update_and_yield_sample_hits(sample), desc="Syncing HITs"):
@@ -466,12 +464,13 @@ class MTurk(object):
                     )
                     try: self.conn.delete_hit(HITId=hit_id)
                     except:
-                        time.sleep(10)
+                        time.sleep(30)
                         self.conn.delete_hit(HITId=hit_id)
-                    hit = HIT.objects.get(turk_id=hit_id)
-                    hit.turk_id = None
-                    hit.turk_status = "Deleted"
-                    hit.save()
+                    hit = HIT.objects.get_if_exists({"turk_id": hit_id})
+                    if hit:
+                        hit.turk_id = None
+                        hit.turk_status = "Deleted"
+                        hit.save()
                 except Exception as e:
                     print(e)
                     import pdb
@@ -488,52 +487,110 @@ class MTurk(object):
         hit_ids = sample.hits.filter(turk=True).filter(turk_id__isnull=False).values_list("turk_id", flat=True)
         self._delete_hits(hit_ids)
 
-    # TODO: get the functions below working
-    # def sync_qualification_test(self, qual_test):
-    #
-    #     existing_quals = self.paginate_endpoint("list_qualification_types", 'QualificationTypes', Query=qual_test.name)
-    #     for q in existing_quals:
-    #         if q['Name'] == qual_test.name:
-    #             requests = self.paginate_endpoints("get_qualification_requests", 'QualificationRequests', QualificationTypeId=q.QualificationTypeId)
-    #
-    #             for a in requests:
-    #
-    #                 coder = Coder.objects.create_or_update({"name": a['SubjectId']}, {"is_mturk": True})
-    #                 assignment = QualificationAssignment.objects.create_or_update(
-    #                     {"test": qual_test, "coder": coder},
-    #                     {
-    #                         "turk_id": a.['QualificationRequestId'],
-    #                         "time_finished": a['SubmitTime']
-    #                     }
-    #                 )
-    #                 for answer in a['answers'][0]:
-    #                     question = answer['qid']
-    #                     code_ids = answer['fields']
-    #                     try:
-    #                         q = qual_test.questions.get(name=question)
-    #                     except:
-    #                         q = None
-    #                     if q:
-    #                         if len(code_ids) < 2 and not q.multiple:
-    #                             code_ids = code_ids[0]
-    #                         q.update_assignment_response(assignment, code_ids)
-    #
-    #                 if coder.is_qualified(qual_test):  # and coder not in sample.project.inactive_coders.all():
-    #                     self.conn.accept_qualification_request(
-    #                         QualificationRequestId=a['QualificationRequestId']
-    #                     )
-    #
-    # def revoke_qualification(self, qual_test, coder):
-    #
-    #     self.conn.disassociate_qualification_from_worker(
-    #         QualificationTypeId=qual_test.turk_id,
-    #         WorkerId=coder.name,
-    #     )
-    #     # qual_identifier = "{}_{}".format(sample.project.name, sample.hit_type.name)
-    #     # existing_quals = self.conn.search_qualification_types(qual_identifier)
-    #     # for q in existing_quals:
-    #     #     self.conn.update_qualification_score(q.QualificationTypeId, coder.name, 0)
-    #     #     # self.conn.revoke_qualification(coder.name, q.QualificationTypeId, reason="Sorry, your responses were to inconsistent with our own - thank you for the assignments that you've already completed, and keep an eye out for new samples on other projects.")
+    def get_annual_worker_compensation(self, year=None):
+
+        workers = defaultdict(float)
+        if not year: year = datetime.datetime.now().year
+        for hit in self.paginate_endpoint("list_hits", "HITs"):
+            for a in self.paginate_endpoint("list_assignments_for_hit", 'Assignments', HITId=str(hit['HITId'])):
+                if a['AssignmentStatus'] == 'Approved' and a['ApprovalTime'].year == year:
+                    workers[a['WorkerId']] += float(hit['Reward'])
+
+        return workers
+
+    def update_worker_blocks(self, notify=False, max_comp=500):
+
+        worker_comp = self.get_annual_worker_compensation(year=datetime.datetime.now().year)
+        blocks = self.get_worker_blocks()
+        blocks = blocks.get("Maximum annual compensation", [])
+
+        over_limit = []
+        for worker_id, comp in worker_comp.iteritems():
+            if comp >= max_comp:
+                over_limit.append(worker_id)
+
+        to_add = list(set(over_limit).difference(set(blocks)))
+        title = "Maximum number of HITs reached"
+        message = """
+            Hello - we just wanted to let you know that you've reached the maximum number of HITs that we can offer you \
+            for {}.  Thank you so much for helping us with our research, and we hope you'll work with us again in the future! \
+            We'll automatically lift the block on your account in the new year.  In the meantime, feel free to reach out \
+            to us if you have questions.  
+        """.format(datetime.datetime.now().year)
+        if notify and len(to_add) > 0:
+            self.conn.notify_workers(Subject=title, MessageText=message, WorkerIds=to_add)
+        for worker_id in to_add:
+            self.conn.create_worker_block(WorkerId=worker_id, Reason="Maximum annual compensation")
+
+        to_remove = list(set(blocks).difference(set(over_limit)))
+        for worker_id in to_remove:
+            self.conn.delete_worker_block(WorkerId=worker_id, Reason="")
+
+    def clear_all_worker_blocks(self):
+
+        for k, blocks in self.get_worker_blocks().items():
+            for worker_id in blocks:
+                self.conn.delete_worker_block(WorkerId=worker_id, Reason="")
+
+    def get_worker_blocks(self):
+
+        blocks = defaultdict(list)
+        for block in self.paginate_endpoint("list_worker_blocks", "WorkerBlocks"):
+            blocks[block['Reason']].append(block['WorkerId'])
+
+        return blocks
+
+    def sync_qualification_test(self, qual_test):
+
+        existing_quals = self.paginate_endpoint("list_qualification_types", 'QualificationTypes', MustBeRequestable=True, Query=qual_test.name, MustBeOwnedByCaller=True)
+        for q in existing_quals:
+            if q['Name'] == qual_test.name:
+                requests = self.paginate_endpoint("list_qualification_requests", 'QualificationRequests', QualificationTypeId=q['QualificationTypeId'])
+
+                for a in requests:
+
+                    coder = Coder.objects.create_or_update({"name": a['WorkerId']}, {"is_mturk": True})
+                    assignment = QualificationAssignment.objects.create_or_update(
+                        {"test": qual_test, "coder": coder},
+                        {
+                            "turk_id": a['QualificationRequestId'],
+                            "time_finished": a['SubmitTime']
+                        }
+                    )
+                    answer = self._parse_answer_xml(a['Answer'], qual_test=True)
+                    for question, value in answer.items():
+                        try:
+                            q = qual_test.questions.get(name=question)
+                        except:
+                            q = None
+                        if q:
+                            if q.multiple:
+                                value = value.split("|")
+                            q.update_assignment_response(assignment, value)
+                    for q in qual_test.questions \
+                            .exclude(name__in=answer.keys()):
+                        q.update_assignment_response(assignment, None)
+
+                    if coder.is_qualified(qual_test):  # and coder not in sample.project.inactive_coders.all():
+                        self.conn.accept_qualification_request(
+                            QualificationRequestId=a['QualificationRequestId']
+                        )
+                    else:
+                        try:
+                            self.revoke_qualification(qual_test, coder)
+                        except Exception as e:
+                            print(e)
+
+    def revoke_qualification(self, qual_test, coder):
+
+        self.conn.disassociate_qualification_from_worker(
+            QualificationTypeId=qual_test.turk_id,
+            WorkerId=coder.name,
+        )
+
+    def delete_qualification_test(self, qual_test):
+
+        self.conn.delete_qualification_type(QualificationTypeId=qual_test.turk_id)
 
     def _find_missing_hits(self, hit_type_id):
 
@@ -556,7 +613,8 @@ class MTurk(object):
                 db_hit.turk_id = hit['HITId']
                 db_hit.save()
                 counter += 1
-        print("Found {} missing HITs and restored their turk_ids".format(counter))
+        if counter > 0:
+            print("Found {} missing HITs and restored their turk_ids".format(counter))
 
     def _update_and_yield_sample_hits(self, sample):
 
@@ -573,13 +631,3 @@ class MTurk(object):
                 else:
                     raise
             yield hit
-
-    # def sync_qualification_test(self, qual_test):
-    #
-    #     for c in tqdm(hit_type.project.coders.filter(turk=True), desc="Updating qualification for all existing coders"):
-    #         if c.is_qualified(hit_type.project) and c not in hit_type.project.inactive_coders.all():
-    #             try: self.conn.assign_qualification(hit_type.qualification_turk_id, c.name, 1)
-    #             except: self.conn.update_qualification_score(hit_type.qualification_turk_id, c.name, 1)
-    #         else:
-    #             try: self.conn.assign_qualification(hit_type.qualification_turk_id, c.name, 0)
-    #             except: self.conn.update_qualification_score(hit_type.qualification_turk_id, c.name, 0)
