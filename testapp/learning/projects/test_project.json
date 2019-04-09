@@ -1,6 +1,6 @@
 {
   "instructions": "Instructions",
-  "qualification_tests": [],
+  "qualification_tests": ["test_qualification"],
   "admins": [
     "pvankessel"
   ],
