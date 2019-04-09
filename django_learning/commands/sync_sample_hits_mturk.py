@@ -21,6 +21,9 @@ class Command(BasicCommand):
         parser.add_argument("--loop", default=False, action="store_true")
         parser.add_argument("--approve", default=False, action="store_true")
         parser.add_argument("--approve_probability", default=1.0, type=float)
+        parser.add_argument("--update_blocks", default=False, action="store_true")
+        parser.add_argument("--max_comp", default=500, type=int)
+        parser.add_argument("--notify_blocks", default=False, action="store_true")
         return parser
 
     def run(self):
@@ -41,6 +44,11 @@ class Command(BasicCommand):
                 approve=self.options["approve"],
                 approve_probability=self.options["approve_probability"]
             )
+            if self.options["update_blocks"]:
+                mturk.update_worker_blocks(
+                    notify=self.options["notify_blocks"],
+                    max_comp=self.options["max_comp"]
+                )
             if not self.options["loop"]:
                 break
             time.sleep(self.options["time_sleep"])
