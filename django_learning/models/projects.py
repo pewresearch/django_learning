@@ -328,8 +328,11 @@ class QualificationTest(LoggedExtendedModel):
 
     def is_qualified(self, coder):
 
-        try: return self.assignments.get(coder=coder).is_qualified
-        except QualificationAssignment.DoesNotExist: return False
+        try:
+            assignment = self.assignments.filter(time_finished__isnull=False).get(coder=coder)
+            return project_qualification_scorers.project_qualification_scorers[self.name](assignment)
+        except QualificationAssignment.DoesNotExist:
+            return False
 
 
 class QualificationAssignment(LoggedExtendedModel):
@@ -341,14 +344,6 @@ class QualificationAssignment(LoggedExtendedModel):
     time_finished = models.DateTimeField(null=True)
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
-
-    is_qualified = models.NullBooleanField()
-
-    def save(self, *args, **kwargs):
-
-        if is_not_null(self.time_finished):
-            self.is_qualified = project_qualification_scorers.project_qualification_scorers[self.test.name](self)
-        super(QualificationAssignment, self).save(*args, **kwargs)
 
 
 class HITType(LoggedExtendedModel):
@@ -367,8 +362,6 @@ class HITType(LoggedExtendedModel):
     min_approve_cnt = models.IntegerField(null=True)
 
     turk_id = models.CharField(max_length=250, unique=True, null=True)
-
-    qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="hit_types")
 
     class Meta:
         unique_together = ("project", "name")
@@ -396,15 +389,3 @@ class HITType(LoggedExtendedModel):
             setattr(self, attr, val)
 
         super(HITType, self).save(*args, **kwargs)
-
-        qual_tests = []
-        for qual_test in config.get("qualification_tests", []):
-            qual_tests.append(
-                QualificationTest.objects.create_or_update({"name": qual_test, "sandbox": self.project.sandbox})
-            )
-        self.qualification_tests = qual_tests
-
-    def is_qualified(self, coder):
-
-        qual_tests = self.qualification_tests.all() | self.project.qualification_tests.all()
-        return all([qual_test.is_qualified(coder) for qual_test in qual_tests])
