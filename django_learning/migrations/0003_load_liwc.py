@@ -9,13 +9,14 @@ from tqdm import tqdm
 from django_pewtils import get_model
 from pewtils.io import FileHandler
 
-from django_learning.settings import BASE_DIR
+from django.conf import settings
 from django_commander.commands import commands
 
 
 def forwards(apps, schema_editor):
 
-    commands["reload_liwc"]().run()
+    if not hasattr(settings, "SITE_NAME") or not settings.SITE_NAME == "testapp":
+        commands["reload_liwc"]().run()
 
 def backwards(apps, schema_editor):
 

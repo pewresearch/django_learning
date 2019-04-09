@@ -193,7 +193,7 @@
                                         </td>
                                     {% elif q.display == 'dropdown' %}
                                         <td class="form-group">
-                                            <select class="form-control" name="{{ q.name }}" id="{{ q.name }}"
+                                            <select {% if q.multiple %} multiple {% endif %}class="form-control" name="{{ q.name }}" id="{{ q.name }}"
                                                     {% if not q.optional %}required{% endif %}
                                                     {% if q.dependency %} data-visibility="{{ q.dependency.question.name }}_{{ q.dependency.value }}" data-required="{{ q.dependency.question.name }}_{{ q.dependency.value }}"{% endif %}
                                             >

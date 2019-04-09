@@ -20,18 +20,22 @@ from django_learning.utils import dataset_extractors
 
 class Project(LoggedExtendedModel):
 
-    name = models.CharField(max_length=250, unique=True)
+    name = models.CharField(max_length=250)
     coders = models.ManyToManyField("django_learning.Coder", related_name="projects")
     admins = models.ManyToManyField("django_learning.Coder", related_name="admin_projects")
     inactive_coders = models.ManyToManyField("django_learning.Coder", related_name="inactive_projects")
     instructions = models.TextField(null=True)
     qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="projects")
-
+    sandbox = models.BooleanField(default=False)
     # classification_models = GenericRelation("django_learning.ClassificationModel")
     # regression_models = GenericRelation("django_learning.RegressionModel")
 
-    def __str__(self):
-        return self.name
+    def __str___(self):
+        if self.sandbox: return "{} (SANDBOX)".format(self.name)
+        else: return self.name
+
+    class Meta:
+        unique_together = ("name", "sandbox")
 
     def save(self, *args, **kwargs):
 
@@ -52,7 +56,7 @@ class Project(LoggedExtendedModel):
         qual_tests = []
         for qual_test in config.get("qualification_tests", []):
             qual_tests.append(
-                QualificationTest.objects.create_or_update({"name": qual_test})
+                QualificationTest.objects.create_or_update({"name": qual_test, "sandbox": self.sandbox})
             )
         self.qualification_tests = qual_tests
 
@@ -105,6 +109,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
+            sandbox=self.sandbox,
             **kwargs
         )
         return e.extract(refresh=kwargs.get("refresh", False))
@@ -115,6 +120,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
+            sandbox=self.sandbox
             **kwargs
         )
         return e.extract(refresh=kwargs.get("refresh", False))
@@ -125,6 +131,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
+            sandbox=self.sandbox,
             **kwargs
         )
         return e.extract(refresh=kwargs.get("refresh", False))
@@ -277,7 +284,7 @@ class Example(LoggedExtendedModel):
 
 class QualificationTest(LoggedExtendedModel):
 
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     coders = models.ManyToManyField("django_learning.Coder", related_name="qualification_tests", through="django_learning.QualificationAssignment")
     instructions = models.TextField(null=True)
     turk_id = models.CharField(max_length=250, unique=True, null=True)
@@ -288,9 +295,14 @@ class QualificationTest(LoggedExtendedModel):
     approval_wait_hours = models.IntegerField(null=True)
     duration_minutes = models.IntegerField(null=True)
     lifetime_days = models.IntegerField(null=True)
+    sandbox = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.name
+        if self.sandbox: return "{} (SANDBOX)".format(self.name)
+        else: return self.name
+
+    class Meta:
+        unique_together = ("name", "sandbox")
 
     def save(self, *args, **kwargs):
 
@@ -316,8 +328,11 @@ class QualificationTest(LoggedExtendedModel):
 
     def is_qualified(self, coder):
 
-        try: return self.assignments.get(coder=coder).is_qualified
-        except QualificationAssignment.DoesNotExist: return False
+        try:
+            assignment = self.assignments.filter(time_finished__isnull=False).get(coder=coder)
+            return project_qualification_scorers.project_qualification_scorers[self.name](assignment)
+        except QualificationAssignment.DoesNotExist:
+            return False
 
 
 class QualificationAssignment(LoggedExtendedModel):
@@ -329,14 +344,6 @@ class QualificationAssignment(LoggedExtendedModel):
     time_finished = models.DateTimeField(null=True)
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
-
-    is_qualified = models.NullBooleanField()
-
-    def save(self, *args, **kwargs):
-
-        if is_not_null(self.time_finished):
-            self.is_qualified = project_qualification_scorers.project_qualification_scorers[self.test.name](self)
-        super(QualificationAssignment, self).save(*args, **kwargs)
 
 
 class HITType(LoggedExtendedModel):
@@ -355,8 +362,6 @@ class HITType(LoggedExtendedModel):
     min_approve_cnt = models.IntegerField(null=True)
 
     turk_id = models.CharField(max_length=250, unique=True, null=True)
-
-    qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="hit_types")
 
     class Meta:
         unique_together = ("project", "name")
@@ -384,15 +389,3 @@ class HITType(LoggedExtendedModel):
             setattr(self, attr, val)
 
         super(HITType, self).save(*args, **kwargs)
-
-        qual_tests = []
-        for qual_test in config.get("qualification_tests", []):
-            qual_tests.append(
-                QualificationTest.objects.create_or_update({"name": qual_test})
-            )
-        self.qualification_tests = qual_tests
-
-    def is_qualified(self, coder):
-
-        qual_tests = self.qualification_tests.all() | self.project.qualification_tests.all()
-        return all([qual_test.is_qualified(coder) for qual_test in qual_tests])
