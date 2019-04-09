@@ -1,7 +1,7 @@
 alembic>=0.9.1,<1.0
 beautifulsoup4>=4.5.3
 boto>=2.46.1
-boto3>=1.4.4
+boto3>=1.9.128
 census>=0.8.1
 corextopic
 Cerberus>=1.1
@@ -74,6 +74,7 @@ tweepy>=3.5.0
 Twisted>=17.1.0
 Unidecode>=0.4.20
 untangle>=1.1.0
+urllib3==1.22
 us>=0.9.1
 w3lib>=1.17.0
 wikipedia>=1.4.0

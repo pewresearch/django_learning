@@ -1,0 +1,28 @@
+{
+  "instructions": "Test instructions",
+  "display_type": "text",
+  "title": "Test title",
+  "description": "Test description",
+  "price": 0.0,
+  "approval_wait_hours": 24,
+  "duration_minutes": 5,
+  "lifetime_days": 7,
+  "questions": [
+    {
+      "prompt": "Do you want to be qualified?",
+      "name": "q1",
+      "display": "radio",
+      "labels": [
+        {
+          "label": "Yes",
+          "value": "1"
+        },
+        {
+          "label": "No",
+          "value": "0"
+        }
+      ]
+    }
+  ]
+}
+
