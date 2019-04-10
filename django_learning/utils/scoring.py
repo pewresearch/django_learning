@@ -9,6 +9,7 @@ from sklearn.metrics import matthews_corrcoef, accuracy_score, f1_score, \
 from scipy.stats import ttest_ind
 
 from pewanalytics.internal import wmom
+from pewanalytics.stats.irr import compute_scores
 from pewtils import is_not_null
 
 #         scoring_function = None
@@ -112,184 +113,17 @@ def compute_scores_from_dataset(dataset, document_column, outcome_column, coder_
 
             coder_df = code_subset[[coder_column, document_column, outcome_column, weight_column]]
             if not pos_label:
-                scores.append(_get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None))
+                scores.append(compute_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None))
 
             for pos in pos_labels:
                 if not pos_label or pos == pos_label:
                     coder_df["{}__{}".format(outcome_column, pos)] = (coder_df[outcome_column] == pos).astype(int)
-                    scoreset = _get_scores(coder_df, coder1, coder2, "{}__{}".format(outcome_column, pos), document_column, coder_column, weight_column, pos_label=1)
+                    scoreset = compute_scores(coder_df, coder1, coder2, "{}__{}".format(outcome_column, pos), document_column, coder_column, weight_column, pos_label=1)
                     scores.append(scoreset)
 
         combo_count += 1
 
     return pandas.DataFrame(scores)
-
-
-def compute_overall_scores_from_dataset(dataset, document_column, outcome_column, coder_column):
-
-    alpha = AnnotationTask(data=dataset[[coder_column, document_column, outcome_column]].as_matrix())
-    try:
-        alpha = alpha.alpha()
-    except (ZeroDivisionError, ValueError):
-        alpha = None
-
-    grouped = dataset.groupby(document_column).count()
-    complete_docs = grouped[grouped[coder_column]==len(dataset[coder_column].unique())].index
-    dataset = dataset[dataset[document_column].isin(complete_docs)]
-    df = dataset.groupby([outcome_column, document_column]).count()[[coder_column]]
-    df = df.unstack(outcome_column).fillna(0)
-
-    if len(df) > 0:
-        kappa = fleiss_kappa(df)
-    else:
-        kappa = None
-
-    return {
-        "alpha": alpha,
-        "fleiss_kappa": kappa
-    }
-
-
-def _get_scores(coder_df, coder1, coder2, outcome_column, document_column, coder_column, weight_column, pos_label=None):
-
-    coder1_df = coder_df[coder_df[coder_column] == coder1]
-    coder1_df.index = coder1_df[document_column]
-    coder2_df = coder_df[coder_df[coder_column] == coder2]
-    coder2_df.index = coder2_df[document_column]
-    coder1_df = coder1_df[coder1_df.index.isin(coder2_df.index)]
-    coder2_df = coder2_df[coder2_df.index.isin(coder1_df.index)].ix[coder1_df.index]
-
-    row = {
-        "coder1": coder1,
-        "coder2": coder2,
-        "n": len(coder1_df),
-        "outcome_column": outcome_column,
-        "pos_label": pos_label,
-    }
-
-    for labelsetname, labelset in [
-        ("coder1", coder1_df[outcome_column]),
-        ("coder2", coder2_df[outcome_column])
-    ]:
-
-        try:
-            weighted = wmom(labelset, coder1_df[weight_column], calcerr=True, sdev=True)
-        except TypeError:
-            try:
-                weighted = wmom(labelset.astype(int), coder1_df[weight_column], calcerr=True, sdev=True)
-            except ValueError:
-                weighted = None
-        if weighted:
-            for valname, val in zip(["mean", "err", "std"], list(weighted)):
-                row["{}_{}".format(labelsetname, valname)] = val
-
-        try:
-            unweighted = wmom(labelset.astype(int), [1.0 for x in labelset], calcerr=True, sdev=True)
-        except ValueError:
-            unweighted = None
-        if unweighted:
-            for valname, val in zip(["mean", "err", "std"], list(unweighted)):
-                row["{}_unweighted_{}".format(labelsetname, valname)] = val
-
-    # if len(numpy.unique(coder_df[outcome_column])) == 2: # and sum(coder1_df[outcome_column]) > 0 and sum(coder2_df[outcome_column]) > 0:
-
-    # if len(coder1_df[outcome_column].unique()) >= 2 and len(coder2_df[outcome_column].unique()) >= 2:
-    # not running reliability tests unless both coders saw at least more than one outcome at least once each
-
-    alpha = AnnotationTask(data=coder_df[[coder_column, document_column, outcome_column]].as_matrix())
-    try:
-        alpha = alpha.alpha()
-    except (ZeroDivisionError, ValueError):
-        alpha = None
-    row["alpha"] = alpha
-
-    if len(numpy.unique(coder_df[outcome_column])) <= 2:
-
-        row["cohens_kappa_weighted"] = cohen_kappa_score(
-            coder1_df[outcome_column],
-            coder2_df[outcome_column],
-            sample_weight=coder1_df[weight_column]
-        )
-
-        if pos_label: val1, val2 = 0, 1
-        else:
-            try: val1, val2 = coder_df[outcome_column].unique()
-            except ValueError: val1, val2 = None, None
-        if val1 != None and val2 != None:
-            result_dict = {val1: defaultdict(int), val2: defaultdict(int)}
-            for pred, true in zip(coder1_df[outcome_column], coder2_df[outcome_column], ):
-                result_dict[pred][true] += 1
-            kappa = cohens_kappa([
-                [result_dict[val1][val1], result_dict[val1][val2]],
-                [result_dict[val2][val1], result_dict[val2][val2]]
-            ])
-            row["cohens_kappa"] = kappa["kappa"]
-            row["cohens_kappa_err"] = kappa["std_kappa"]
-        else:
-            row["cohens_kappa"] = None
-            row["cohens_kappa_err"] = None
-    else:
-        row["cohens_kappa"] = None
-        row["cohens_kappa_err"] = None
-
-    try:
-        row["accuracy"] = accuracy_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["accuracy"] = None
-
-    try:
-        row["f1"] = f1_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["f1"] = None
-
-    try:
-        row["precision"] = precision_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["precision"] = None
-
-    try:
-        row["recall"] = recall_score(coder1_df[outcome_column], coder2_df[outcome_column], pos_label=pos_label, sample_weight=coder1_df[weight_column]),
-    except ValueError:
-        row["recall"] = None
-
-    if is_not_null(row["precision"]) and is_not_null(row["recall"]):
-        row["precision_recall_min"] = min([row["precision"], row["recall"]])
-    else:
-        row["precision_recall_min"] = None
-
-    try:
-        row["matthews_corrcoef"] = matthews_corrcoef(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column])
-    except ValueError:
-        row["matthews_corrcoef"] = None
-
-    try:
-        row["roc_auc"] = roc_auc_score(coder1_df[outcome_column], coder2_df[outcome_column], sample_weight=coder1_df[weight_column]) \
-            if len(numpy.unique(coder1_df[outcome_column])) > 1 and len(numpy.unique(coder2_df[outcome_column])) > 1 else None
-    except (ValueError, TypeError):
-        row["roc_auc"] = None
-
-    # try:
-    #     row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column], coder2_df[outcome_column])
-    # except TypeError:
-    #     try:
-    #         row["ttest_t"], row["ttest_p"] = ttest_ind(coder1_df[outcome_column].astype(int),
-    #                                                    coder2_df[outcome_column].astype(int))
-    #     except ValueError:
-    #         row["ttest_t"], row["ttest_p"] = None, None
-    # if row["ttest_p"]:
-    #     if row["ttest_p"] > .05:
-    #         row["ttest_pass"] = 1
-    #     else:
-    #         row["ttest_pass"] = 0
-
-    row["pct_agree"] = numpy.average([1 if c[0] == c[1] else 0 for c in zip(coder1_df[outcome_column], coder2_df[outcome_column])])
-
-    for k, v in row.iteritems():
-        if type(v) == tuple:
-            row[k] = v[0]
-            # For some weird reason, some of the sklearn scorers return 1-tuples sometimes
-
-    return row
 
 
 def get_probability_threshold_score_df(
