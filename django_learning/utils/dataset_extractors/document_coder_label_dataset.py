@@ -9,7 +9,8 @@ from django_learning.utils.dataset_document_filters import dataset_document_filt
 from django_learning.utils.dataset_coder_filters import dataset_coder_filters
 from django_learning.utils.balancing_variables import balancing_variables
 from django_learning.utils.dataset_extractors import DatasetExtractor
-from django_learning.utils.scoring import compute_scores_from_dataset, compute_overall_scores_from_dataset
+from django_learning.utils.scoring import compute_scores_from_dataset
+from pewanalytics.stats.irr import compute_overall_scores
 from django_learning.functions import get_sampling_weights
 
 
@@ -276,7 +277,7 @@ class Extractor(DatasetExtractor):
     def compute_overall_scores(self, refresh=False):
 
         dataset = self.extract(refresh=refresh)
-        return compute_overall_scores_from_dataset(
+        return compute_overall_scores(
             dataset,
             "document_id",
             "label_value",

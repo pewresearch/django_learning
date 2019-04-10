@@ -287,7 +287,7 @@ def create_sample_hits_mturk(request, project_name):
             "project_name": project_name,
             "sample_name": request.POST.get("sample_name"),
             "num_coders": int(request.POST.get("num_coders")),
-            "prod": bool(request.POST.get("prod"))
+            "sandbox": bool(request.POST.get("sandbox"))
         })
 
     return view_sample(request, project_name, request.POST.get("sample_name"))
@@ -630,8 +630,8 @@ def view_document_classification_model(request, model_name):
 
     return render(request, "django_learning/document_classification_model.html", {
         "model": model,
-        "cv_results": cv_results[['outcome_column', 'precision', 'recall', 'alpha', 'cohens_kappa_weighted', 'coder1_unweighted_mean']],
-        "test_results": test_results[['outcome_column', 'precision', 'recall', 'alpha', 'cohens_kappa_weighted', 'coder1_unweighted_mean']],
+        "cv_results": cv_results[['outcome_column', 'precision', 'recall', 'alpha', 'cohens_kappa', 'coder1_mean_unweighted']],
+        "test_results": test_results[['outcome_column', 'precision', 'recall', 'alpha', 'cohens_kappa', 'coder1_mean_unweighted']],
         "classifications": classifications
     })
 
