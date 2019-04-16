@@ -487,20 +487,21 @@ class MTurk(object):
         hit_ids = sample.hits.filter(turk=True).filter(turk_id__isnull=False).values_list("turk_id", flat=True)
         self._delete_hits(hit_ids)
 
-    def get_annual_worker_compensation(self, year=None):
+    def get_annual_worker_compensation(self, year=None, include_pending=False):
 
         workers = defaultdict(float)
         if not year: year = datetime.datetime.now().year
         for hit in self.paginate_endpoint("list_hits", "HITs"):
             for a in self.paginate_endpoint("list_assignments_for_hit", 'Assignments', HITId=str(hit['HITId'])):
-                if a['AssignmentStatus'] == 'Approved' and a['ApprovalTime'].year == year:
+                if (a['AssignmentStatus'] == 'Approved' and a['ApprovalTime'].year == year) or \
+                        (include_pending and a['AssignmentStatus'] == 'Submitted' and a['SubmitTime'].year == year):
                     workers[a['WorkerId']] += float(hit['Reward'])
 
         return workers
 
     def update_worker_blocks(self, notify=False, max_comp=500):
 
-        worker_comp = self.get_annual_worker_compensation(year=datetime.datetime.now().year)
+        worker_comp = self.get_annual_worker_compensation(year=datetime.datetime.now().year, include_pending=True)
         blocks = self.get_worker_blocks()
         blocks = blocks.get("Maximum annual compensation", [])
 
