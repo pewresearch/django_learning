@@ -260,10 +260,12 @@ class Sample(LoggedExtendedModel):
 
             docs = self.frame.documents.all()
             if size and size < 1 and size > 0:
-                size = int(len(docs)*size)
+                size = int(float(docs.count())*size)
             if not allow_overlap_with_existing_project_samples and not recompute_weights:
                 existing_doc_ids = SampleUnit.objects.filter(sample__project=self.project).values_list("document_id", flat=True)
                 docs = docs.exclude(pk__in=existing_doc_ids)
+            if self.documents.count() > 0:
+                docs = docs.exclude(pk__in=self.documents.values_list("pk", flat=True))
 
             stratify_by = params.get("stratify_by", None)
             try:
