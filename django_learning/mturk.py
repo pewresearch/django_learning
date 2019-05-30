@@ -341,31 +341,20 @@ class MTurk(object):
                 }
             )
 
-
             answer = self._parse_answer_xml(a['Answer'])
-            for question, value in answer.items():
-                if question in ["hit_id", "assignment_id"]:
-                    pass
-                elif question == "notes":
-                    assignment.notes = value
-                    assignment.save()
-                elif question == "uncodeable" and value == "1":
-                    assignment.uncodeable = True
-                    assignment.save()
-                else:
-                    try:
-                        q = hit.sample.project.questions.get(name=question)
-                    except:
-                        q = None
-                    if q:
-                        if q.multiple:
-                            value = value.split("|")
-                        notes = answer.get("{}_notes".format(question), None)
-                        q.update_assignment_response(assignment, value, notes=notes)
+            if "notes" in answer.keys():
+                assignment.notes = answer["notes"]
+                assignment.save()
+            if "uncodeable" in answer.keys() and answer["uncodeable"] == "1":
+                assignment.uncodeable = True
+                assignment.save()
             for q in hit.sample.project.questions\
-                    .exclude(name__in=answer.keys())\
                     .exclude(display="header"):
-                q.update_assignment_response(assignment, None)
+                value = answer.get(q.name, None)
+                if q.multiple:
+                    value = value.split("|")
+                notes = answer.get("{}_notes".format(q.name), None)
+                q.update_assignment_response(assignment, value, notes=notes)
 
             if not assignment.time_finished:
                 assignment.time_finished = a['SubmitTime']
