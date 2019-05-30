@@ -323,7 +323,7 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
         sample = Sample.objects.get(project=project, name=sample_name)
         request.user.coder._clear_abandoned_sample_assignments(sample)
 
-        if sample.hit_type.is_qualified(request.user.coder):
+        if qual_test.is_qualified(request.user.coder):
             return code_assignment(request, project.name, sample.name, skip_post=True)
         else:
             QualificationAssignment.objects.create_or_update({"test": qual_test, "coder": request.user.coder}, return_object=False)
@@ -401,14 +401,17 @@ def code_assignment(request, project_name, sample_name, assignment_id=None, skip
         sample = Sample.objects.get(project=project, name=sample_name)
         request.user.coder._clear_abandoned_sample_assignments(sample)
 
-        qual_tests = project.qualification_tests.all() | sample.hit_type.qualification_tests.all()
+        is_qualified = True
+        qual_tests = project.qualification_tests.all()
         for qual_test in qual_tests:
             try: qual = QualificationAssignment.objects.filter(time_finished__isnull=False).get(test=qual_test, coder=request.user.coder)
             except QualificationAssignment.DoesNotExist: qual = None
             if not qual:
                 return complete_qualification(request, project.name, sample.name, qual_test.name)
+            if not qual_test.is_qualified(request.user.coder):
+                is_qualified = False
 
-        if sample.hit_type.is_qualified(request.user.coder):
+        if is_qualified:
 
             if assignment_id:
 
