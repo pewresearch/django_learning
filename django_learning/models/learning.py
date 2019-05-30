@@ -40,8 +40,9 @@ class LearningModel(LoggedExtendedModel):
     cv_folds = PickledObjectField(null=True)
     cv_folds_test = PickledObjectField(null=True)
 
-    cache_hash =  models.CharField(max_length=256, null=True)
-    # dataset_cache_hash = models.CharField(max_length=256, null=True)
+    model_cache_hash = models.CharField(max_length=256, null=True)
+    dataset_cache_hash = models.CharField(max_length=256, null=True)
+    test_dataset_cache_hash = models.CharField(max_length=256, null=True)
 
     class Meta:
 
@@ -66,6 +67,13 @@ class LearningModel(LoggedExtendedModel):
 
         self.cache = CacheHandler(os.path.join(S3_CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
             hash = False,
+            use_s3=True,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
+            bucket=settings.S3_BUCKET
+        )
+        self.dataset_cache = CacheHandler(os.path.join(S3_CACHE_PATH, "datasets"),
+            hash=False,
             use_s3=True,
             aws_access=settings.AWS_ACCESS_KEY_ID,
             aws_secret=settings.AWS_SECRET_ACCESS_KEY,
@@ -113,39 +121,49 @@ class LearningModel(LoggedExtendedModel):
     def save(self, *args, **kwargs):
 
         super(LearningModel, self).save(*args, **kwargs)
-        self.refresh_from_db() # pickles and unpickles self.parameters so it remains in a consistent format
+        self.refresh_from_db()  # pickles and unpickles self.parameters so it remains in a consistent format
 
-    def extract_dataset(self, refresh=False, **kwargs):
+    def extract_dataset(self, refresh=False, only_load_existing=False, **kwargs):
 
-        # if not refresh and self.dataset_cache_hash:
-        #     self.dataset = self.cache.read(self.dataset_cache_hash)
-        #
-        # if is_null(self.dataset) and not kwargs.get("only_load_existing", False):
+        test_dataset = None
+        if not refresh and self.dataset_cache_hash:
+            self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
+            self.dataset_extractor.cache_hash = self.dataset_cache_hash
+            self.dataset = self.dataset_extractor.extract(refresh=False, only_load_existing=only_load_existing, **kwargs)
+            if "test_dataset_extractor" in self.parameters.keys() and self.test_dataset_cache_hash:
+                test_dataset_extractor = self._get_dataset_extractor("test_dataset_extractor")
+                test_dataset_extractor.cache_hash = self.test_dataset_cache_hash
+                test_dataset = test_dataset_extractor.extract(refresh=False, only_load_existing=only_load_existing, **kwargs)
 
-        if refresh:
+        if is_null(self.dataset) and not only_load_existing:
+
             self._refresh_parameters()  # pickles and unpickles self.parameters so it remains in a consistent format
-        self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")
-        self.dataset = self.dataset_extractor.extract(refresh=refresh, **kwargs)
-        if len(self.dataset) == 0:
-            print("Dataset returned no data; forcing cache refresh and trying again")
-            self._refresh_parameters()  # looks like we're actually refreshing, so we'll grab the latest parameters
-            self.dataset_extractor = self._get_dataset_extractor("dataset_extractor") # update the extractor with latest params
+            self.dataset_extractor = self._get_dataset_extractor("dataset_extractor")  # update the extractor with latest params
             self.dataset = self.dataset_extractor.extract(refresh=True, **kwargs)
-        if hasattr(self.dataset_extractor, "project") and self.dataset_extractor.project:
-            self.project = get_model("Project", app_name="django_learning").objects.get(name=self.dataset_extractor.project.name)
+            self.dataset_cache_hash = self.dataset_extractor.cache_hash
             self.save()
-        if not self.dataset_extractor.outcome_column:
-            outcome_col = self.parameters["dataset_extractor"].get("outcome_column", None)
-            if outcome_col:
-                self.dataset_extractor.set_outcome_column(outcome_col)
-            else:
-                raise Exception("Extractor '{}' has no outcome column set and one was not specified in your pipeline".format(
-                    self.parameters["dataset_extractor"]["name"]
-                ))
-        # self.outcome_column = self.dataset_extractor.outcome_column
-        if "test_dataset_extractor" in self.parameters.keys():
-            test_dataset_extractor = self._get_dataset_extractor("test_dataset_extractor")
-            test_dataset = test_dataset_extractor.extract(refresh=refresh, **kwargs)
+
+            if "test_dataset_extractor" in self.parameters.keys():
+                test_dataset_extractor = self._get_dataset_extractor("test_dataset_extractor")
+                test_dataset = test_dataset_extractor.extract(refresh=True, **kwargs)
+                self.test_dataset_cache_hash = test_dataset_extractor.cache_hash
+                self.save()
+
+        if is_not_null(self.dataset):
+            if hasattr(self.dataset_extractor, "project") and self.dataset_extractor.project:
+                self.project = self.dataset_extractor.project
+                self.save()
+            if not self.dataset_extractor.outcome_column:
+                outcome_col = self.parameters["dataset_extractor"].get("outcome_column", None)
+                if outcome_col:
+                    self.dataset_extractor.set_outcome_column(outcome_col)
+                else:
+                    raise Exception("Extractor '{}' has no outcome column set and one was not specified in your pipeline".format(
+                        self.parameters["dataset_extractor"]["name"]
+                    ))
+                # self.outcome_column = self.dataset_extractor.outcome_column
+
+        if is_not_null(test_dataset):
             test_dataset.index = test_dataset.index.map(lambda x: 'test_{}'.format(x))
             self.dataset = pandas.concat([self.dataset, test_dataset])
 
@@ -156,10 +174,6 @@ class LearningModel(LoggedExtendedModel):
         elif "sampling_weight" in self.dataset.columns:
             print("Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation")
 
-        # self.cache.write(self.dataset_extractor.cache_hash, self.dataset)
-        # self.cache_hash = self.dataset_extractor.cache_hash
-        # self.save()
-
     @temp_cache_wrapper
     def load_model(self, refresh=False, clear_temp_cache=True, only_load_existing=False, num_cores=1, **kwargs):
 
@@ -168,15 +182,15 @@ class LearningModel(LoggedExtendedModel):
 
         cache_data = None
 
-        if not refresh and self.cache_hash:
-            cache_data = self.cache.read(self.cache_hash)
+        if not refresh and self.model_cache_hash:
+            cache_data = self.cache.read(self.model_cache_hash)
             # note: if you hit an ImportError when loading the pickle, you probably need to
             # scroll up to the top and load a utils module in this file
             # (e.g. from django_learning.utils.scoring_functions import scoring_functions)
 
         if is_null(cache_data) and not only_load_existing:
 
-            self._refresh_parameters("model") # refresh the model and pipeline parameters (but not the dataset ones)
+            self._refresh_parameters("model")  # refresh the model and pipeline parameters (but not the dataset ones)
             self._refresh_parameters("pipeline")
 
             pipeline_steps = copy.copy(self.parameters['pipeline']['steps'])
@@ -206,7 +220,7 @@ class LearningModel(LoggedExtendedModel):
             updated_hashstr = self.cache.file_handler.get_key_hash(updated_hashstr)
             cache_data = self._train_model(pipeline_steps, params, num_cores=num_cores, **kwargs)
             self.cache.write(updated_hashstr, cache_data)
-            self.cache_hash = updated_hashstr
+            self.model_cache_hash = updated_hashstr
             self.cv_folds = None
             self.save()
 
