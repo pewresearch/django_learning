@@ -15,8 +15,15 @@ class Command(BasicCommand):
 
     def run(self):
 
+        from django_commander.commands import commands
+
         mturk = MTurk(sandbox=True)
-        mturk.clear_hits()
+        commands["expire_all_hits_mturk"](sandbox=True).run()
+        commands["delete_all_hits_mturk"](sandbox=True).run()
+        for qual_test in mturk.paginate_endpoint("list_qualification_types", 'QualificationTypes',
+                                                     MustBeRequestable=True,
+                                                     MustBeOwnedByCaller=True):
+            mturk.conn.delete_qualification_type(QualificationTypeId=qual_test['QualificationTypeId'])
 
     def cleanup(self):
 

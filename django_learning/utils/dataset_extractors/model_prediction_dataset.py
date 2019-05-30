@@ -30,7 +30,7 @@ class Extractor(DatasetExtractor):
     def get_hash(self, **kwargs):
 
         hash_key = super(Extractor, self).get_hash(**kwargs)
-        hash_key += self.learning_model.cache_hash + str(self.cache_key)
+        hash_key += self.learning_model.model_cache_hash + str(self.cache_key)
 
         return self.cache.file_handler.get_key_hash(hash_key)
 

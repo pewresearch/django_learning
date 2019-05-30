@@ -1,0 +1,13 @@
+{
+  "display_type": "text",
+  "title": "Test",
+  "description": "Test",
+  "keywords": ["test"],
+  "price": 0.0,
+  "approval_wait_hours": 24,
+  "duration_minutes": 10,
+  "lifetime_days": 7,
+  "min_approve_pct": 0.95,
+  "min_approve_cnt": 100,
+  "qualification_tests": []
+}

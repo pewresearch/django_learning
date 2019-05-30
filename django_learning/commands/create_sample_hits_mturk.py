@@ -17,25 +17,20 @@ class Command(BasicCommand):
         parser.add_argument("sample_name", type=str)
         parser.add_argument("--num_coders", default=1, type=int)
         parser.add_argument("--template_name", default=None, type=str)
-        parser.add_argument("--prod", default=False, action="store_true")
+        parser.add_argument("--sandbox", default=False, action="store_true")
         parser.add_argument("--force_hit_type_reset", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        project = Project.objects.get(name=self.parameters["project_name"])
+        project = Project.objects.get(name=self.parameters["project_name"], sandbox=self.options["sandbox"])
 
         sample = Sample.objects.get(
             name=self.parameters["sample_name"],
             project=project
         )
 
-        mturk = MTurk(sandbox=(not self.options["prod"]))
-
-        # TODO: this can become a problem when you create a hit type in prod, but then on a new sample you want to try sandbox again
-        # the project already has an API ID for the hit type (the correct prod one, which may be associated with existing Turker qualification test results)
-        # but if you switch back to the sandbox, the API won't recognize the prod ID
-        # easiest solution is to modify the HitType model to have a prod and non-prod ID
+        mturk = MTurk(sandbox=self.options["sandbox"])
         if not sample.hit_type.turk_id or self.options["force_hit_type_reset"]:
             mturk.sync_hit_type(sample.hit_type)
 
@@ -49,3 +44,5 @@ class Command(BasicCommand):
     def cleanup(self):
 
         pass
+
+# 3BH55VSCCHFXPE5TC7MLIA9DJDUBJ6 hit type
