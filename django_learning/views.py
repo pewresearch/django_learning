@@ -607,8 +607,10 @@ def edit_topic_model(request, model_id):
         for topic in topic_model.topics.order_by("num"):
             name = request.POST.get("topic_{}_name".format(topic.num), None)
             topic.name = name
+            if topic.name == '': topic.name = None
             label = request.POST.get("topic_{}_label".format(topic.num), None)
             topic.label = label
+            if topic.label == '': topic.label = None
             anchors = request.POST.get("topic_{}_anchors".format(topic.num), None)
             if is_not_null(anchors):
                 anchors = [anchor.strip() for anchor in anchors.split(",")]
