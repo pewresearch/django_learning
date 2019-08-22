@@ -45,7 +45,7 @@ regex_filter_template_end = """\", re.IGNORECASE)"""
 def create_topic_sampling_method(topic_model):
 
     anchors = []
-    for topic in topic_model.topics.filter(label__isnull=False):
+    for topic in topic_model.topics.filter(label__isnull=False).exclude(label=''):
         anchors.extend(topic.anchors)
     anchors = list(set(anchors))
     regex = r"|".join([r"\b{}\b".format(ngram) for ngram in anchors])
@@ -102,7 +102,7 @@ class Command(BasicCommand):
                     }
                 ]
             }
-            for topic in topic_model.topics.filter(label__isnull=False):
+            for topic in topic_model.topics.filter(label__isnull=False).exclude(label=''):
                 project["questions"].append({
                     "prompt": topic.label,
                     "name": topic.name,
