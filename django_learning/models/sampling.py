@@ -57,7 +57,7 @@ class SamplingFrame(LoggedExtendedModel):
             params = self.config
             if params:
                 objs = get_model("Document").objects.all()
-                objs = filter_queryset_by_params(objs, params)
+                objs = list(filter_queryset_by_params(objs, params).distinct().values_list("pk", flat=True))
                 self.documents = objs
                 self.save()
                 print("Extracted {} documents for frame '{}'".format(self.documents.count(), self.name))
