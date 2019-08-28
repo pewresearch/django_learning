@@ -1,5 +1,3 @@
-from __future__ import print_function
-from builtins import str
 import pandas, copy, itertools
 
 from pewtils import is_null, is_not_null
@@ -112,7 +110,7 @@ def get_score(topic, df1, df2, sample_name, group_name):
 
     df = pandas.concat([df1, df2])
     score = compute_scores_from_dataset(df, "document_id", "value", "dataset", weight_column="sampling_weight")
-    score = score[['coder1', 'coder1_mean', 'coder1_unweighted_mean', 'coder2', 'coder2_mean', 'coder2_unweighted_mean', 'n', 'pct_agree', 'accuracy', 'outcome_column', 'precision', 'recall', 'cohens_kappa', 'cohens_kappa_weighted', 'alpha']]
+    score = score[['coder1', 'coder1_mean', 'coder1_mean_unweighted', 'coder2', 'coder2_mean', 'coder2_mean_unweighted', 'n', 'pct_agree_unweighted', 'accuracy', 'outcome_column', 'precision', 'recall', 'cohens_kappa']]
     score['topic'] = topic.name
     score['sample'] = sample_name
     score['group'] = group_name
@@ -131,21 +129,18 @@ class Command(BasicCommand):
     def add_arguments(parser):
         parser.add_argument("topic_model_name", type=str)
         parser.add_argument("--refresh_codes", action="store_true", default=False)
-        parser.add_argument("--refresh_model", action="store_true", default=False)
-        parser.add_argument("--skip_classifiers", action="store_true", default=False)
         parser.add_argument("--export", action="store_true", default=False)
-        parser.add_argument("--num_cores", type=int, default=1)
         return parser
 
     @log_command
     def run(self):
 
         topic_model = get_model("TopicModel", app_name="django_learning").objects.get(name=self.parameters["topic_model_name"])
-        topic_model.frame.get_sampling_flags(refresh=True)
+        topic_model.frame.get_sampling_flags(refresh=False)
 
         scores = None
 
-        for topic in topic_model.topics.order_by("name"):
+        for topic in topic_model.topics.filter(label__isnull=False).order_by("name"):
 
             print(topic)
 
@@ -178,6 +173,7 @@ class Command(BasicCommand):
                                 scores = score
                             else:
                                 scores = pandas.concat([scores, score])
+
             for group_name, df1, df2 in [
                 ("corex", all_expert_codes, topic_codes),
                 ("dictionary", all_expert_codes, dictionary_codes)
@@ -195,7 +191,7 @@ class Command(BasicCommand):
                                 scores = pandas.concat([scores, score])
 
         if self.options["export"]:
-            scores.to_csv("topic_model_{}_codes.csv".format(topic_model.name))
+            scores.to_csv("topic_model_{}_irr_results.csv".format(topic_model.name))
 
         return scores
 
