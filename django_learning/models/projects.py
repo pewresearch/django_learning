@@ -30,7 +30,7 @@ class Project(LoggedExtendedModel):
     # classification_models = GenericRelation("django_learning.ClassificationModel")
     # regression_models = GenericRelation("django_learning.RegressionModel")
 
-    def __str___(self):
+    def __str__(self):
         if self.sandbox: return "{} (SANDBOX)".format(self.name)
         else: return self.name
 
