@@ -16,7 +16,6 @@ from sklearn.model_selection import ParameterGrid
 
 from django_commander.models import LoggedExtendedModel
 
-from django_learning.settings import S3_CACHE_PATH, LOCAL_CACHE_PATH
 from django_learning.utils import get_pipeline_repr, get_param_repr
 from django_learning.utils.pipelines import pipelines
 from django_learning.utils.dataset_extractors import dataset_extractors
@@ -65,21 +64,21 @@ class LearningModel(LoggedExtendedModel):
         self.test_dataset = None
         self.predict_dataset = None
 
-        self.cache = CacheHandler(os.path.join(S3_CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
-            hash = False,
-            use_s3=True,
-            aws_access=settings.AWS_ACCESS_KEY_ID,
-            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
-            bucket=settings.S3_BUCKET
-        )
-        self.dataset_cache = CacheHandler(os.path.join(S3_CACHE_PATH, "datasets"),
+        self.cache = CacheHandler(os.path.join(settings.S3_CACHE_PATH, "learning_models/{}".format(self.cache_identifier)),
             hash=False,
-            use_s3=True,
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,
             aws_secret=settings.AWS_SECRET_ACCESS_KEY,
             bucket=settings.S3_BUCKET
         )
-        self.temp_cache = CacheHandler(os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
+        self.dataset_cache = CacheHandler(os.path.join(settings.S3_CACHE_PATH, "datasets"),
+            hash=False,
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
+            bucket=settings.S3_BUCKET
+        )
+        self.temp_cache = CacheHandler(os.path.join(settings.LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)),
             hash=False,
             use_s3=False
         )
@@ -300,7 +299,7 @@ class LearningModel(LoggedExtendedModel):
             self.dataset_extractor.outcome_column
         ))
 
-        try: sklearn_cache = mkdtemp(prefix="sklearn", dir=os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)))
+        try: sklearn_cache = mkdtemp(prefix="sklearn", dir=os.path.join(settings.LOCAL_CACHE_PATH, "feature_extractors/{}".format(self.cache_identifier)))
         except:
             print("Couldn't create local sklearn cache dir")
             sklearn_cache = None

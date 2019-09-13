@@ -3,8 +3,7 @@ import os
 
 from django.apps import apps
 from pewtils.io import FileHandler
-
-from django_learning.settings import BASE_DIR
+from django.conf import settings
 
 from django_commander.commands import BasicCommand
 
@@ -20,7 +19,7 @@ class Command(BasicCommand):
     def run(self):
 
         NgramSet = apps.get_model("django_learning", "NgramSet")
-        h = FileHandler(os.path.join(BASE_DIR, "static/django_learning/dictionaries"), use_s3=False)
+        h = FileHandler(os.path.join(settings.BASE_DIR, "static/django_learning/dictionaries"), use_s3=False)
         df = h.read("NRCv0.92", format="csv", names=["word", "category", "assoc"], header=None, delimiter="\t")
         for cat, words in df.groupby("category"):
             try:

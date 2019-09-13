@@ -7,9 +7,8 @@ from django.contrib.contenttypes.models import ContentType
 from io import StringIO
 from tqdm import tqdm
 from django_pewtils import get_model
+from django.conf import settings
 from pewtils.io import FileHandler
-
-from django_learning.settings import BASE_DIR
 
 
 from django_commander.commands import BasicCommand
@@ -44,7 +43,7 @@ class Command(BasicCommand):
     def run(self):
 
         NgramSet = apps.get_model("django_learning", "NgramSet")
-        h = FileHandler(os.path.join(BASE_DIR, "static/django_learning/dictionaries"), use_s3=False)
+        h = FileHandler(os.path.join(settings.BASE_DIR, "static/django_learning/dictionaries"), use_s3=False)
 
         labels = h.read("liwc_labels", format="json")
 
