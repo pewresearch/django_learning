@@ -1,5 +1,4 @@
 from __future__ import print_function
-from django_learning.settings import S3_CACHE_PATH
 from django.conf import settings
 from pewtils import is_not_null, is_null, extract_attributes_from_folder_modules
 from django_pewtils import CacheHandler, get_app_settings_folders
@@ -13,48 +12,13 @@ class DatasetExtractor(object):
         self.outcome_column = outcome_column
         self.cache_hash = None
 
-        cache_params = {
-            'hash': False,
-            'use_s3': True,
-            'aws_access': os.environ.get("AWS_ACCESS_KEY_ID", None),
-            'aws_secret': os.environ.get("AWS_SECRET_ACCESS_KEY", None),
-            'bucket': os.environ.get("S3_BUCKET", None)
-        }
-
-        if cache_params['aws_access'] is None:
-            if getattr(settings, 'AWS_ACCESS_KEY_ID', None) is not None:
-                cache_params['aws_access'] = settings.AWS_ACCESS_KEY_ID
-
-            else:
-                cache_params.pop('aws_access', None)
-
-        if cache_params['aws_secret'] is None:
-            if getattr(settings, 'AWS_SECRET_ACCESS_KEY', None) is not None:
-                cache_params['aws_secret'] = settings.AWS_SECRET_ACCESS_KEY
-
-            else:
-                cache_params.pop('aws_secret', None)
-
-        if cache_params['bucket'] is None:
-            if getattr(settings, 'S3_BUCKET', None) is not None:
-                cache_params['bucket'] = settings.S3_BUCKET
-
-            else:
-                cache_params.pop('bucket', None)
-
-        # FileHandler will fall back to local automatically
-        # AWS creds may not be necessary depending on instance permissions
-        # if not all(
-        #     map(
-        #         lambda x: x in cache_params and cache_params[x] is not None,
-        #         ('aws_access', 'aws_secret', 'bucket')
-        #     )
-        # ):
-        #     cache_params['use_s3'] = False
-
         self.cache = CacheHandler(
-            os.path.join(S3_CACHE_PATH, "datasets"),
-            **cache_params
+            os.path.join(settings.S3_CACHE_PATH, "datasets"),
+            hash=False,
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
+            aws_access=settings.AWS_ACCESS_KEY_ID,
+            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
+            bucket=settings.S3_BUCKET
         )
 
         self.dataset = None

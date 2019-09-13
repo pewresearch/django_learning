@@ -9,7 +9,6 @@ from gensim.models import Word2Vec, Doc2Vec
 from django.db import transaction
 from django.db.models import Count, F
 from django.conf import settings
-from django_learning.settings import S3_CACHE_PATH
 
 from pewtils import chunk_list, decode_text
 from pewanalytics.text import TextCleaner, SentenceTokenizer
@@ -134,8 +133,8 @@ class DocumentManager(QueryModelManager):
         tokenizer = SentenceTokenizer()
         w2v_model = None
 
-        cache = CacheHandler(os.path.join(S3_CACHE_PATH, "word2vec"),
-            use_s3=True,
+        cache = CacheHandler(os.path.join(settings.S3_CACHE_PATH, "word2vec"),
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
             bucket=settings.S3_BUCKET,
             aws_access=settings.AWS_ACCESS_KEY_ID,
             aws_secret=settings.AWS_SECRET_ACCESS_KEY
@@ -177,8 +176,8 @@ class DocumentManager(QueryModelManager):
         cleaner = TextCleaner(lemmatize=False, strip_html=True)
         d2v_model = None
 
-        cache = CacheHandler(os.path.join(S3_CACHE_PATH, "doc2vec"),
-            use_s3=True,
+        cache = CacheHandler(os.path.join(settings.S3_CACHE_PATH, "doc2vec"),
+            use_s3=settings.DJANGO_LEARNING_USE_S3,
             bucket=settings.S3_BUCKET,
             aws_access=settings.AWS_ACCESS_KEY_ID,
             aws_secret=settings.AWS_SECRET_ACCESS_KEY

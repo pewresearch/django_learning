@@ -4,7 +4,7 @@ from pewtils import is_not_null, decode_text, extract_attributes_from_folder_mod
 from django_pewtils import CacheHandler, get_app_settings_folders
 
 from django_learning.utils import get_param_repr
-from django_learning.settings import LOCAL_CACHE_PATH
+from django.conf import settings
 
 
 
@@ -15,7 +15,7 @@ class BasicPreprocessor(object):
         self.params = kwargs
         self.param_repr = str(get_param_repr(self.params))
         if "cache_identifier" in self.params.keys() and is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler(os.path.join(LOCAL_CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
+            self.cache = CacheHandler(os.path.join(settings.LOCAL_CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
         else:
             self.cache = None
 
