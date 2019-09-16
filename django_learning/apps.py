@@ -9,7 +9,7 @@ class DjangoLearningConfig(AppConfig):
 
     name = 'django_learning'
 
-    def ready(self):
+    def update_settings(self):
         from django.conf import settings
         for setting, default in [
             ("AWS_ACCESS_KEY_ID", None),
@@ -21,7 +21,8 @@ class DjangoLearningConfig(AppConfig):
             ("DJANGO_LEARNING_USE_S3", False),
             ("DJANGO_LEARNING_EXTERNAL_PACKAGE_DIR", "/opt")
         ]:
-            setattr(settings, setting, default)
+            if not hasattr(settings, setting):
+                setattr(settings, setting, default)
 
         for setting, path in [
             ("DJANGO_LEARNING_HIT_TEMPLATE_DIRS", "templates"),
@@ -49,6 +50,7 @@ class DjangoLearningConfig(AppConfig):
             else:
                 dirs = []
             dirs.append(os.path.join(DJANGO_LEARNING_BASE_DIR, path))
+            dirs = list(set(dirs))
             setattr(settings, setting, dirs)
 
         LOCAL_CACHE_PATH = os.path.join(settings.LOCAL_CACHE_ROOT, "django_learning")
@@ -77,3 +79,9 @@ class DjangoLearningConfig(AppConfig):
             if dependency not in settings.INSTALLED_APPS:
                 raise ImproperlyConfigured('{} must be in installed apps.'.format(dependency))
 
+    def __init__(self, *args, **kwargs):
+        super(DjangoLearningConfig, self).__init__(*args, **kwargs)
+        self.update_settings()
+
+    def ready(self):
+        self.update_settings()
