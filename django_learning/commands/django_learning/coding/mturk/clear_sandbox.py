@@ -18,8 +18,8 @@ class Command(BasicCommand):
         from django_commander.commands import commands
 
         mturk = MTurk(sandbox=True)
-        commands["expire_all_hits_mturk"](sandbox=True).run()
-        commands["delete_all_hits_mturk"](sandbox=True).run()
+        commands["django_learning_coding_mturk_expire_all_hits"](sandbox=True).run()
+        commands["django_learning_coding_mturk_delete_all_hits"](sandbox=True).run()
         for qual_test in mturk.paginate_endpoint("list_qualification_types", 'QualificationTypes',
                                                      MustBeRequestable=True,
                                                      MustBeOwnedByCaller=True):
