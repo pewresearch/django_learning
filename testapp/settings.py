@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 import os
 
+SITE_NAME = "testapp"
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..").decode('utf-8')).replace('\\', '/')
 APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__)).decode('utf-8')).replace('\\', '/')
+LOCAL_CACHE_ROOT = "cache"
 
 SITE_NAME = "testapp"
 
 INSTALLED_APPS = [
-'django.contrib.auth',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
@@ -19,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.admindocs',
     "django_commander",
+    "django_queries",
     "django_learning",
     "testapp"
 ]
@@ -36,12 +40,6 @@ DATABASES = {
 }
 
 SECRET_KEY = "testing"
-
-##### DJANGO_COMMANDER SETTINGS
-
-DJANGO_COMMANDER_COMMAND_FOLDERS = [
-    os.path.abspath(os.path.join(APP_ROOT, "commands").decode('utf-8')).replace('\\', '/')
-]
 
 
 ##### DJANGO_LEARNING SETTINGS
@@ -64,26 +62,12 @@ DJANGO_LEARNING_EXTERNAL_PACKAGE_DIR = os.path.join(os.environ.get("EXTERNAL_PAC
 # DJANGO_LEARNING_BASE_TEMPLATE = "pyoutube/_template.html"
 DJANGO_LEARNING_STOPWORD_SETS = [os.path.join(APP_ROOT, "learning", "stopword_sets")]
 
-DJANGO_LEARNING_AWS_ACCESS = os.environ.get("AWS_ACCESS_KEY_ID", None)
-DJANGO_LEARNING_AWS_SECRET = os.environ.get("AWS_SECRET_ACCESS_KEY", None)
+DJANGO_LEARNING_USE_S3 = False
 
 
-##### URL AND TEMPLATE SETTINGS
+### DJANGO_COMMANDER SETTINGS
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': DJANGO_LEARNING_HIT_TEMPLATE_DIRS, # TODO: you shouldn't have to add this, django_learning should add it, right?
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'django_learning.context_processors.identify_template',
-                'django_learning.context_processors.get_document_classification_model_names'
-            ]
-        }
-    },
+DJANGO_COMMANDER_COMMAND_FOLDERS = [
+    os.path.abspath(os.path.join(BASE_DIR, "testapp", "commands")).replace('\\', '/')
 ]
+DJANGO_COMMANDER_USE_S3 = False
