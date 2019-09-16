@@ -74,5 +74,8 @@ def filter_queryset_by_params(objs, params):
     if "complex_filters" in params.keys() and params["complex_filters"]:
         for c in params["complex_filters"]:
             objs = objs.filter(c)
+    if "complex_excludes" in params.keys() and params["complex_excludes"]:
+        for c in params["complex_excludes"]:
+            objs = objs.exclude(c)
 
     return objs

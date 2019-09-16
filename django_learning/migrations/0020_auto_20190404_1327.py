@@ -15,12 +15,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='project',
             name='sandbox',
-            field=models.BooleanField(default=False),
+            field=models.NullBooleanField(null=True),
         ),
         migrations.AddField(
             model_name='qualificationtest',
             name='sandbox',
-            field=models.BooleanField(default=False),
+            field=models.NullBooleanField(null=True),
         ),
         migrations.AlterField(
             model_name='project',
