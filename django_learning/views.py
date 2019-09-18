@@ -592,7 +592,7 @@ def adjudicate_question(request, project_name, sample_name, question_name):
 @login_required
 def view_topic_models(request):
 
-    topic_models = TopicModel.objects.all()
+    topic_models = TopicModel.objects.defer("model", "vectorizer").all()
     return render(request, "django_learning/topic_models.html", {
         "topic_models": topic_models
     })
@@ -601,7 +601,7 @@ def view_topic_models(request):
 @login_required
 def edit_topic_model(request, model_id):
 
-    topic_model = TopicModel.objects.get(pk=model_id)
+    topic_model = TopicModel.objects.defer("model", "vectorizer").get(pk=model_id)
 
     if request.method == "POST":
         for topic in topic_model.topics.order_by("num"):
