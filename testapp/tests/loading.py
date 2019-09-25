@@ -15,37 +15,17 @@ class LoadingTests(DjangoTestCase):
 
         pass
 
-    def test_config(self):
+    def test_balancing_variables(self):
 
-        from django.conf import settings
         from django_learning.utils.balancing_variables import balancing_variables
-        from django_learning.utils.dataset_code_filters import dataset_code_filters
-        from django_learning.utils.dataset_coder_filters import dataset_coder_filters
-        from django_learning.utils.dataset_document_filters import dataset_document_filters
-        from django_learning.utils.dataset_extractors import dataset_extractors
-        from django_learning.utils.feature_extractors import feature_extractors
-        from django_learning.utils.models import models
-        from django_learning.utils.pipelines import pipelines
-        from django_learning.utils.preprocessors import preprocessors
-        from django_learning.utils.project_hit_types import project_hit_types
-        from django_learning.utils.project_qualification_tests import project_qualification_tests
-        from django_learning.utils.project_qualification_scorers import project_qualification_scorers
-        from django_learning.utils.projects import projects
-        from django_learning.utils.regex_filters import regex_filters
-        from django_learning.utils.regex_replacers import regex_replacers
-        from django_learning.utils.sampling_frames import sampling_frames
-        from django_learning.utils.sampling_methods import sampling_methods
-        from django_learning.utils.scoring_functions import scoring_functions
-        from django_learning.utils.stopword_sets import stopword_sets
-        from django_learning.utils.stopword_whitelists import stopword_whitelists
-        from django_learning.utils.topic_models import topic_models
-        from django_commander.commands import commands
 
-        for val in [
-            "document_type",
-            "test"
-        ]:
+        for val in ["document_type", "test"]:
             self.assertIn(val, balancing_variables.keys())
+            self.assertIsNotNone(balancing_variables[val])
+
+    def test_dataset_coder_filters(self):
+
+        from django_learning.utils.dataset_coder_filters import dataset_coder_filters
 
         for val in [
             "exclude_by_coder_names",
@@ -53,9 +33,24 @@ class LoadingTests(DjangoTestCase):
             "exclude_mturk",
             "filter_by_coder_names",
             # "filter_by_coder_variance",
-            "filter_by_min_coder_doc_count"
+            "filter_by_min_coder_doc_count",
         ]:
             self.assertIn(val, dataset_coder_filters.keys())
+            self.assertIsNotNone(dataset_coder_filters[val])
+
+    def test_dataset_code_filters(self):
+
+        from django_learning.utils.dataset_code_filters import dataset_code_filters
+
+        for val in ["test"]:
+            self.assertIn(val, dataset_code_filters.keys())
+            self.assertIsNotNone(dataset_code_filters[val])
+
+    def test_dataset_document_filters(self):
+
+        from django_learning.utils.dataset_document_filters import (
+            dataset_document_filters,
+        )
 
         for val in [
             "django_lookup_filter",
@@ -65,18 +60,28 @@ class LoadingTests(DjangoTestCase):
             "filter_by_other_model_dataset",
             "filter_by_other_model_prediction",
             "require_all_coders",
-            'require_min_coder_count'
+            "require_min_coder_count",
         ]:
             self.assertIn(val, dataset_document_filters.keys())
+            self.assertIsNotNone(dataset_document_filters[val])
+
+    def test_dataset_extractors(self):
+
+        from django_learning.utils.dataset_extractors import dataset_extractors
 
         for val in [
             "document_coder_dataset",
             "document_coder_label_dataset",
             "document_dataset",
             "model_prediction_dataset",
-            "raw_document_dataset"
+            "raw_document_dataset",
         ]:
             self.assertIn(val, dataset_extractors.keys())
+            self.assertIsNotNone(dataset_extractors[val])
+
+    def test_feature_extractors(self):
+
+        from django_learning.utils.feature_extractors import feature_extractors
 
         for val in [
             "django_field_lookups",
@@ -88,9 +93,14 @@ class LoadingTests(DjangoTestCase):
             "regex_counts",
             "tfidf",
             "topics",
-            "word2vec"
+            "word2vec",
         ]:
             self.assertIn(val, feature_extractors.keys())
+            self.assertIsNotNone(feature_extractors[val]())
+
+    def test_models(self):
+
+        from django_learning.utils.models import models
 
         for val in [
             "classification_decision_tree",
@@ -106,79 +116,158 @@ class LoadingTests(DjangoTestCase):
             "regression_linear",
             "regression_random_forest",
             "regression_sgd",
-            "regression_svr"
+            "regression_svr",
         ]:
             self.assertIn(val, models.keys())
+            self.assertIsNotNone(models[val]())
+
+    def test_preprocessors(self):
+
+        from django_learning.utils.preprocessors import preprocessors
 
         for val in [
             "clean_text",
             "expand_text_cooccurrences",
             # "filter_by_regex",
-            "run_function"
+            "run_function",
         ]:
             self.assertIn(val, preprocessors.keys())
+            self.assertIsNotNone(preprocessors[val]())
 
-        for val in [
-            "all_documents"
-        ]:
+    def test_sampling_frames(self):
+
+        from django_learning.utils.sampling_frames import sampling_frames
+
+        for val in ["all_documents"]:
             self.assertIn(val, sampling_frames.keys())
+            self.assertIsNotNone(sampling_frames[val]())
 
-        for val in [
-            "cohens_kappa",
-            "matthews_corrcoef",
-            "maxmin",
-            "mean_difference"
-        ]:
+    def test_scoring_functions(self):
+
+        from django_learning.utils.scoring_functions import scoring_functions
+
+        for val in ["cohens_kappa", "matthews_corrcoef", "maxmin", "mean_difference"]:
             self.assertIn(val, scoring_functions.keys())
+            self.assertIsNotNone(scoring_functions[val])
 
-        for val in [
-            "english",
-            "entities",
-            "misc_boilerplate",
-            "months"
-        ]:
+    def test_stopword_sets(self):
+
+        from django_learning.utils.stopword_sets import stopword_sets
+
+        for val in ["english", "entities", "misc_boilerplate", "months"]:
             self.assertIn(val, stopword_sets.keys())
+            self.assertIsNotNone(stopword_sets[val]())
 
-        for val in [
-            "test_hit_type"
-        ]:
+    def test_project_hit_types(self):
+
+        from django_learning.utils.project_hit_types import project_hit_types
+
+        for val in ["test_hit_type"]:
             self.assertIn(val, project_hit_types.keys())
+            self.assertIsNotNone(project_hit_types[val])
 
-        for val in [
-            "test_qualification"
-        ]:
+    def test_project_qualification_scorers(self):
+
+        from django_learning.utils.project_qualification_scorers import (
+            project_qualification_scorers,
+        )
+
+        for val in ["test_qualification"]:
             self.assertIn(val, project_qualification_scorers.keys())
+            self.assertIsNotNone(project_qualification_scorers[val])
 
-        for val in [
-            "test_qualification"
-        ]:
+    def test_project_qualification_tests(self):
+
+        from django_learning.utils.project_qualification_tests import (
+            project_qualification_tests,
+        )
+
+        for val in ["test_qualification"]:
             self.assertIn(val, project_qualification_tests.keys())
+            self.assertIsNotNone(project_qualification_tests[val])
 
-        for val in [
-            "test_project"
-        ]:
+    def test_projects(self):
+
+        from django_learning.utils.projects import projects
+
+        for val in ["test_project"]:
             self.assertIn(val, projects.keys())
+            self.assertIsNotNone(projects[val])
+
+    def test_pipelines(self):
+
+        from django_learning.utils.pipelines import pipelines
+
+        for val in ["test", "test_with_holdout"]:
+            self.assertIn(val, pipelines.keys())
+            self.assertIsNotNone(pipelines[val])
+
+    def test_regex_filters(self):
+
+        from django_learning.utils.regex_filters import regex_filters
+
+        for val in ["test"]:
+            self.assertIn(val, regex_filters.keys())
+            self.assertIsNotNone(regex_filters[val]())
+
+    def test_regex_replacers(self):
+
+        from django_learning.utils.regex_replacers import regex_replacers
+
+        for val in ["test"]:
+            self.assertIn(val, regex_replacers.keys())
+            self.assertIsNotNone(regex_replacers[val]())
+
+    def test_sampling_methods(self):
+
+        from django_learning.utils.sampling_methods import sampling_methods
+
+        for val in ["test"]:
+            self.assertIn(val, sampling_methods.keys())
+            self.assertIsNotNone(sampling_methods[val]())
+
+    def test_stopword_whitelists(self):
+
+        from django_learning.utils.stopword_whitelists import stopword_whitelists
+
+        for val in ["test"]:
+            self.assertIn(val, stopword_whitelists.keys())
+            self.assertIsNotNone(stopword_whitelists[val]())
+
+    def test_topic_models(self):
+
+        from django_learning.utils.topic_models import topic_models
+
+        for val in ["test"]:
+            self.assertIn(val, topic_models.keys())
+            self.assertIsNotNone(topic_models[val]())
+
+    def test_commands(self):
+
+        from django_commander.commands import commands
 
         for command in [
-            "check_mturk_account_balance",
-            "clear_mturk_sandbox",
-            "create_coder",
-            "create_project",
-            "create_sample_hits_experts",
-            "create_sample_hits_mturk",
-            "delete_all_hits_mturk",
-            "delete_sample_hits_mturk",
-            "expire_all_hits_mturk",
-            "expire_sample_hits_mturk",
-            # "extract_entities",
-            'extract_sample',
-            'extract_sampling_frame',
-            "reload_liwc",
-            "reload_nrc_emotions",
-            "sync_sample_hits_mturk",
-            "test_command"
+            "django_learning_coding_create_coder",
+            "django_learning_coding_create_project",
+            "django_learning_coding_create_sample_hits",
+            "django_learning_coding_extract_sample",
+            "django_learning_coding_extract_sampling_frame",
+            "django_learning_coding_mturk_create_sample_hits",
+            "django_learning_coding_mturk_delete_all_hits",
+            "django_learning_coding_mturk_delete_sample_hits",
+            "django_learning_coding_mturk_expire_all_hits",
+            "django_learning_coding_mturk_expire_sample_hits",
+            "django_learning_coding_mturk_check_account_balance",
+            "django_learning_coding_mturk_clear_sandbox",
+            "django_learning_coding_mturk_sync_sample_hits",
+            # "django_learning_nlp_extract_entities",
+            "django_learning_nlp_reload_liwc",
+            "django_learning_nlp_reload_nrc_emotions",
+            "test_command",
         ]:
             self.assertIn(command, commands.keys())
+            params = {p: "1" for p in commands[command].parameter_names}
+            self.assertIsNotNone(commands[command](**params))
 
     def tearDown(self):
         pass
