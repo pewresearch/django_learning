@@ -25,6 +25,12 @@ class Extractor(DocumentCoderDatasetExtractor):
 
         if self.coder_aggregation_function == "mean":
             dataset = dataset.groupby("document_id").mean().reset_index()
+        elif self.coder_aggregation_function == "median":
+            dataset = dataset.groupby("document_id").median().reset_index()
+        elif self.coder_aggregation_function == "max":
+            dataset = dataset.groupby("document_id").max().reset_index()
+        elif self.coder_aggregation_function == "min":
+            dataset = dataset.groupby("document_id").min().reset_index()
         else:
             raise Exception("Specify another aggregation function, fool!")
         for col in ["coder_is_mturk", "coder_id"]:
