@@ -34,5 +34,5 @@ class Command(BasicCommand):
             document_filters=self.model.dataset_extractor.document_filters,
             refresh=self.options["refresh"],
             num_cores=self.options["num_cores"],
-            chunk_size=self.options["chunk_size"]
+            chunk_size=self.options["chunk_size"],
         )

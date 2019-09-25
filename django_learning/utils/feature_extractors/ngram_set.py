@@ -10,9 +10,7 @@ from django_pewtils import get_model, reset_django_connection_wrapper
 from django_learning.utils.feature_extractors import BasicExtractor
 
 
-
 class Extractor(BasicExtractor):
-
     def __init__(self, *args, **kwargs):
 
         self.name = None
@@ -33,18 +31,22 @@ class Extractor(BasicExtractor):
         for cat in self.regexes.keys():
             matches = self.regexes[cat].findall(u" {0} ".format(text))
             if self.params["feature_name_prefix"]:
-                ngramset_row["%s__%s" % (self.params["feature_name_prefix"], cat)] = len(
-                    [m for m in matches if m != ''])
+                ngramset_row[
+                    "%s__%s" % (self.params["feature_name_prefix"], cat)
+                ] = len([m for m in matches if m != ""])
             else:
-                ngramset_row[cat] = len([m for m in matches if m != ''])
+                ngramset_row[cat] = len([m for m in matches if m != ""])
         if self.params["include_ngrams"]:
             for word in self.ngram_regexes.keys():
                 matches = self.ngram_regexes[word].findall(u" {0} ".format(text))
                 if self.params["feature_name_prefix"]:
-                    ngramset_row["%s__ngram__%s" % (self.params["feature_name_prefix"], word)] = len(
-                        [m for m in matches if m != ''])
+                    ngramset_row[
+                        "%s__ngram__%s" % (self.params["feature_name_prefix"], word)
+                    ] = len([m for m in matches if m != ""])
                 else:
-                    ngramset_row["ngram__%s".format(word)] = len([m for m in matches if m != ''])
+                    ngramset_row["ngram__%s".format(word)] = len(
+                        [m for m in matches if m != ""]
+                    )
 
         return ngramset_row
 
@@ -57,7 +59,7 @@ class Extractor(BasicExtractor):
 
         ngramsets = []
         for index, row in X.iterrows():
-            text = row['text']
+            text = row["text"]
             ngramset_row = self.transform_text(text, preprocessors=preprocessors)
             # text_length = len(text.split())
             # if text_length > 0:
@@ -78,35 +80,47 @@ class Extractor(BasicExtractor):
         if "ngramset_name" not in self.params.keys():
             self.params["ngramset_name"] = None
 
-        ngram_sets = get_model("NgramSet").objects.filter(dictionary=self.params["dictionary"])
-        if self.params["ngramset_name"]: ngram_sets = ngram_sets.filter(name=self.params["ngramset_name"])
+        ngram_sets = get_model("NgramSet").objects.filter(
+            dictionary=self.params["dictionary"]
+        )
+        if self.params["ngramset_name"]:
+            ngram_sets = ngram_sets.filter(name=self.params["ngramset_name"])
         for cat in ngram_sets:
             full_words = []
             wildcards = []
             for word in cat.words:
                 if word.endswith("*"):
                     search_word = word.replace("*", "")
-                    if search_word != '':
+                    if search_word != "":
                         wildcards.append(re.escape(search_word))
                         self.ngram_regexes[re.escape(search_word)] = re.compile(
-                            r"((?<=\s)" + re.escape(search_word) + "(?=\w))", re.IGNORECASE
+                            r"((?<=\s)" + re.escape(search_word) + "(?=\w))",
+                            re.IGNORECASE,
                         )
                 else:
                     search_word = word
-                    if search_word != '':
+                    if search_word != "":
                         full_words.append(re.escape(search_word))
                         self.ngram_regexes[re.escape(search_word)] = re.compile(
-                            r"((?<=\s)" + re.escape(search_word) + "(?=\W))", re.IGNORECASE
+                            r"((?<=\s)" + re.escape(search_word) + "(?=\W))",
+                            re.IGNORECASE,
                         )
 
-            if len(wildcards) > 0 and len(full_words) > 0: final_pattern = r'('
-            else: final_pattern = r''
-            if len(wildcards) > 0: final_pattern += r"(?<=\s)(" + "|".join(wildcards) + r")(?=\w)"
+            if len(wildcards) > 0 and len(full_words) > 0:
+                final_pattern = r"("
+            else:
+                final_pattern = r""
+            if len(wildcards) > 0:
+                final_pattern += r"(?<=\s)(" + "|".join(wildcards) + r")(?=\w)"
             if len(full_words) > 0:
-                if len(wildcards) > 0: final_pattern += r"|"
+                if len(wildcards) > 0:
+                    final_pattern += r"|"
                 final_pattern += r"(?<=\s)(" + "|".join(full_words) + r")(?=\W)"
-            if len(wildcards) > 0 and len(full_words) > 0: final_pattern += r')'
-            self.regexes[decode_text(cat.name)] = re.compile(final_pattern, re.IGNORECASE)
+            if len(wildcards) > 0 and len(full_words) > 0:
+                final_pattern += r")"
+            self.regexes[decode_text(cat.name)] = re.compile(
+                final_pattern, re.IGNORECASE
+            )
 
         return self
 

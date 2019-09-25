@@ -52,19 +52,22 @@ class _ProbaScorer(_BaseScorer):
             if y_pred.shape[1] == 2:
                 y_pred = y_pred[:, 1]
             else:
-                raise ValueError('got predict_proba of shape {},'
-                                 ' but need classifier with two'
-                                 ' classes for {} scoring'.format(
-                                     y_pred.shape, self._score_func.__name__))
+                raise ValueError(
+                    "got predict_proba of shape {},"
+                    " but need classifier with two"
+                    " classes for {} scoring".format(
+                        y_pred.shape, self._score_func.__name__
+                    )
+                )
         elif len(clf.classes_) > 1 and "pos_label" in list(self._kwargs.keys()):
             for i, label in enumerate(clf.classes_):
                 if label == self._kwargs["pos_label"]:
                     y_pred = [p[i] for p in y_pred]
                     break
         if sample_weight is not None:
-            return self._sign * self._score_func(y, y_pred,
-                                                 sample_weight=sample_weight,
-                                                 **self._kwargs)
+            return self._sign * self._score_func(
+                y, y_pred, sample_weight=sample_weight, **self._kwargs
+            )
         else:
             return self._sign * self._score_func(y, y_pred, **self._kwargs)
 
@@ -72,11 +75,23 @@ class _ProbaScorer(_BaseScorer):
         return ", needs_proba=True"
 
 
-def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
-                   parameters, fit_params, return_train_score=False,
-                   return_parameters=False, return_n_test_samples=False,
-                   return_times=False, return_estimator=False,
-                   error_score='raise-deprecating'):
+def _fit_and_score(
+    estimator,
+    X,
+    y,
+    scorer,
+    train,
+    test,
+    verbose,
+    parameters,
+    fit_params,
+    return_train_score=False,
+    return_parameters=False,
+    return_n_test_samples=False,
+    return_times=False,
+    return_estimator=False,
+    error_score="raise-deprecating",
+):
     """Fit estimator and compute scores for a given dataset split.
 
     Parameters
@@ -175,8 +190,9 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
 
     # Adjust length of sample weights
     fit_params = fit_params if fit_params is not None else {}
-    fit_params = dict([(k, _index_param_value(X, v, train))
-                      for k, v in list(fit_params.items())])
+    fit_params = dict(
+        [(k, _index_param_value(X, v, train)) for k, v in list(fit_params.items())]
+    )
 
     train_scores = {}
     if parameters is not None:
@@ -198,8 +214,8 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
         # Sadly the best way to ensure that models are evaluated using known sampling weights for both train and test
         # Is to directly check for and grab the sampling_weight column from the django learning dataset
         if "sampling_weight" in X.columns:
-            score_params_train["sample_weight"] = X_train['sampling_weight']
-            score_params_test["sample_weight"] = X_test['sampling_weight']
+            score_params_train["sample_weight"] = X_train["sampling_weight"]
+            score_params_test["sample_weight"] = X_test["sampling_weight"]
             print("DETECTED DJANGO_LEARNING SAMPLING WEIGHTS, PASSING TO SCORERS")
     except Exception as e:
         pass
@@ -229,45 +245,60 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
         # Note fit time as time until error
         fit_time = time.time() - start_time
         score_time = 0.0
-        if error_score == 'raise':
+        if error_score == "raise":
             raise
-        elif error_score == 'raise-deprecating':
-            warnings.warn("From version 0.22, errors during fit will result "
-                          "in a cross validation score of NaN by default. Use "
-                          "error_score='raise' if you want an exception "
-                          "raised or error_score=np.nan to adopt the "
-                          "behavior from version 0.22.",
-                          FutureWarning)
+        elif error_score == "raise-deprecating":
+            warnings.warn(
+                "From version 0.22, errors during fit will result "
+                "in a cross validation score of NaN by default. Use "
+                "error_score='raise' if you want an exception "
+                "raised or error_score=np.nan to adopt the "
+                "behavior from version 0.22.",
+                FutureWarning,
+            )
             raise
         elif isinstance(error_score, numbers.Number):
             if is_multimetric:
-                test_scores = dict(list(zip(list(scorer.keys()),
-                                   [error_score, ] * n_scorers)))
+                test_scores = dict(
+                    list(zip(list(scorer.keys()), [error_score] * n_scorers))
+                )
                 if return_train_score:
-                    train_scores = dict(list(zip(list(scorer.keys()),
-                                        [error_score, ] * n_scorers)))
+                    train_scores = dict(
+                        list(zip(list(scorer.keys()), [error_score] * n_scorers))
+                    )
             else:
                 test_scores = error_score
                 if return_train_score:
                     train_scores = error_score
-            warnings.warn("Estimator fit failed. The score on this train-test"
-                          " partition for these parameters will be set to %f. "
-                          "Details: \n%s" %
-                          (error_score, format_exception_only(type(e), e)[0]),
-                          FitFailedWarning)
+            warnings.warn(
+                "Estimator fit failed. The score on this train-test"
+                " partition for these parameters will be set to %f. "
+                "Details: \n%s" % (error_score, format_exception_only(type(e), e)[0]),
+                FitFailedWarning,
+            )
         else:
-            raise ValueError("error_score must be the string 'raise' or a"
-                             " numeric value. (Hint: if using 'raise', please"
-                             " make sure that it has been spelled correctly.)")
+            raise ValueError(
+                "error_score must be the string 'raise' or a"
+                " numeric value. (Hint: if using 'raise', please"
+                " make sure that it has been spelled correctly.)"
+            )
 
     else:
         fit_time = time.time() - start_time
         # _score will return dict if is_multimetric is True
-        test_scores = _score(estimator, X_test, y_test, scorer, is_multimetric, **score_params_test)
+        test_scores = _score(
+            estimator, X_test, y_test, scorer, is_multimetric, **score_params_test
+        )
         score_time = time.time() - start_time - fit_time
         if return_train_score:
-            train_scores = _score(estimator, X_train, y_train, scorer,
-                                  is_multimetric, **score_params_train)
+            train_scores = _score(
+                estimator,
+                X_train,
+                y_train,
+                scorer,
+                is_multimetric,
+                **score_params_train
+            )
 
     # if verbose > 2:
     #     if is_multimetric:
@@ -307,7 +338,7 @@ def _score(estimator, X_test, y_test, scorer, is_multimetric=False, **score_para
         else:
             score = scorer(estimator, X_test, y_test, **score_params)
 
-        if hasattr(score, 'item'):
+        if hasattr(score, "item"):
             try:
                 # e.g. unwrap memmapped scalars
                 score = score.item()
@@ -316,9 +347,10 @@ def _score(estimator, X_test, y_test, scorer, is_multimetric=False, **score_para
                 pass
 
         if not isinstance(score, numbers.Number):
-            raise ValueError("scoring must return a number, got %s (%s) "
-                             "instead. (scorer=%r)"
-                             % (str(score), type(score), scorer))
+            raise ValueError(
+                "scoring must return a number, got %s (%s) "
+                "instead. (scorer=%r)" % (str(score), type(score), scorer)
+            )
     return score
 
 
@@ -329,13 +361,15 @@ def _multimetric_score(estimator, X_test, y_test, scorers, **score_params):
     for name, scorer in list(scorers.items()):
 
         score_param_names = inspect.getargspec(scorer._score_func).args
-        scorer_params = {k: v for k, v in list(score_params.items()) if k in score_param_names}
+        scorer_params = {
+            k: v for k, v in list(score_params.items()) if k in score_param_names
+        }
         if y_test is None:
             score = scorer(estimator, X_test, **scorer_params)
         else:
             score = scorer(estimator, X_test, y_test, **scorer_params)
 
-        if hasattr(score, 'item'):
+        if hasattr(score, "item"):
             try:
                 # e.g. unwrap memmapped scalars
                 score = score.item()
@@ -345,7 +379,8 @@ def _multimetric_score(estimator, X_test, y_test, scorers, **score_params):
         scores[name] = score
 
         if not isinstance(score, numbers.Number):
-            raise ValueError("scoring must return a number, got %s (%s) "
-                             "instead. (scorer=%s)"
-                             % (str(score), type(score), name))
+            raise ValueError(
+                "scoring must return a number, got %s (%s) "
+                "instead. (scorer=%s)" % (str(score), type(score), name)
+            )
     return scores

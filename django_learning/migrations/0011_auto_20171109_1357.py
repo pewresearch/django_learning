@@ -7,14 +7,10 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0010_auto_20171108_1042'),
-    ]
+    dependencies = [("django_learning", "0010_auto_20171108_1042")]
 
     operations = [
         migrations.AlterField(
-            model_name='hittype',
-            name='name',
-            field=models.CharField(max_length=50),
-        ),
+            model_name="hittype", name="name", field=models.CharField(max_length=50)
+        )
     ]

@@ -5,7 +5,11 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from django.apps import apps
 from django.conf import settings
 
-from pewtils import extract_attributes_from_folder_modules, extract_json_from_folder, decode_text
+from pewtils import (
+    extract_attributes_from_folder_modules,
+    extract_json_from_folder,
+    decode_text,
+)
 from django_pewtils import get_model, get_app_settings_folders
 
 

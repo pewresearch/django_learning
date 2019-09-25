@@ -10,17 +10,22 @@ from django_commander.commands import BasicCommand, log_command, commands
 def get_topic_base_class(topic):
 
     try:
-        base_class_id = get_model("Question", app_name="django_learning").objects \
-            .filter(project__name="topic_model_{}".format(topic.model.name)) \
-            .get(name=topic.name) \
-            .labels.get(value="0").pk
+        base_class_id = (
+            get_model("Question", app_name="django_learning")
+            .objects.filter(project__name="topic_model_{}".format(topic.model.name))
+            .get(name=topic.name)
+            .labels.get(value="0")
+            .pk
+        )
     except:
         base_class_id = None
 
     return base_class_id
 
 
-def get_expert_topic_code_extractor_params(topic, coder_filters, exclude_consensus_ignore=False):
+def get_expert_topic_code_extractor_params(
+    topic, coder_filters, exclude_consensus_ignore=False
+):
 
     return {
         "project_name": "topic_model_{}".format(topic.model.name),
@@ -29,20 +34,30 @@ def get_expert_topic_code_extractor_params(topic, coder_filters, exclude_consens
         "document_filters": [],
         "coder_filters": coder_filters,
         "base_class_id": get_topic_base_class(topic),
-        "threshold": .4,
+        "threshold": 0.4,
         "convert_to_discrete": True,
         "balancing_variables": [],
         "ignore_stratification_weights": False,
-        "exclude_consensus_ignore": exclude_consensus_ignore
+        "exclude_consensus_ignore": exclude_consensus_ignore,
     }
 
 
-def get_topic_expert_codes(dataset_name, topic, sample_name, coder_filters, exclude_consensus_ignore=False, refresh_codes=False):
+def get_topic_expert_codes(
+    dataset_name,
+    topic,
+    sample_name,
+    coder_filters,
+    exclude_consensus_ignore=False,
+    refresh_codes=False,
+):
 
     from django_learning.utils.dataset_extractors import dataset_extractors
+
     try:
         codes = dataset_extractors["document_dataset"](
-            **get_expert_topic_code_extractor_params(topic, coder_filters, exclude_consensus_ignore=exclude_consensus_ignore)
+            **get_expert_topic_code_extractor_params(
+                topic, coder_filters, exclude_consensus_ignore=exclude_consensus_ignore
+            )
         ).extract(refresh=refresh_codes)
     except Exception as e:
         print(e)
@@ -51,12 +66,23 @@ def get_topic_expert_codes(dataset_name, topic, sample_name, coder_filters, excl
     if is_not_null(codes) and len(codes) > 0:
 
         base_class_id = get_topic_base_class(topic)
-        codes['value'] = codes['label_id'].map(lambda x: 1 if str(x) != str(base_class_id) else 0)
+        codes["value"] = codes["label_id"].map(
+            lambda x: 1 if str(x) != str(base_class_id) else 0
+        )
         codes["dataset"] = dataset_name
         codes["probability"] = None
         codes["sampling_weight"] = codes["sampling_weight"].astype(float)
         codes["value"] = codes["value"].astype(str)
-        codes = codes[["document_id", "value", "dataset", "sampling_weight", "probability", "text"]]
+        codes = codes[
+            [
+                "document_id",
+                "value",
+                "dataset",
+                "sampling_weight",
+                "probability",
+                "text",
+            ]
+        ]
 
     return codes
 
@@ -69,26 +95,36 @@ def get_topic_dictionary_codes(topic, dataset, anchor_override=None):
         return None
 
     dictionary_codes = copy.copy(dataset)
-    dictionary_codes['dataset'] = 'dictionary'
+    dictionary_codes["dataset"] = "dictionary"
 
-    ngram_set = get_model("NgramSet", app_name="django_learning").objects.create_or_update(
+    ngram_set = get_model(
+        "NgramSet", app_name="django_learning"
+    ).objects.create_or_update(
         {"dictionary": "topic_model_{}".format(topic.model.name), "name": topic.name},
-        {"label": topic.label[:99], "words": topic.anchors if not anchor_override else anchor_override}
+        {
+            "label": topic.label[:99],
+            "words": topic.anchors if not anchor_override else anchor_override,
+        },
     )
     extractor = feature_extractors["ngram_set"](
         dictionary="topic_model_{}".format(topic.model.name),
         include_ngrams=False,
         ngramset_name=topic.name,
-        preprocessors=topic.model.parameters["vectorizer"]["preprocessors"]
+        preprocessors=topic.model.parameters["vectorizer"]["preprocessors"],
     )
     extractor.fit(dictionary_codes)
     dictionary_codes[topic.name] = extractor.transform(dictionary_codes)
-    dictionary_codes["value"] = dictionary_codes[topic.name].map(lambda x: "1" if x > 0 else "0")
+    dictionary_codes["value"] = dictionary_codes[topic.name].map(
+        lambda x: "1" if x > 0 else "0"
+    )
     if "probability" not in dictionary_codes.columns:
         dictionary_codes["probability"] = None
-    dictionary_codes = dictionary_codes[["document_id", "value", "dataset", "sampling_weight", "probability", "text"]]
+    dictionary_codes = dictionary_codes[
+        ["document_id", "value", "dataset", "sampling_weight", "probability", "text"]
+    ]
 
     return dictionary_codes
+
 
 def get_topic_codes(topic, codes):
 
@@ -98,10 +134,14 @@ def get_topic_codes(topic, codes):
     topic_codes = topic.model.apply_model(codes, probabilities=False)
     topic_codes["dataset"] = "topic_model"
     topic_codes["value"] = topic_codes[topic.name]
-    topic_codes['probability'] = topic.model.apply_model(codes, probabilities=True)[topic.name]
+    topic_codes["probability"] = topic.model.apply_model(codes, probabilities=True)[
+        topic.name
+    ]
     topic_codes["sampling_weight"] = topic_codes["sampling_weight"].astype(float)
     topic_codes["value"] = topic_codes["value"].astype(str)
-    topic_codes = topic_codes[["document_id", "value", "dataset", "sampling_weight", "probability", "text"]]
+    topic_codes = topic_codes[
+        ["document_id", "value", "dataset", "sampling_weight", "probability", "text"]
+    ]
 
     return topic_codes
 
@@ -109,15 +149,31 @@ def get_topic_codes(topic, codes):
 def get_score(topic, df1, df2, sample_name, group_name):
 
     df = pandas.concat([df1, df2])
-    score = compute_scores_from_dataset(df, "document_id", "value", "dataset", weight_column="sampling_weight")
-    score = score[['coder1', 'coder1_mean', 'coder1_mean_unweighted', 'coder2', 'coder2_mean', 'coder2_mean_unweighted', 'n', 'pct_agree_unweighted', 'accuracy', 'outcome_column', 'precision', 'recall', 'cohens_kappa']]
-    score['topic'] = topic.name
-    score['sample'] = sample_name
-    score['group'] = group_name
+    score = compute_scores_from_dataset(
+        df, "document_id", "value", "dataset", weight_column="sampling_weight"
+    )
+    score = score[
+        [
+            "coder1",
+            "coder1_mean",
+            "coder1_mean_unweighted",
+            "coder2",
+            "coder2_mean",
+            "coder2_mean_unweighted",
+            "n",
+            "pct_agree_unweighted",
+            "accuracy",
+            "outcome_column",
+            "precision",
+            "recall",
+            "cohens_kappa",
+        ]
+    ]
+    score["topic"] = topic.name
+    score["sample"] = sample_name
+    score["group"] = group_name
 
     return score
-
-
 
 
 class Command(BasicCommand):
@@ -135,7 +191,9 @@ class Command(BasicCommand):
     @log_command
     def run(self):
 
-        topic_model = get_model("TopicModel", app_name="django_learning").objects.get(name=self.parameters["topic_model_name"])
+        topic_model = get_model("TopicModel", app_name="django_learning").objects.get(
+            name=self.parameters["topic_model_name"]
+        )
         topic_model.frame.get_sampling_flags(refresh=False)
 
         scores = None
@@ -144,17 +202,36 @@ class Command(BasicCommand):
 
             print(topic)
 
-            all_expert_codes = get_topic_expert_codes("expert_consensus", topic, "topic_model_{}".format(topic_model.name), [], exclude_consensus_ignore=True, refresh_codes=self.options["refresh_codes"])
+            all_expert_codes = get_topic_expert_codes(
+                "expert_consensus",
+                topic,
+                "topic_model_{}".format(topic_model.name),
+                [],
+                exclude_consensus_ignore=True,
+                refresh_codes=self.options["refresh_codes"],
+            )
             expert_codes = {}
-            for coder in get_model("Project", app_name="django_learning").objects.get(name="topic_model_{}".format(topic_model.name)).coders.all():
-                expert_codes[coder.name] = get_topic_expert_codes(coder.name, topic, "topic_model_{}".format(topic_model.name),
-                                           [("filter_by_coder_names", [[coder.name]], {})],
-                                           exclude_consensus_ignore=False, refresh_codes=self.options["refresh_codes"])
+            for coder in (
+                get_model("Project", app_name="django_learning")
+                .objects.get(name="topic_model_{}".format(topic_model.name))
+                .coders.all()
+            ):
+                expert_codes[coder.name] = get_topic_expert_codes(
+                    coder.name,
+                    topic,
+                    "topic_model_{}".format(topic_model.name),
+                    [("filter_by_coder_names", [[coder.name]], {})],
+                    exclude_consensus_ignore=False,
+                    refresh_codes=self.options["refresh_codes"],
+                )
 
             dictionary_codes = get_topic_dictionary_codes(topic, all_expert_codes)
             topic_codes = get_topic_codes(topic, all_expert_codes)
 
-            if is_not_null(all_expert_codes) and all_expert_codes['value'].astype(int).mean() < .05:
+            if (
+                is_not_null(all_expert_codes)
+                and all_expert_codes["value"].astype(int).mean() < 0.05
+            ):
                 warning = True
             else:
                 warning = False
@@ -164,10 +241,18 @@ class Command(BasicCommand):
                 df1 = expert_codes[coder1]
                 df2 = expert_codes[coder2]
                 if is_not_null(df1) and is_not_null(df2):
-                    try: score = get_score(topic, df1, df2,  "topic_model_{}".format(topic_model.name), group_name)
-                    except: score = None
+                    try:
+                        score = get_score(
+                            topic,
+                            df1,
+                            df2,
+                            "topic_model_{}".format(topic_model.name),
+                            group_name,
+                        )
+                    except:
+                        score = None
                     if is_not_null(score):
-                        score['warning'] = warning
+                        score["warning"] = warning
                         if is_not_null(score):
                             if is_null(scores):
                                 scores = score
@@ -176,14 +261,22 @@ class Command(BasicCommand):
 
             for group_name, df1, df2 in [
                 ("corex", all_expert_codes, topic_codes),
-                ("dictionary", all_expert_codes, dictionary_codes)
+                ("dictionary", all_expert_codes, dictionary_codes),
             ]:
 
                 if is_not_null(df1) and is_not_null(df2):
-                    try: score = get_score(topic, df1, df2,  "topic_model_{}".format(topic_model.name), group_name)
-                    except: score = None
+                    try:
+                        score = get_score(
+                            topic,
+                            df1,
+                            df2,
+                            "topic_model_{}".format(topic_model.name),
+                            group_name,
+                        )
+                    except:
+                        score = None
                     if is_not_null(score):
-                        score['warning'] = warning
+                        score["warning"] = warning
                         if is_not_null(score):
                             if is_null(scores):
                                 scores = score
@@ -194,4 +287,3 @@ class Command(BasicCommand):
             scores.to_csv("topic_model_{}_irr_results.csv".format(topic_model.name))
 
         return scores
-

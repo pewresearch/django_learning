@@ -16,7 +16,11 @@ from pewanalytics.text import TextCleaner, SentenceTokenizer
 
 class Word2VecModel(LoggedExtendedModel):
 
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="word2vec_models", on_delete=models.CASCADE)
+    frame = models.ForeignKey(
+        "django_learning.SamplingFrame",
+        related_name="word2vec_models",
+        on_delete=models.CASCADE,
+    )
 
     window_size = models.IntegerField(default=10)
     use_skipgrams = models.BooleanField(default=False)
@@ -27,11 +31,19 @@ class Word2VecModel(LoggedExtendedModel):
 
     model = PickledObjectField(null=True)
 
-    training_documents = models.ManyToManyField("django_learning.Document", related_name="word2vec_models_trained")
+    training_documents = models.ManyToManyField(
+        "django_learning.Document", related_name="word2vec_models_trained"
+    )
 
     class Meta:
 
-      unique_together = ("frame", "window_size", "use_skipgrams", "use_sentences", "dimensions")
+        unique_together = (
+            "frame",
+            "window_size",
+            "use_skipgrams",
+            "use_sentences",
+            "dimensions",
+        )
 
     def __str__(self):
 
@@ -41,7 +53,7 @@ class Word2VecModel(LoggedExtendedModel):
             self.use_sentences,
             self.use_skipgrams,
             self.dimensions,
-            self.finalized
+            self.finalized,
         )
 
     def train_model(self, chunk_size=100000, workers=2, doc_limit=None):
@@ -53,22 +65,31 @@ class Word2VecModel(LoggedExtendedModel):
             w2v_model = self.model
 
             print("Extracting document IDs")
-            doc_ids = self.frame.documents \
-                .filter(is_clean=True) \
-                .filter(text__isnull=False)
+            doc_ids = self.frame.documents.filter(is_clean=True).filter(
+                text__isnull=False
+            )
             doc_ids = list(doc_ids.values_list("pk", flat=True))
             random.shuffle(doc_ids)
 
-            for i, chunk in tqdm(enumerate(chunk_list(doc_ids, chunk_size)), desc="Processing document chunks"):
+            for i, chunk in tqdm(
+                enumerate(chunk_list(doc_ids, chunk_size)),
+                desc="Processing document chunks",
+            ):
 
                 chunk_docs = get_model("Document").objects.filter(pk__in=chunk)
 
                 sentences = []
-                for text in tqdm(chunk_docs.values_list("text", flat=True),
-                                 nested=True,
-                                 desc="Loading documents {0} - {1}".format((i) * chunk_size, (i + 1) * chunk_size)):
+                for text in tqdm(
+                    chunk_docs.values_list("text", flat=True),
+                    nested=True,
+                    desc="Loading documents {0} - {1}".format(
+                        (i) * chunk_size, (i + 1) * chunk_size
+                    ),
+                ):
                     if self.use_sentences:
-                        sentences.extend([cleaner.clean(s).split() for s in tokenizer.tokenize(text)])
+                        sentences.extend(
+                            [cleaner.clean(s).split() for s in tokenizer.tokenize(text)]
+                        )
                     else:
                         sentences.append(cleaner.clean(text).split())
                 print("Transforming and training")
@@ -81,7 +102,7 @@ class Word2VecModel(LoggedExtendedModel):
                         sg=1 if self.use_skipgrams else 0,
                         window=self.window_size,
                         min_count=5,
-                        workers=workers
+                        workers=workers,
                     )
                 else:
                     w2v_model.train(bigram_transformer[sentences])
@@ -115,21 +136,27 @@ class Word2VecModel(LoggedExtendedModel):
     def apply_model_to_docs(self, docs, stopword_sets=None, regex_filters=None):
 
         df = pandas.DataFrame.from_records(docs.values("pk", "text"))
-        return self.apply_model_to_dataframe(df, stopword_sets=stopword_sets, regex_filters=regex_filters)
+        return self.apply_model_to_dataframe(
+            df, stopword_sets=stopword_sets, regex_filters=regex_filters
+        )
 
     def apply_model_to_dataframe(self, df, stopword_sets=None, regex_filters=None):
 
-        if not stopword_sets: stopword_sets = []
-        if not regex_filters: regex_filters = []
+        if not stopword_sets:
+            stopword_sets = []
+        if not regex_filters:
+            regex_filters = []
 
-        cleaner = preprocessors['clean_text'](lemmatize=False, stopword_sets=stopword_sets, regex_filters=regex_filters)
-        df['text'] = df['text'].map(cleaner.run)
+        cleaner = preprocessors["clean_text"](
+            lemmatize=False, stopword_sets=stopword_sets, regex_filters=regex_filters
+        )
+        df["text"] = df["text"].map(cleaner.run)
 
         model = self.model
 
         vecs = []
         for index, row in tqdm(df.iterrows(), desc="Computing Word2Vec features"):
-            text = row['text']
+            text = row["text"]
             new_row = []
             words = []
             for word in text.split():
@@ -144,12 +171,12 @@ class Word2VecModel(LoggedExtendedModel):
             else:
                 words = pandas.DataFrame(words)
                 new_row.extend(
-                    list(words.mean()) +
-                    list(words.max()) +
-                    list(words.min()) +
-                    list(words.apply(lambda x: numpy.median(x))) +
-                    list(words.apply(lambda x: numpy.percentile(x, 25))) +
-                    list(words.apply(lambda x: numpy.percentile(x, 75)))
+                    list(words.mean())
+                    + list(words.max())
+                    + list(words.min())
+                    + list(words.apply(lambda x: numpy.median(x)))
+                    + list(words.apply(lambda x: numpy.percentile(x, 25)))
+                    + list(words.apply(lambda x: numpy.percentile(x, 75)))
                 )
             vecs.append(new_row)
 
@@ -157,15 +184,17 @@ class Word2VecModel(LoggedExtendedModel):
 
     def get_feature_names(self):
 
-        return ["{}_avg".format(i) for i in range(0, self.dimensions)] + \
-               ["{}_max".format(i) for i in range(0, self.dimensions)] + \
-               ["{}_min".format(i) for i in range(0, self.dimensions)] + \
-               ["{}_median".format(i) for i in range(0, self.dimensions)] + \
-               ["{}_25pct".format(i) for i in range(0, self.dimensions)] + \
-               ["{}_75pct".format(i) for i in range(0, self.dimensions)]
-
+        return (
+            ["{}_avg".format(i) for i in range(0, self.dimensions)]
+            + ["{}_max".format(i) for i in range(0, self.dimensions)]
+            + ["{}_min".format(i) for i in range(0, self.dimensions)]
+            + ["{}_median".format(i) for i in range(0, self.dimensions)]
+            + ["{}_25pct".format(i) for i in range(0, self.dimensions)]
+            + ["{}_75pct".format(i) for i in range(0, self.dimensions)]
+        )
 
         # class Word2VecModelDocument(LoggedExtendedModel):
+
 
 #
 #     word2vec_model = models.ForeignKey("django_learning.Word2VecModel", related_name="documents")

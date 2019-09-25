@@ -5,7 +5,6 @@ from django_learning.utils.feature_extractors import BasicExtractor
 
 
 class Extractor(BasicExtractor):
-
     def __init__(self, *args, **kwargs):
 
         self.name = "regex_counts"
@@ -20,19 +19,22 @@ class Extractor(BasicExtractor):
 
         rows = []
         for index, row in X.iterrows():
-            text = row['text']
+            text = row["text"]
             for p in preprocessors:
                 text = p.run(text)
             matches = self.regex_filter.findall(text)
             count = float(len(matches))
             row = {
                 "{}_count".format(self.params["regex_filter"]): count,
-                "{}_has_match".format(self.params["regex_filter"]): 1 if count > 0 else 0,
-                "{}_count_sq".format(self.params["regex_filter"]): count*count,
-                "{}_count_log".format(self.params["regex_filter"]): numpy.log(count+1.0)
+                "{}_has_match".format(self.params["regex_filter"]): 1
+                if count > 0
+                else 0,
+                "{}_count_sq".format(self.params["regex_filter"]): count * count,
+                "{}_count_log".format(self.params["regex_filter"]): numpy.log(
+                    count + 1.0
+                ),
             }
             rows.append(row)
-
 
         df = pandas.DataFrame(rows)
         self.features = df.columns

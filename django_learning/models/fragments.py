@@ -15,10 +15,14 @@ class DocumentFragment(LoggedExtendedModel):
     indicates that the fragment has yet to be determined to be content or non-content.
     """
 
-    scope = JSONField(default=dict,
-                      help_text="A dictionary of filter parameters for defining documents within which the fragment can exist")
+    scope = JSONField(
+        default=dict,
+        help_text="A dictionary of filter parameters for defining documents within which the fragment can exist",
+    )
 
-    documents = models.ManyToManyField("django_learning.Document", related_name="document_fragments")
+    documents = models.ManyToManyField(
+        "django_learning.Document", related_name="document_fragments"
+    )
 
     hash = models.CharField(max_length=256, db_index=True)
     text = models.TextField()
@@ -27,4 +31,3 @@ class DocumentFragment(LoggedExtendedModel):
 
     def __str__(self):
         return "{0}...".format(decode_text(self.text)[:50])
-

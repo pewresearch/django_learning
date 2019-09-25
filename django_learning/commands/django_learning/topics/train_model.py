@@ -21,7 +21,7 @@ class Command(BasicCommand):
         model.save()
         model.load_model(
             refresh_model=self.options["refresh_model"],
-            refresh_vectorizer=self.options["refresh_vectorizer"]
+            refresh_vectorizer=self.options["refresh_vectorizer"],
         )
 
     def cleanup(self):

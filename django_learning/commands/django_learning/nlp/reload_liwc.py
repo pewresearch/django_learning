@@ -16,7 +16,6 @@ from django_commander.commands import BasicCommand
 from django_learning.models import SamplingFrame
 
 
-
 def _get_label(key, val, label=""):
 
     if type(val) == dict:
@@ -24,7 +23,8 @@ def _get_label(key, val, label=""):
             return "%s > %s" % (label, val[key])
         else:
             for k, v in val.items():
-                if label: k = "%s > %s" % (label, k)
+                if label:
+                    k = "%s > %s" % (label, k)
                 subval = _get_label(key, v, k)
                 if subval:
                     return subval
@@ -43,7 +43,10 @@ class Command(BasicCommand):
     def run(self):
 
         NgramSet = apps.get_model("django_learning", "NgramSet")
-        h = FileHandler(os.path.join(settings.BASE_DIR, "static/django_learning/dictionaries"), use_s3=False)
+        h = FileHandler(
+            os.path.join(settings.BASE_DIR, "static/django_learning/dictionaries"),
+            use_s3=False,
+        )
 
         labels = h.read("liwc_labels", format="json")
 
@@ -96,10 +99,15 @@ class Command(BasicCommand):
             print(cat)
             valid_categories.append(cat.pk)
 
-        invalid_categories = NgramSet.objects.filter(dictionary="liwc").exclude(pk__in=valid_categories)
+        invalid_categories = NgramSet.objects.filter(dictionary="liwc").exclude(
+            pk__in=valid_categories
+        )
         if invalid_categories.count() > 0:
-            for invalid_category in tqdm(invalid_categories, desc="Deleting extra/invalid categories",
-                                         total=invalid_categories.count()):
+            for invalid_category in tqdm(
+                invalid_categories,
+                desc="Deleting extra/invalid categories",
+                total=invalid_categories.count(),
+            ):
                 invalid_category.delete()
 
     def cleanup(self):

@@ -7,19 +7,17 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0021_auto_20190408_1541'),
-    ]
+    dependencies = [("django_learning", "0021_auto_20190408_1541")]
 
     operations = [
         migrations.RenameField(
-            model_name='classificationmodel',
-            old_name='cache_hash',
-            new_name='model_cache_hash',
+            model_name="classificationmodel",
+            old_name="cache_hash",
+            new_name="model_cache_hash",
         ),
         migrations.AddField(
-            model_name='classificationmodel',
-            name='dataset_cache_hash',
+            model_name="classificationmodel",
+            name="dataset_cache_hash",
             field=models.CharField(max_length=256, null=True),
         ),
     ]

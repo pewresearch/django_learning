@@ -10,7 +10,6 @@ from django_learning.utils.feature_extractors import BasicExtractor
 
 
 class Extractor(BasicExtractor):
-
     def __init__(self, *args, **kwargs):
 
         self.name = "tfidf"
@@ -24,7 +23,7 @@ class Extractor(BasicExtractor):
 
     def transform(self, X, **transform_params):
 
-        text = X['text']
+        text = X["text"]
         for p in self.get_preprocessors():
             text = text.apply(p.run)
 
@@ -36,13 +35,15 @@ class Extractor(BasicExtractor):
             ngrams = pandas.DataFrame(ngrams.todense(), index=X.index)
             for doctype, group in X.groupby("document_type"):
                 for col in ngrams.columns:
-                    ngrams.ix[group.index, col] = ((ngrams[col] - self.mean_mapper[doctype][col]) / self.std_mapper[doctype][col])
+                    ngrams.ix[group.index, col] = (
+                        ngrams[col] - self.mean_mapper[doctype][col]
+                    ) / self.std_mapper[doctype][col]
 
         return ngrams
 
     def fit(self, X, y=None, **fit_params):
 
-        text = X['text']
+        text = X["text"]
         for p in self.get_preprocessors():
             text = text.apply(p.run)
 
@@ -51,12 +52,19 @@ class Extractor(BasicExtractor):
         if hasattr(self, "normalize_document_types") and self.normalize_document_types:
 
             # Computing normalization parameters (fit)
-            ngrams = pandas.DataFrame(self.vectorizer.transform(text).todense(), index=X.index)
+            ngrams = pandas.DataFrame(
+                self.vectorizer.transform(text).todense(), index=X.index
+            )
             self.mean_mapper = defaultdict(dict)
             self.std_mapper = defaultdict(dict)
             for doctype, group in X.groupby("document_type"):
                 for col in ngrams.columns:
-                    mean, err, std = wmom(ngrams[col][group.index], group["sampling_weight"], calcerr=True, sdev=True)
+                    mean, err, std = wmom(
+                        ngrams[col][group.index],
+                        group["sampling_weight"],
+                        calcerr=True,
+                        sdev=True,
+                    )
                     self.mean_mapper[doctype][col] = mean
                     self.std_mapper[doctype][col] = std
 
@@ -65,7 +73,10 @@ class Extractor(BasicExtractor):
     def get_feature_names(self):
 
         if self.params["feature_name_prefix"]:
-            return ["%s__%s" % (self.params["feature_name_prefix"], ngram) for ngram in self.vectorizer.get_feature_names()]
+            return [
+                "%s__%s" % (self.params["feature_name_prefix"], ngram)
+                for ngram in self.vectorizer.get_feature_names()
+            ]
         else:
             return self.vectorizer.get_feature_names()
 
@@ -88,4 +99,3 @@ class Extractor(BasicExtractor):
         super(Extractor, self).set_params(*args, **kwargs)
 
         return self
-

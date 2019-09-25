@@ -19,11 +19,12 @@ class Command(BasicCommand):
 
     def run(self):
 
-        project = Project.objects.get(name=self.parameters["project_name"], sandbox=self.options["sandbox"])
+        project = Project.objects.get(
+            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
+        )
 
         sample = Sample.objects.get(
-            name=self.parameters["sample_name"],
-            project=project
+            name=self.parameters["sample_name"], project=project
         )
 
         for su in sample.document_units.all():
@@ -32,8 +33,8 @@ class Command(BasicCommand):
                 {"sample_unit": su, "turk": False},
                 {
                     "template_name": self.options["template_name"],
-                    "num_coders": self.options["num_coders"]
-                }
+                    "num_coders": self.options["num_coders"],
+                },
             )
 
     def cleanup(self):

@@ -8,12 +8,8 @@ from django_pewtils import get_model
 def get_frame():
 
     return {
-        "filter_dict": {
-            "text__regex": "action"
-        },
-        "exclude_dict": {
-            "text__regex": "adventure"
-        },
+        "filter_dict": {"text__regex": "action"},
+        "exclude_dict": {"text__regex": "adventure"},
         "complex_filters": [],
-        "code_weights": []
+        "code_weights": [],
     }

@@ -24,5 +24,5 @@ def get_stopwords():
         "november",
         "nov",
         "december",
-        "dec"
+        "dec",
     ]

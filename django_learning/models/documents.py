@@ -21,7 +21,9 @@ class Document(LoggedExtendedModel, QueryModel):
     original_text = models.TextField(null=True)
     duplicate_ids = ArrayField(models.IntegerField(), default=[])
     alternative_text = ArrayField(models.TextField(), default=[])
-    date = models.DateTimeField(null=True, help_text="An optional date associated with the document")
+    date = models.DateTimeField(
+        null=True, help_text="An optional date associated with the document"
+    )
 
     is_clean = models.BooleanField(default=False)
 
@@ -31,14 +33,19 @@ class Document(LoggedExtendedModel, QueryModel):
 
     language = models.CharField(max_length=5, null=True)
 
-    paragraphs = models.ManyToManyField("self", symmetrical=False, related_name="parent")
+    paragraphs = models.ManyToManyField(
+        "self", symmetrical=False, related_name="parent"
+    )
     paragraph_id = models.IntegerField(null=True)
 
-    entities = models.ManyToManyField("django_learning.Entity", related_name="documents")
+    entities = models.ManyToManyField(
+        "django_learning.Entity", related_name="documents"
+    )
 
-    coded_labels = models.ManyToManyField("django_learning.Label",
+    coded_labels = models.ManyToManyField(
+        "django_learning.Label",
         related_name="coded_documents",
-        through="django_learning.Code"
+        through="django_learning.Code",
     )
     # classified_labels = models.ManyToManyField("django_learning.Label",
     #     related_name="classified_documents",
@@ -62,6 +69,7 @@ class Document(LoggedExtendedModel, QueryModel):
     def get_parent_relations(cls):
         obj_models = []
         from django.db.models.fields.reverse_related import OneToOneRel
+
         for field in cls._meta.get_fields():
             if type(field) == OneToOneRel:
                 obj_models.append(field)
@@ -92,9 +100,7 @@ class Document(LoggedExtendedModel, QueryModel):
     def __str__(self):
 
         return "Document #{}, {}: {}...".format(
-            self.pk,
-            str(self.object),
-            decode_text(self.text[:50])
+            self.pk, str(self.object), decode_text(self.text[:50])
         )
 
     #     # parent_field = self.get_parent_field()
@@ -127,9 +133,9 @@ class Document(LoggedExtendedModel, QueryModel):
                         "text": paragraph,
                         "date": self.date,
                         "is_clean": self.is_clean,
-                        "language": self.language
+                        "language": self.language,
                     },
-                    return_object=False
+                    return_object=False,
                 )
 
     def freeze(self):
@@ -172,10 +178,15 @@ class Document(LoggedExtendedModel, QueryModel):
                     if getattr(self, m2m).count() > 0:
                         delete = True
                         if not ignore_warnings:
-                            print("Warning: text for document {} was modified, clearing out {}".format(self.pk, m2m))
+                            print(
+                                "Warning: text for document {} was modified, clearing out {}".format(
+                                    self.pk, m2m
+                                )
+                            )
                             # setattr(self, m2m, [])
                             # getattr(self, m2m).clear()
                             import pdb
+
                             pdb.set_trace()
                         if delete:
                             try:
@@ -187,8 +198,13 @@ class Document(LoggedExtendedModel, QueryModel):
                 if self.coded_labels.count() > 0:
                     delete = True
                     if not ignore_warnings:
-                        print("Warning: text for document {} was modified, clearing out coded labels".format(self.pk))
+                        print(
+                            "Warning: text for document {} was modified, clearing out coded labels".format(
+                                self.pk
+                            )
+                        )
                         import pdb
+
                         pdb.set_trace()
                     if delete:
                         self.codes.all().delete()
@@ -218,7 +234,12 @@ class Document(LoggedExtendedModel, QueryModel):
 
         parent_field = None
         for f in self._meta.get_fields():
-            if f.is_relation and f.one_to_one and hasattr(self, f.name) and is_not_null(getattr(self, f.name)):
+            if (
+                f.is_relation
+                and f.one_to_one
+                and hasattr(self, f.name)
+                and is_not_null(getattr(self, f.name))
+            ):
                 parent_field = f
         return parent_field
 

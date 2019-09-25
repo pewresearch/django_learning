@@ -27,7 +27,7 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
         self.params = {
             "document_types": None,
             "cache_identifier": None,
-            "feature_name_prefix": None
+            "feature_name_prefix": None,
         }
         self.param_repr = str(get_param_repr(self.params))
         self.cache = None
@@ -52,7 +52,15 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
 
         self.param_repr = str(get_param_repr(self.params))
         if is_not_null(self.params["cache_identifier"]):
-            self.cache = CacheHandler(os.path.join(settings.LOCAL_CACHE_PATH, "feature_extractors/{}/{}".format(self.params["cache_identifier"], self.name)), use_s3=False)
+            self.cache = CacheHandler(
+                os.path.join(
+                    settings.LOCAL_CACHE_PATH,
+                    "feature_extractors/{}/{}".format(
+                        self.params["cache_identifier"], self.name
+                    ),
+                ),
+                use_s3=False,
+            )
 
         return self
 
@@ -84,25 +92,18 @@ class BasicExtractor(BaseEstimator, TransformerMixin):
         return preprocessor_list
 
 
-for mod_category, attribute_name in [
-    ("feature_extractors", "Extractor")
-]:
+for mod_category, attribute_name in [("feature_extractors", "Extractor")]:
     mods = extract_attributes_from_folder_modules(
         os.path.join(__path__[0]),
         attribute_name,
         include_subdirs=True,
-        concat_subdir_names=True
+        concat_subdir_names=True,
     )
     conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
     for folder in get_app_settings_folders(conf_var):
         mods.update(
             extract_attributes_from_folder_modules(
-                folder,
-                attribute_name,
-                include_subdirs=True,
-                concat_subdir_names=True
+                folder, attribute_name, include_subdirs=True, concat_subdir_names=True
             )
         )
     globals()[mod_category] = mods
-
-
