@@ -11,7 +11,7 @@ from django_learning.utils.balancing_variables import balancing_variables
 from django_learning.utils.dataset_extractors import DatasetExtractor
 from django_learning.utils.scoring import compute_scores_from_dataset
 from pewanalytics.stats.irr import compute_overall_scores
-from django_learning.functions import get_sampling_weights
+from django_learning.utils.sampling import get_sampling_weights
 
 
 class Extractor(DatasetExtractor):
