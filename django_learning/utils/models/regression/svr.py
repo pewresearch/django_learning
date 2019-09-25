@@ -5,7 +5,5 @@ def get_params():
 
     return {
         "model_class": SVR(),
-        "params": {
-            "kernel": ('linear', ) # linear, poly, rbf, signmoid
-        }
+        "params": {"kernel": ("linear",)},  # linear, poly, rbf, signmoid
     }

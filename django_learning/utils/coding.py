@@ -13,22 +13,44 @@ def filter_hits(
     assignments=None,
     exclude_coders=None,
     filter_coders=None,
-    documents=None
+    documents=None,
 ):
 
     hits = get_model("HIT", app_name="django_learning").objects.all()
-    if project: hits = hits.filter(sample__project=project)
-    if sample: hits = hits.filter(sample=sample)
-    if turk_only: hits = hits.filter(turk=True)
-    elif experts_only: hits = hits.filter(turk=False)
+    if project:
+        hits = hits.filter(sample__project=project)
+    if sample:
+        hits = hits.filter(sample=sample)
+    if turk_only:
+        hits = hits.filter(turk=True)
+    elif experts_only:
+        hits = hits.filter(turk=False)
     if finished_only:
-        hits = get_model("HIT", app_name="django_learning").objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() >= h.num_coders])
+        hits = get_model("HIT", app_name="django_learning").objects.filter(
+            pk__in=[
+                h.pk
+                for h in hits
+                if h.assignments.filter(time_finished__isnull=False).count()
+                >= h.num_coders
+            ]
+        )
     elif unfinished_only:
-        hits = get_model("HIT", app_name="django_learning").objects.filter(pk__in=[h.pk for h in hits if h.assignments.filter(time_finished__isnull=False).count() < h.num_coders])
-    if exclude_coders != None: hits = hits.exclude(assignments__coder__in=exclude_coders)
-    if filter_coders != None: hits = hits.filter(assignments__coder__in=filter_coders)
-    if assignments != None: hits = hits.filter(assignments__in=assignments)
-    if documents != None: hits = hits.filter(sample_unit__document__in=documents)
+        hits = get_model("HIT", app_name="django_learning").objects.filter(
+            pk__in=[
+                h.pk
+                for h in hits
+                if h.assignments.filter(time_finished__isnull=False).count()
+                < h.num_coders
+            ]
+        )
+    if exclude_coders != None:
+        hits = hits.exclude(assignments__coder__in=exclude_coders)
+    if filter_coders != None:
+        hits = hits.filter(assignments__coder__in=filter_coders)
+    if assignments != None:
+        hits = hits.filter(assignments__in=assignments)
+    if documents != None:
+        hits = hits.filter(sample_unit__document__in=documents)
 
     return hits.distinct()
 
@@ -45,22 +67,38 @@ def filter_assignments(
     hits=None,
     exclude_coders=None,
     filter_coders=None,
-    documents=None
+    documents=None,
 ):
 
     assignments = get_model("Assignment", app_name="django_learning").objects.all()
-    if project: assignments = assignments.filter(hit__sample__project=project)
-    if sample: assignments = assignments.filter(hit__sample=sample)
-    if turk_only: assignments = assignments.filter(hit__turk=True)
-    elif experts_only: assignments = assignments.filter(hit__turk=False)
-    if coder_min_hit_count: assignments = assignments.filter(coder__in=filter_coders(project, sample=sample, min_hit_count=coder_min_hit_count))
-    if coder: assignments = assignments.filter(coder=coder)
-    if completed_only: assignments = assignments.filter(time_finished__isnull=False)
-    elif incomplete_only: assignments = assignments.filter(time_finished__isnull=True)
-    if exclude_coders != None: assignments = assignments.exclude(coder__in=exclude_coders)
-    if filter_coders != None: assignments = assignments.filter(coder__in=filter_coders)
-    if hits != None: assignments = assignments.filter(hit__in=hits)
-    if documents != None: assignments = assignments.filter(hits__sample_unit__document__in=documents)
+    if project:
+        assignments = assignments.filter(hit__sample__project=project)
+    if sample:
+        assignments = assignments.filter(hit__sample=sample)
+    if turk_only:
+        assignments = assignments.filter(hit__turk=True)
+    elif experts_only:
+        assignments = assignments.filter(hit__turk=False)
+    if coder_min_hit_count:
+        assignments = assignments.filter(
+            coder__in=filter_coders(
+                project, sample=sample, min_hit_count=coder_min_hit_count
+            )
+        )
+    if coder:
+        assignments = assignments.filter(coder=coder)
+    if completed_only:
+        assignments = assignments.filter(time_finished__isnull=False)
+    elif incomplete_only:
+        assignments = assignments.filter(time_finished__isnull=True)
+    if exclude_coders != None:
+        assignments = assignments.exclude(coder__in=exclude_coders)
+    if filter_coders != None:
+        assignments = assignments.filter(coder__in=filter_coders)
+    if hits != None:
+        assignments = assignments.filter(hit__in=hits)
+    if documents != None:
+        assignments = assignments.filter(hits__sample_unit__document__in=documents)
 
     return assignments.distinct()
 
@@ -69,18 +107,24 @@ def filter_coders(project=None, sample=None, min_hit_count=None):
 
     good_coder_ids = []
     coders = get_model("Coder", app_name="django_learning").objects.all()
-    if project: coders = project.coders.all()
-    if sample: coders = coders.filter(assignments__hit__sample=sample)
+    if project:
+        coders = project.coders.all()
+    if sample:
+        coders = coders.filter(assignments__hit__sample=sample)
     for c in coders:
-        a = c.assignments\
-            .filter(hit__sample__project=project)\
-            .filter(time_finished__isnull=False)
-        if sample: a = a.filter(hit__sample=sample)
+        a = c.assignments.filter(hit__sample__project=project).filter(
+            time_finished__isnull=False
+        )
+        if sample:
+            a = a.filter(hit__sample=sample)
         if not min_hit_count or a.count() >= min_hit_count:
             good_coder_ids.append(c.pk)
 
-    return get_model("Coder", app_name="django_learning").objects.filter(pk__in=good_coder_ids).distinct()
-
+    return (
+        get_model("Coder", app_name="django_learning")
+        .objects.filter(pk__in=good_coder_ids)
+        .distinct()
+    )
 
 
 # def filter_responses(

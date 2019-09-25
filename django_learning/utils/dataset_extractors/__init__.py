@@ -7,7 +7,6 @@ import os
 
 
 class DatasetExtractor(object):
-
     def __init__(self, outcome_column=None, **kwargs):
         self.outcome_column = outcome_column
         self.cache_hash = None
@@ -18,7 +17,7 @@ class DatasetExtractor(object):
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,
             aws_secret=settings.AWS_SECRET_ACCESS_KEY,
-            bucket=settings.S3_BUCKET
+            bucket=settings.S3_BUCKET,
         )
 
         self.dataset = None
@@ -27,7 +26,9 @@ class DatasetExtractor(object):
 
     def get_hash(self, **kwargs):
 
-        hash_key = str(inspect.getsourcelines(self._get_dataset)) + str({k: v for k, v in self.kwargs.iteritems() if k != "refresh"})
+        hash_key = str(inspect.getsourcelines(self._get_dataset)) + str(
+            {k: v for k, v in self.kwargs.iteritems() if k != "refresh"}
+        )
         return self.cache.file_handler.get_key_hash(hash_key)
 
     def set_outcome_column(self, outcome_col):
@@ -50,7 +51,8 @@ class DatasetExtractor(object):
 
         if is_null(cache_data) and not only_load_existing:
             # print("Refreshing dataset: {}".format(self.cache_hash))
-            if hasattr(self, "name") and self.name: print(self.name)
+            if hasattr(self, "name") and self.name:
+                print(self.name)
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
             try:
@@ -62,7 +64,6 @@ class DatasetExtractor(object):
             return cache_data.get("dataset", None)
         else:
             return cache_data
-
 
     def _get_preserved_state(self, **kwargs):
 
@@ -89,23 +90,18 @@ class DatasetExtractor(object):
 # # you'll also need to detect if the outcome column is a categorical or numeric outcome
 # # and restrict functions accordingly (classification vs. regression)
 
-for mod_category, attribute_name in [
-    ("dataset_extractors", "Extractor")
-]:
+for mod_category, attribute_name in [("dataset_extractors", "Extractor")]:
     mods = extract_attributes_from_folder_modules(
         os.path.join(__path__[0]),
         attribute_name,
         include_subdirs=True,
-        concat_subdir_names=True
+        concat_subdir_names=True,
     )
     conf_var = "DJANGO_LEARNING_{}".format(mod_category.upper())
     for folder in get_app_settings_folders(conf_var):
         mods.update(
             extract_attributes_from_folder_modules(
-                folder,
-                attribute_name,
-                include_subdirs=True,
-                concat_subdir_names=True
+                folder, attribute_name, include_subdirs=True, concat_subdir_names=True
             )
         )
     globals()[mod_category] = mods

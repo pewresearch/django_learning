@@ -8,7 +8,6 @@ from django_learning.utils.feature_extractors import BasicExtractor
 
 
 class Extractor(BasicExtractor):
-
     def __init__(self, *args, **kwargs):
 
         self.name = "word2vec"
@@ -20,7 +19,7 @@ class Extractor(BasicExtractor):
 
         X = copy.deepcopy(X)
         for p in self.get_preprocessors():
-            X['text'] = X['text'].apply(p.run)
+            X["text"] = X["text"].apply(p.run)
 
         # return pandas.concat([m.apply_model_to_dataframe(X) for m in self.models.values()], axis=1)
         # TODO: split X up by the document_type column, and send the subsets to their appropriate models
@@ -37,7 +36,7 @@ class Extractor(BasicExtractor):
                         document_type=doc_type,
                         use_skipgrams=self.params.get("use_skipgrams", True),
                         use_sentences=self.params.get("use_sentences", False),
-                        politicians_only=self.params.get("politicians_only", True)
+                        politicians_only=self.params.get("politicians_only", True),
                     )
                 except:
                     print("Couldn't load {} Word2Vec model!".format(doc_type))
@@ -51,7 +50,9 @@ class Extractor(BasicExtractor):
         for doc_type, model in self.models.iteritems():
             feature_names.extend(model.get_feature_names())
         if self.params["feature_name_prefix"]:
-            return ["{}_{}".format(self.params["feature_name_prefix"], f) for f in feature_names]
+            return [
+                "{}_{}".format(self.params["feature_name_prefix"], f)
+                for f in feature_names
+            ]
         else:
             return feature_names
-

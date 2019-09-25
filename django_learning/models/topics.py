@@ -20,14 +20,22 @@ from django_pewtils.sampling import SampleExtractor
 class TopicModel(LoggedExtendedModel):
 
     name = models.CharField(max_length=200, unique=True)
-    frame = models.ForeignKey("django_learning.SamplingFrame", related_name="topic_models", on_delete=models.CASCADE)
+    frame = models.ForeignKey(
+        "django_learning.SamplingFrame",
+        related_name="topic_models",
+        on_delete=models.CASCADE,
+    )
 
     model = PickledObjectField(null=True)
     vectorizer = PickledObjectField(null=True)
 
-    parameters = PickledObjectField(null=True, help_text="A pickle file of the parameters used")
+    parameters = PickledObjectField(
+        null=True, help_text="A pickle file of the parameters used"
+    )
 
-    training_documents = models.ManyToManyField("django_learning.Document", related_name="topic_models_trained")
+    training_documents = models.ManyToManyField(
+        "django_learning.Document", related_name="topic_models_trained"
+    )
 
     def __str__(self):
 
@@ -42,9 +50,7 @@ class TopicModel(LoggedExtendedModel):
     def _get_document_ids(self):
 
         doc_ids = list(
-            self.frame.documents \
-                .filter(text__isnull=False) \
-                .values_list("pk", flat=True)
+            self.frame.documents.filter(text__isnull=False).values_list("pk", flat=True)
         )
 
         return doc_ids
@@ -57,7 +63,9 @@ class TopicModel(LoggedExtendedModel):
 
                 from django_learning.utils.feature_extractors import feature_extractors
 
-                self.vectorizer = feature_extractors['tfidf'](**self.parameters["vectorizer"])
+                self.vectorizer = feature_extractors["tfidf"](
+                    **self.parameters["vectorizer"]
+                )
 
                 print("Extracting sample for vectorizer")
 
@@ -67,20 +75,39 @@ class TopicModel(LoggedExtendedModel):
                 if not self.parameters["sample_size"]:
                     sample_ids = frame_ids
                 else:
-                    sample_ids = SampleExtractor(id_col="pk", sampling_strategy="random").extract(
-                        pandas.DataFrame({"pk": frame_ids}), self.parameters["sample_size"]
+                    sample_ids = SampleExtractor(
+                        id_col="pk", sampling_strategy="random"
+                    ).extract(
+                        pandas.DataFrame({"pk": frame_ids}),
+                        self.parameters["sample_size"],
                     )
-                self.training_documents = get_model("Document").objects.filter(pk__in=sample_ids)
-                sample = pandas.DataFrame.from_records(self.training_documents.values("pk", "text"))
+                self.training_documents = get_model("Document").objects.filter(
+                    pk__in=sample_ids
+                )
+                sample = pandas.DataFrame.from_records(
+                    self.training_documents.values("pk", "text")
+                )
 
                 print("Training vectorizer on {} documents".format(len(sample)))
                 self.vectorizer = self.vectorizer.fit(sample)
-                print("{} features extracted from vectorizer".format(len(self.vectorizer.get_feature_names())))
+                print(
+                    "{} features extracted from vectorizer".format(
+                        len(self.vectorizer.get_feature_names())
+                    )
+                )
 
-            print("Initializing new topic model ({}, {})".format(self.frame, self.parameters["num_topics"]))
-            self.model = corex_topic.Corex(n_hidden=self.parameters["num_topics"], seed=42)
+            print(
+                "Initializing new topic model ({}, {})".format(
+                    self.frame, self.parameters["num_topics"]
+                )
+            )
+            self.model = corex_topic.Corex(
+                n_hidden=self.parameters["num_topics"], seed=42
+            )
             tfidf = self.vectorizer.transform(
-                pandas.DataFrame.from_records(self.training_documents.values("pk", "text"))
+                pandas.DataFrame.from_records(
+                    self.training_documents.values("pk", "text")
+                )
             )
 
             ngrams = self.vectorizer.get_feature_names()
@@ -91,8 +118,10 @@ class TopicModel(LoggedExtendedModel):
             anchor_topic_num = 0
             old_topic_map = {}
             for t in old_topics:
-                if is_not_null(t['anchors']):
-                    anchor_list = [anchor for anchor in t['anchors'] if anchor in ngrams]
+                if is_not_null(t["anchors"]):
+                    anchor_list = [
+                        anchor for anchor in t["anchors"] if anchor in ngrams
+                    ]
                     if len(anchor_list) > 0:
                         anchors.append(anchor_list)
                         old_topic_map[anchor_topic_num] = t
@@ -102,7 +131,7 @@ class TopicModel(LoggedExtendedModel):
                 tfidf,
                 words=self.vectorizer.get_feature_names(),
                 anchors=anchors,
-                anchor_strength=self.parameters["anchor_strength"]
+                anchor_strength=self.parameters["anchor_strength"],
             )
 
             self.save()
@@ -111,37 +140,38 @@ class TopicModel(LoggedExtendedModel):
             for i, topic_ngrams in enumerate(self.model.get_topics(n_words=20)):
 
                 topic = Topic.objects.create_or_update(
-                    {
-                        "num": i,
-                        "model": self
-                    },
+                    {"num": i, "model": self},
                     search_nulls=False,
                     save_nulls=True,
-                    empty_lists_are_null=True
+                    empty_lists_are_null=True,
                 )
                 topic.ngrams.all().delete()
                 for ngram, weight in topic_ngrams:
                     TopicNgram.objects.create(
-                        name=str(ngram),
-                        topic=topic,
-                        weight=weight
+                        name=str(ngram), topic=topic, weight=weight
                     )
                 print(str(topic))
 
                 old_topic = old_topic_map.get(i, None)
                 if old_topic:
 
-                    topic.name = old_topic['name']
-                    topic.label = old_topic['label']
-                    topic.anchors = old_topic['anchors']
+                    topic.name = old_topic["name"]
+                    topic.label = old_topic["label"]
+                    topic.anchors = old_topic["anchors"]
                     topic.save()
 
     def apply_model(self, df, probabilities=False):
 
         tfidf = self.vectorizer.transform(df)
         topic_names = list(self.topics.order_by("num").values_list("name", flat=True))
-        if not probabilities: topic_df = pandas.DataFrame(self.model.transform(tfidf), columns=topic_names).astype(int)
-        else: topic_df = pandas.DataFrame(self.model.transform(tfidf, details=True)[1], columns=topic_names).astype(float)
+        if not probabilities:
+            topic_df = pandas.DataFrame(
+                self.model.transform(tfidf), columns=topic_names
+            ).astype(int)
+        else:
+            topic_df = pandas.DataFrame(
+                self.model.transform(tfidf, details=True)[1], columns=topic_names
+            ).astype(float)
         topic_df.index = df.index
         return pandas.concat([df, topic_df], axis=1)
 
@@ -152,7 +182,12 @@ class Topic(LoggedExtendedModel):
     """
 
     num = models.IntegerField()
-    model = models.ForeignKey("django_learning.TopicModel", related_name="topics", null=True, on_delete=models.SET_NULL)
+    model = models.ForeignKey(
+        "django_learning.TopicModel",
+        related_name="topics",
+        null=True,
+        on_delete=models.SET_NULL,
+    )
     name = models.CharField(max_length=50, db_index=True, null=True)
     label = models.CharField(max_length=300, db_index=True, null=True)
     anchors = ArrayField(models.CharField(max_length=100), default=[])
@@ -181,8 +216,14 @@ class Topic(LoggedExtendedModel):
 
     def top_ngrams(self, top_n=25):
 
-        return " ".join([n.replace(" ", "_") for n in
-                         self.ngrams.order_by("-weight").filter(weight__gte=.001).values_list("name", flat=True)[:top_n]])
+        return " ".join(
+            [
+                n.replace(" ", "_")
+                for n in self.ngrams.order_by("-weight")
+                .filter(weight__gte=0.001)
+                .values_list("name", flat=True)[:top_n]
+            ]
+        )
 
     # def distinctive_ngrams(self):
     #
@@ -204,7 +245,9 @@ class Topic(LoggedExtendedModel):
         return list(self.documents.values_list("value", flat=True))
 
     def values_at_least_1pct(self):
-        return list(self.documents.filter(value__gte=.01).values_list("value", flat=True))
+        return list(
+            self.documents.filter(value__gte=0.01).values_list("value", flat=True)
+        )
 
     def top_n_documents(self, n=10):
         return self.documents.order_by("-value")[:n]
@@ -230,7 +273,9 @@ class Topic(LoggedExtendedModel):
 
 class TopicNgram(LoggedExtendedModel):
     name = models.CharField(max_length=40, db_index=True)
-    topic = models.ForeignKey("django_learning.Topic", related_name="ngrams", on_delete=models.CASCADE)
+    topic = models.ForeignKey(
+        "django_learning.Topic", related_name="ngrams", on_delete=models.CASCADE
+    )
     weight = models.FloatField()
 
     def __str__(self):
@@ -238,16 +283,16 @@ class TopicNgram(LoggedExtendedModel):
 
 
 class DocumentTopic(LoggedExtendedModel):
-    topic = models.ForeignKey("django_learning.Topic", related_name="documents", on_delete=models.CASCADE)
-    document = models.ForeignKey("django_learning.Document", related_name="topics", on_delete=models.CASCADE)
+    topic = models.ForeignKey(
+        "django_learning.Topic", related_name="documents", on_delete=models.CASCADE
+    )
+    document = models.ForeignKey(
+        "django_learning.Document", related_name="topics", on_delete=models.CASCADE
+    )
     value = models.FloatField()
 
     class Meta:
         unique_together = ("topic", "document")
 
     def __str__(self):
-        return "{0}, {1}: {2}".format(
-            str(self.document),
-            str(self.topic),
-            self.value
-        )
+        return "{0}, {1}: {2}".format(str(self.document), str(self.topic), self.value)

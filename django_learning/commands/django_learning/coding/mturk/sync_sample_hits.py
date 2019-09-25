@@ -28,11 +28,12 @@ class Command(BasicCommand):
 
     def run(self):
 
-        project = Project.objects.get(name=self.parameters["project_name"], sandbox=self.options["sandbox"])
+        project = Project.objects.get(
+            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
+        )
 
         sample = Sample.objects.get(
-            name=self.parameters["sample_name"],
-            project=project
+            name=self.parameters["sample_name"], project=project
         )
 
         mturk = MTurk(sandbox=self.options["sandbox"])
@@ -42,12 +43,12 @@ class Command(BasicCommand):
                 sample,
                 resync=self.options["resync"],
                 approve=self.options["approve"],
-                approve_probability=self.options["approve_probability"]
+                approve_probability=self.options["approve_probability"],
             )
             if self.options["update_blocks"]:
                 mturk.update_worker_blocks(
                     notify=self.options["notify_blocks"],
-                    max_comp=self.options["max_comp"]
+                    max_comp=self.options["max_comp"],
                 )
             if not self.options["loop"]:
                 break

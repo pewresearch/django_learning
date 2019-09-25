@@ -1,4 +1,5 @@
 from sklearn.svm import SVC
+
 # http://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
 
 
@@ -12,5 +13,5 @@ def get_params():
             # 'penalty': ('l2', ), # can also be 'l1'
             # 'class_weight' : (None, ), # can also be 'auto' or 'balanced'
             # 'loss': ('squared_hinge', ) # can also be 'hinge'
-        }
+        },
     }

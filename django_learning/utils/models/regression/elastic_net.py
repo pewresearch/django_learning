@@ -7,5 +7,5 @@ def get_params():
         "model_class": ElasticNet(),
         "params": {
             # "normalize": (False, )
-        }
+        },
     }

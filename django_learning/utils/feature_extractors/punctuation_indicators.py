@@ -4,15 +4,14 @@ from django_learning.utils.feature_extractors import BasicExtractor
 
 
 class Extractor(BasicExtractor):
-
     def __init__(self, *args, **kwargs):
 
         self.name = "punctuation_indicators"
 
         self.regexes = [
-            ("dollars", r'\$([0-9]{1,3}(?:(?:\,[0-9]{3})+)?(?:\.[0-9]{1,2})?)\s'),
-            ("dollars_alt", r'\$[0-9]{1,3}((\,[0-9]{3})+)?\s'),
-            ("amounts", r"thousand*|million*|billion*|hundred*")
+            ("dollars", r"\$([0-9]{1,3}(?:(?:\,[0-9]{3})+)?(?:\.[0-9]{1,2})?)\s"),
+            ("dollars_alt", r"\$[0-9]{1,3}((\,[0-9]{3})+)?\s"),
+            ("amounts", r"thousand*|million*|billion*|hundred*"),
         ]
 
         super(Extractor, self).__init__(*args, **kwargs)
@@ -28,7 +27,7 @@ class Extractor(BasicExtractor):
         for index, r in X.iterrows():
             row = []
             for name, regex in regexes:
-                matches = [m for m in regex.findall(r['text']) if m != '']
+                matches = [m for m in regex.findall(r["text"]) if m != ""]
                 row.extend([len(matches), 1 if len(matches) > 0 else 0])
             rows.append(row)
 

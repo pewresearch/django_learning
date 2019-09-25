@@ -8,23 +8,20 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0016_auto_20171114_1033'),
-    ]
+    dependencies = [("django_learning", "0016_auto_20171114_1033")]
 
     operations = [
-        migrations.RemoveField(
-            model_name='classification',
-            name='content_type',
-        ),
-        migrations.RemoveField(
-            model_name='classification',
-            name='object_id',
-        ),
+        migrations.RemoveField(model_name="classification", name="content_type"),
+        migrations.RemoveField(model_name="classification", name="object_id"),
         migrations.AddField(
-            model_name='classification',
-            name='classification_model',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='classifications', to='django_learning.DocumentClassificationModel'),
+            model_name="classification",
+            name="classification_model",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="classifications",
+                to="django_learning.DocumentClassificationModel",
+            ),
             preserve_default=False,
         ),
     ]

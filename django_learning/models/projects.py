@@ -22,17 +22,25 @@ class Project(LoggedExtendedModel):
 
     name = models.CharField(max_length=250)
     coders = models.ManyToManyField("django_learning.Coder", related_name="projects")
-    admins = models.ManyToManyField("django_learning.Coder", related_name="admin_projects")
-    inactive_coders = models.ManyToManyField("django_learning.Coder", related_name="inactive_projects")
+    admins = models.ManyToManyField(
+        "django_learning.Coder", related_name="admin_projects"
+    )
+    inactive_coders = models.ManyToManyField(
+        "django_learning.Coder", related_name="inactive_projects"
+    )
     instructions = models.TextField(null=True)
-    qualification_tests = models.ManyToManyField("django_learning.QualificationTest", related_name="projects")
+    qualification_tests = models.ManyToManyField(
+        "django_learning.QualificationTest", related_name="projects"
+    )
     sandbox = models.BooleanField(default=False)
     # classification_models = GenericRelation("django_learning.ClassificationModel")
     # regression_models = GenericRelation("django_learning.RegressionModel")
 
     def __str__(self):
-        if self.sandbox: return "{} (SANDBOX)".format(self.name)
-        else: return self.name
+        if self.sandbox:
+            return "{} (SANDBOX)".format(self.name)
+        else:
+            return self.name
 
     class Meta:
         unique_together = ("name", "sandbox")
@@ -45,18 +53,25 @@ class Project(LoggedExtendedModel):
                 print(self.name)
                 print(projects.projects.keys())
                 import pdb
+
                 pdb.set_trace()
-                raise Exception("Project '{}' is not defined in any of the known folders".format(self.name))
+                raise Exception(
+                    "Project '{}' is not defined in any of the known folders".format(
+                        self.name
+                    )
+                )
 
         config = projects.projects[self.name]
         if "instructions" in config.keys():
-            self.instructions = config['instructions']
+            self.instructions = config["instructions"]
         super(Project, self).save(*args, **kwargs)
 
         qual_tests = []
         for qual_test in config.get("qualification_tests", []):
             qual_tests.append(
-                QualificationTest.objects.create_or_update({"name": qual_test, "sandbox": self.sandbox})
+                QualificationTest.objects.create_or_update(
+                    {"name": qual_test, "sandbox": self.sandbox}
+                )
             )
         self.qualification_tests = qual_tests
 
@@ -73,16 +88,14 @@ class Project(LoggedExtendedModel):
         coders = []
         admins = []
         for c in coder_names:
-            try: user = User.objects.get(username=c)
+            try:
+                user = User.objects.get(username=c)
             except User.DoesNotExist:
                 user = User.objects.create_user(
-                    c,
-                    "{}@pewresearch.org".format(c),
-                    "pass"
+                    c, "{}@pewresearch.org".format(c), "pass"
                 )
             coder = get_model("Coder").objects.create_or_update(
-                {"name": c},
-                {"is_mturk": False, "user": user}
+                {"name": c}, {"is_mturk": False, "user": user}
             )
             coders.append(coder.pk)
             if c in admin_names:
@@ -101,9 +114,16 @@ class Project(LoggedExtendedModel):
 
     def is_qualified(self, coder):
 
-        return all([qual_test.is_qualified(coder) for qual_test in self.qualification_tests.all()])
+        return all(
+            [
+                qual_test.is_qualified(coder)
+                for qual_test in self.qualification_tests.all()
+            ]
+        )
 
-    def extract_document_coder_label_dataset(self, sample_names, question_names, code_filters=None, **kwargs):
+    def extract_document_coder_label_dataset(
+        self, sample_names, question_names, code_filters=None, **kwargs
+    ):
 
         e = dataset_extractors.dataset_extractors["document_coder_label_dataset"](
             project_name=self.name,
@@ -120,8 +140,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
-            sandbox=self.sandbox
-            **kwargs
+            sandbox=self.sandbox ** kwargs,
         )
         return e.extract(refresh=kwargs.get("refresh", False))
 
@@ -140,15 +159,25 @@ class Project(LoggedExtendedModel):
 class Question(LoggedExtendedModel):
 
     DISPLAY_CHOICES = (
-        ('radio', 'radio'),
-        ('checkbox', 'checkbox'),
-        ('dropdown', 'dropdown'),
-        ('text', 'text'),
-        ('header', 'header')
+        ("radio", "radio"),
+        ("checkbox", "checkbox"),
+        ("dropdown", "dropdown"),
+        ("text", "text"),
+        ("header", "header"),
     )
 
-    qualification_test = models.ForeignKey("django_learning.QualificationTest", related_name="questions", null=True, on_delete=models.SET_NULL)
-    project = models.ForeignKey("django_learning.Project", related_name="questions", null=True, on_delete=models.SET_NULL)
+    qualification_test = models.ForeignKey(
+        "django_learning.QualificationTest",
+        related_name="questions",
+        null=True,
+        on_delete=models.SET_NULL,
+    )
+    project = models.ForeignKey(
+        "django_learning.Project",
+        related_name="questions",
+        null=True,
+        on_delete=models.SET_NULL,
+    )
 
     name = models.CharField(max_length=250)
     prompt = models.TextField()
@@ -159,13 +188,18 @@ class Question(LoggedExtendedModel):
     optional = models.BooleanField(default=False)
     show_notes = models.BooleanField(default=False)
 
-    dependency = models.ForeignKey("django_learning.Label", related_name="dependencies", null=True, on_delete=models.SET_NULL)
+    dependency = models.ForeignKey(
+        "django_learning.Label",
+        related_name="dependencies",
+        null=True,
+        on_delete=models.SET_NULL,
+    )
 
     objects = QuestionManager().as_manager()
 
     class Meta:
         unique_together = ("project", "qualification_test", "name")
-        ordering = ['priority']
+        ordering = ["priority"]
 
     def __str__(self):
         return "{}, {}".format(self.project, self.name)
@@ -187,15 +221,19 @@ class Question(LoggedExtendedModel):
         while dependency:
             label_ids.append(dependency.pk)
             dependency = dependency.question.dependency
-        return get_model("Label", app_name="django_learning").objects.filter(pk__in=label_ids)
+        return get_model("Label", app_name="django_learning").objects.filter(
+            pk__in=label_ids
+        )
 
     def update_assignment_response(self, assignment, label_values, notes=None):
 
         existing = assignment.codes.filter(label__question=self)
 
         current = []
-        if not self.multiple: labels = [label_values]
-        else: labels = label_values
+        if not self.multiple:
+            labels = [label_values]
+        else:
+            labels = label_values
         labels = [l for l in labels if l]
         if self.display == "checkbox" and len(labels) == 0:
             labels = self.labels.filter(select_as_default=True)
@@ -203,13 +241,14 @@ class Question(LoggedExtendedModel):
         elif self.display == "number":
             labels = [
                 Label.objects.create_or_update(
-                    {"question": self, "value": l},
-                    {"label": l}
-                ) for l in labels
+                    {"question": self, "value": l}, {"label": l}
+                )
+                for l in labels
             ]
             labels = self.labels.filter(pk__in=[l.pk for l in labels])
         elif self.display in ["text", "date"]:
-            try: labels = self.labels.filter(value="open_response")
+            try:
+                labels = self.labels.filter(value="open_response")
             except:
                 label = Label.objects.create(question=self, value="open_response")
                 self.labels.add(label)
@@ -219,8 +258,10 @@ class Question(LoggedExtendedModel):
         if labels.count() == 0 and not self.optional:
             raise RequiredResponseException()
 
-        if "qualification" in assignment._meta.verbose_name: fk = "qualification_assignment"
-        else: fk = "assignment"
+        if "qualification" in assignment._meta.verbose_name:
+            fk = "qualification_assignment"
+        else:
+            fk = "assignment"
         for l in labels:
             code = get_model("Code").objects.create_or_update(
                 {fk: assignment, "label": l}
@@ -233,16 +274,19 @@ class Question(LoggedExtendedModel):
         if is_not_null(notes):
             get_model("Code").objects.filter(pk__in=current).update(notes=notes)
 
-
     # def get_consensus_documents(self, label_value="1", turk_only=False, experts_only=False):
     #     return self.labels.get(value=label_value).get_consensus_documents(turk_only=turk_only, experts_only=experts_only)
 
 
 class Label(LoggedExtendedModel):
 
-    question = models.ForeignKey("django_learning.Question", related_name="labels", on_delete=models.CASCADE)
+    question = models.ForeignKey(
+        "django_learning.Question", related_name="labels", on_delete=models.CASCADE
+    )
     value = models.CharField(max_length=50, db_index=True, help_text="The code value")
-    label = models.CharField(max_length=400, help_text="A longer label for the code value")
+    label = models.CharField(
+        max_length=400, help_text="A longer label for the code value"
+    )
     priority = models.IntegerField(default=1)
     pointers = ArrayField(models.TextField(), default=[])
     select_as_default = models.BooleanField(default=False)
@@ -250,7 +294,7 @@ class Label(LoggedExtendedModel):
     class Meta:
 
         unique_together = ("question", "value")
-        ordering = ['priority']
+        ordering = ["priority"]
 
     def __str__(self):
         return "{}: {}".format(self.question, self.label)
@@ -276,7 +320,9 @@ class Label(LoggedExtendedModel):
 
 class Example(LoggedExtendedModel):
 
-    question = models.ForeignKey("django_learning.Question", related_name="examples", on_delete=models.CASCADE)
+    question = models.ForeignKey(
+        "django_learning.Question", related_name="examples", on_delete=models.CASCADE
+    )
 
     quote = models.TextField()
     explanation = models.TextField()
@@ -285,7 +331,11 @@ class Example(LoggedExtendedModel):
 class QualificationTest(LoggedExtendedModel):
 
     name = models.CharField(max_length=50)
-    coders = models.ManyToManyField("django_learning.Coder", related_name="qualification_tests", through="django_learning.QualificationAssignment")
+    coders = models.ManyToManyField(
+        "django_learning.Coder",
+        related_name="qualification_tests",
+        through="django_learning.QualificationAssignment",
+    )
     instructions = models.TextField(null=True)
     turk_id = models.CharField(max_length=250, unique=True, null=True)
     title = models.TextField(null=True)
@@ -298,16 +348,25 @@ class QualificationTest(LoggedExtendedModel):
     sandbox = models.BooleanField(default=False)
 
     def __str__(self):
-        if self.sandbox: return "{} (SANDBOX)".format(self.name)
-        else: return self.name
+        if self.sandbox:
+            return "{} (SANDBOX)".format(self.name)
+        else:
+            return self.name
 
     class Meta:
         unique_together = ("name", "sandbox")
 
     def save(self, *args, **kwargs):
 
-        if self.name not in project_qualification_tests.project_qualification_tests.keys():
-            raise Exception("Qualification test '{}' is not defined in any of the known folders".format(self.name))
+        if (
+            self.name
+            not in project_qualification_tests.project_qualification_tests.keys()
+        ):
+            raise Exception(
+                "Qualification test '{}' is not defined in any of the known folders".format(
+                    self.name
+                )
+            )
 
         config = project_qualification_tests.project_qualification_tests[self.name]
         for attr in [
@@ -317,7 +376,7 @@ class QualificationTest(LoggedExtendedModel):
             "price",
             "approval_wait_hours",
             "duration_minutes",
-            "lifetime_days"
+            "lifetime_days",
         ]:
             val = config.get(attr, None)
             setattr(self, attr, val)
@@ -329,16 +388,28 @@ class QualificationTest(LoggedExtendedModel):
     def is_qualified(self, coder):
 
         try:
-            assignment = self.assignments.filter(time_finished__isnull=False).get(coder=coder)
-            return project_qualification_scorers.project_qualification_scorers[self.name](assignment)
+            assignment = self.assignments.filter(time_finished__isnull=False).get(
+                coder=coder
+            )
+            return project_qualification_scorers.project_qualification_scorers[
+                self.name
+            ](assignment)
         except QualificationAssignment.DoesNotExist:
             return False
 
 
 class QualificationAssignment(LoggedExtendedModel):
 
-    test = models.ForeignKey("django_learning.QualificationTest", related_name="assignments", on_delete=models.CASCADE)
-    coder = models.ForeignKey("django_learning.Coder", related_name="qualification_assignments", on_delete=models.CASCADE)
+    test = models.ForeignKey(
+        "django_learning.QualificationTest",
+        related_name="assignments",
+        on_delete=models.CASCADE,
+    )
+    coder = models.ForeignKey(
+        "django_learning.Coder",
+        related_name="qualification_assignments",
+        on_delete=models.CASCADE,
+    )
 
     time_started = models.DateTimeField(null=True, auto_now_add=True)
     time_finished = models.DateTimeField(null=True)
@@ -348,7 +419,9 @@ class QualificationAssignment(LoggedExtendedModel):
 
 class HITType(LoggedExtendedModel):
 
-    project = models.ForeignKey("django_learning.Project", related_name="hit_types", on_delete=models.CASCADE)
+    project = models.ForeignKey(
+        "django_learning.Project", related_name="hit_types", on_delete=models.CASCADE
+    )
     name = models.CharField(max_length=50)
 
     title = models.TextField(null=True)
@@ -372,7 +445,11 @@ class HITType(LoggedExtendedModel):
     def save(self, *args, **kwargs):
 
         if self.name not in project_hit_types.project_hit_types.keys():
-            raise Exception("HIT Type '{}' is not defined in any of the known folders".format(self.name))
+            raise Exception(
+                "HIT Type '{}' is not defined in any of the known folders".format(
+                    self.name
+                )
+            )
 
         config = project_hit_types.project_hit_types[self.name]
         for attr in [
@@ -383,7 +460,7 @@ class HITType(LoggedExtendedModel):
             "duration_minutes",
             "lifetime_days",
             "min_approve_pct",
-            "min_approve_cnt"
+            "min_approve_cnt",
         ]:
             val = config.get(attr, None)
             setattr(self, attr, val)

@@ -1,5 +1,3 @@
-
-
 def get_parameters():
 
     return {
@@ -9,7 +7,7 @@ def get_parameters():
         "anchor_strength": 4,
         "vectorizer": {
             "sublinear_tf": False,
-            "max_df": .9,
+            "max_df": 0.9,
             "min_df": 5,
             "max_features": 8000,
             "ngram_range": (1, 3),
@@ -17,13 +15,15 @@ def get_parameters():
             "norm": None,
             "binary": True,
             "preprocessors": [
-                ("clean_text", {
-                    "lemmatize": True,
-                    "regex_filters": [],
-                    "stopword_sets": ["english", "test"],
-                    "stopword_whitelists": ["test"]
-                })
-            ]
-        }
-
+                (
+                    "clean_text",
+                    {
+                        "lemmatize": True,
+                        "regex_filters": [],
+                        "stopword_sets": ["english", "test"],
+                        "stopword_whitelists": ["test"],
+                    },
+                )
+            ],
+        },
     }

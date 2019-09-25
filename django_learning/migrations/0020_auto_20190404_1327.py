@@ -7,37 +7,31 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0019_auto_20190130_0829'),
-    ]
+    dependencies = [("django_learning", "0019_auto_20190130_0829")]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='sandbox',
+            model_name="project",
+            name="sandbox",
             field=models.NullBooleanField(null=True),
         ),
         migrations.AddField(
-            model_name='qualificationtest',
-            name='sandbox',
+            model_name="qualificationtest",
+            name="sandbox",
             field=models.NullBooleanField(null=True),
         ),
         migrations.AlterField(
-            model_name='project',
-            name='name',
-            field=models.CharField(max_length=250),
+            model_name="project", name="name", field=models.CharField(max_length=250)
         ),
         migrations.AlterField(
-            model_name='qualificationtest',
-            name='name',
+            model_name="qualificationtest",
+            name="name",
             field=models.CharField(max_length=50),
         ),
         migrations.AlterUniqueTogether(
-            name='project',
-            unique_together=set([('name', 'sandbox')]),
+            name="project", unique_together=set([("name", "sandbox")])
         ),
         migrations.AlterUniqueTogether(
-            name='qualificationtest',
-            unique_together=set([('name', 'sandbox')]),
+            name="qualificationtest", unique_together=set([("name", "sandbox")])
         ),
     ]
