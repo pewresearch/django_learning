@@ -71,7 +71,7 @@ class SamplingFrame(LoggedExtendedModel):
                     .distinct()
                     .values_list("pk", flat=True)
                 )
-                self.documents = objs
+                self.documents.set(objs)
                 self.save()
                 print(
                     "Extracted {} documents for frame '{}'".format(
@@ -140,16 +140,16 @@ class SamplingFrame(LoggedExtendedModel):
                 frame["search_none"] = ~frame["text"].str.contains(
                     r"|".join(regex_patterns.values())
                 )
-                for search_name, search_pattern in regex_patterns.iteritems():
+                for search_name, search_pattern in regex_patterns.items():
                     frame["search_{}".format(search_name)] = frame["text"].str.contains(
                         search_pattern
                     )
 
-            for name, additional in additional_variables.iteritems():
+            for name, additional in additional_variables.items():
                 frame[name] = frame[additional["field_lookup"]].map(
                     additional["mapper"]
                 )
-            for name, additional in additional_variables.iteritems():
+            for name, additional in additional_variables.items():
                 try:
                     del frame[additional["field_lookup"]]
                 except KeyError:
@@ -354,7 +354,7 @@ class Sample(LoggedExtendedModel):
                     non_search_sample_size = 1.0 - sum(
                         [
                             p["proportion"]
-                            for search, p in params["sampling_searches"].iteritems()
+                            for search, p in params["sampling_searches"].items()
                         ]
                     )
                     sample_chunks.append(
@@ -370,7 +370,7 @@ class Sample(LoggedExtendedModel):
                         )
                     )
 
-                    for search, p in params["sampling_searches"].iteritems():
+                    for search, p in params["sampling_searches"].items():
                         sample_chunks.append(
                             SampleExtractor(
                                 sampling_strategy=params["sampling_strategy"],

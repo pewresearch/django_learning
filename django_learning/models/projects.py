@@ -288,7 +288,7 @@ class Label(LoggedExtendedModel):
         max_length=400, help_text="A longer label for the code value"
     )
     priority = models.IntegerField(default=1)
-    pointers = ArrayField(models.TextField(), default=[])
+    pointers = ArrayField(models.TextField(), default=list)
     select_as_default = models.BooleanField(default=False)
 
     class Meta:
@@ -340,7 +340,7 @@ class QualificationTest(LoggedExtendedModel):
     turk_id = models.CharField(max_length=250, unique=True, null=True)
     title = models.TextField(null=True)
     description = models.TextField(null=True)
-    keywords = ArrayField(models.TextField(), default=[])
+    keywords = ArrayField(models.TextField(), default=list)
     price = models.FloatField(null=True)
     approval_wait_hours = models.IntegerField(null=True)
     duration_minutes = models.IntegerField(null=True)
@@ -426,7 +426,7 @@ class HITType(LoggedExtendedModel):
 
     title = models.TextField(null=True)
     description = models.TextField(null=True)
-    keywords = ArrayField(models.TextField(), default=[])
+    keywords = ArrayField(models.TextField(), default=list)
     price = models.FloatField(null=True)
     approval_wait_hours = models.IntegerField(null=True)
     duration_minutes = models.IntegerField(null=True)

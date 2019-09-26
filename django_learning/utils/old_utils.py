@@ -214,7 +214,7 @@
 #     if df == 'summary':
 #         if nonempty != {} :
 #             wordcnt = {k: dict(Counter(kwik[k].split())) for k in nonempty}
-#             ind = [{(innerKey, k) : [v] for k, v in values.iteritems()}  for innerKey, values in wordcnt.iteritems()]
+#             ind = [{(innerKey, k) : [v] for k, v in values.items()}  for innerKey, values in wordcnt.items()]
 #             df=pandas.concat([pandas.DataFrame(pandas.DataFrame(k).unstack()) for k in ind])
 #             df.columns = ['freq']
 #             df.index.names=['mainterm','closeterm','0']

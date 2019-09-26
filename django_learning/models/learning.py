@@ -281,13 +281,13 @@ class LearningModel(LoggedExtendedModel):
                 pipeline_steps.append(("model", model_class))
 
                 params.update(
-                    {"model__{}".format(k): v for k, v in model_params.iteritems()}
+                    {"model__{}".format(k): v for k, v in model_params.items()}
                 )
                 if "params" in self.parameters["model"].keys():
                     params.update(
                         {
                             "model__{}".format(k): v
-                            for k, v in self.parameters["model"]["params"].iteritems()
+                            for k, v in self.parameters["model"]["params"].items()
                         }
                     )
 
@@ -317,7 +317,7 @@ class LearningModel(LoggedExtendedModel):
             self.save()
 
         if is_not_null(cache_data):
-            for k, v in cache_data.iteritems():
+            for k, v in cache_data.items():
                 setattr(self, k, v)
 
     def _get_largest_code(self):
@@ -340,7 +340,7 @@ class LearningModel(LoggedExtendedModel):
 
         fit_params = {
             "model__{}".format(k): v
-            for k, v in self.parameters["model"].get("fit_params", {}).iteritems()
+            for k, v in self.parameters["model"].get("fit_params", {}).items()
         }
         # if self.parameters["model"].get("use_sample_weights", False) or self.parameters["model"].get("use_class_weights", False):
         fit_params["model__sample_weight"] = [
@@ -641,7 +641,7 @@ class LearningModel(LoggedExtendedModel):
                 )
         else:
             if names[-1] in params.keys():
-                for k, v in params[names[-1]].iteritems():
+                for k, v in params[names[-1]].items():
                     # if k == "preprocessors":
                     #     preprocessor_sets = []
                     #     for pset in v:

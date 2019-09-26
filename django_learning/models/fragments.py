@@ -26,7 +26,7 @@ class DocumentFragment(LoggedExtendedModel):
 
     hash = models.CharField(max_length=256, db_index=True)
     text = models.TextField()
-    # all_variations = ArrayField(models.TextField(), default=[])
+    # all_variations = ArrayField(models.TextField(), default=list)
     # boilerplate = models.NullBooleanField(null=True)
 
     def __str__(self):

@@ -180,7 +180,7 @@
 #                 if is_not_null(r['c']):
 #                     expert_obv_counts[r["assignment__hit__observation_id"]] = float(r["c"])
 #             avg_expert_code_pct = numpy.average(
-#                 [expert_obv_counts.get(oid, 0.0) / float(val) for oid, val in expert_code_counts.iteritems()])
+#                 [expert_obv_counts.get(oid, 0.0) / float(val) for oid, val in expert_code_counts.items()])
 #
 #             turk_obv_counts = {}
 #             for r in turk_responses.filter(codes=c).values("assignment__hit__observation_id").annotate(
@@ -188,7 +188,7 @@
 #                 if is_not_null(r['c']):
 #                     turk_obv_counts[r["assignment__hit__observation_id"]] = float(r["c"])
 #             avg_turk_code_pct = numpy.average(
-#                 [turk_obv_counts.get(oid, 0.0) / float(val) for oid, val in turk_code_counts.iteritems()])
+#                 [turk_obv_counts.get(oid, 0.0) / float(val) for oid, val in turk_code_counts.items()])
 #
 #             row = {
 #                 "question": q,
@@ -435,7 +435,7 @@
 #     #             for q in context.project.questions.all():
 #     #                 qcontext = QuestionContext(q, context)
 #     #                 qcontext.responses = qcontext.responses.filter(assignment__coder_id__in=[c1.pk, c2.pk])
-#     #                 for metric, val in qcontext.agreement_stats.iteritems():
+#     #                 for metric, val in qcontext.agreement_stats.items():
 #     #                     row["{}_{}".format(q.name, metric)] = val
 #     #
 #     #             rows.append(row)

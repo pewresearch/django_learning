@@ -190,7 +190,7 @@ class Topic(LoggedExtendedModel):
     )
     name = models.CharField(max_length=50, db_index=True, null=True)
     label = models.CharField(max_length=300, db_index=True, null=True)
-    anchors = ArrayField(models.CharField(max_length=100), default=[])
+    anchors = ArrayField(models.CharField(max_length=100), default=list)
 
     class Meta:
 

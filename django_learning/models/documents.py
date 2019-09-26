@@ -19,8 +19,8 @@ class Document(LoggedExtendedModel, QueryModel):
 
     text = models.TextField(help_text="The text content of the document")
     original_text = models.TextField(null=True)
-    duplicate_ids = ArrayField(models.IntegerField(), default=[])
-    alternative_text = ArrayField(models.TextField(), default=[])
+    duplicate_ids = ArrayField(models.IntegerField(), default=list)
+    alternative_text = ArrayField(models.TextField(), default=list)
     date = models.DateTimeField(
         null=True, help_text="An optional date associated with the document"
     )
@@ -247,8 +247,8 @@ class Document(LoggedExtendedModel, QueryModel):
 # def add_foreign_keys(sender, **kwargs):
 #
 #     if sender.__base__ == DocumentModel:
-#         for app, model_list in apps.all_models.iteritems():
-#             for model_name, model in model_list.iteritems():
+#         for app, model_list in apps.all_models.items():
+#             for model_name, model in model_list.items():
 #                 if hasattr(model._meta, "is_document") and getattr(model._meta, "is_document"):
 #                     field = models.OneToOneField("{}.{}".format(app, model.__name__), null=True, related_name="document")
 #                     field.contribute_to_class(sender, re.sub(" ", "_", model._meta.verbose_name))

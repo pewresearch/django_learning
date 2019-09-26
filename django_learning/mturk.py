@@ -589,7 +589,7 @@ class MTurk(object):
         blocks = blocks.get("Maximum annual compensation", [])
 
         over_limit = []
-        for worker_id, comp in worker_comp.iteritems():
+        for worker_id, comp in worker_comp.items():
             if comp >= max_comp:
                 over_limit.append(worker_id)
 

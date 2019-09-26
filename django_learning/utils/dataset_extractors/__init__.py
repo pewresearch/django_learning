@@ -27,7 +27,7 @@ class DatasetExtractor(object):
     def get_hash(self, **kwargs):
 
         hash_key = str(inspect.getsourcelines(self._get_dataset)) + str(
-            {k: v for k, v in self.kwargs.iteritems() if k != "refresh"}
+            {k: v for k, v in self.kwargs.items() if k != "refresh"}
         )
         return self.cache.file_handler.get_key_hash(hash_key)
 
@@ -45,7 +45,7 @@ class DatasetExtractor(object):
         if not refresh:
             cache_data = self.cache.read(self.cache_hash)
             if is_not_null(cache_data):
-                for k, v in cache_data.iteritems():
+                for k, v in cache_data.items():
                     if k != "dataset":
                         setattr(self, k, v)
 

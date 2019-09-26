@@ -125,7 +125,7 @@ class ClassificationModel(LearningModel):
                 zip(steps["model"].feature_importances_, feature_names)
             )[: -(n + 1) : -1]
 
-        for class_label, top_n in top_features.iteritems():
+        for class_label, top_n in top_features.items():
             print(class_label)
             for c, f in top_n:
                 try:
