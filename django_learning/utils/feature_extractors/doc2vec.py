@@ -27,7 +27,7 @@ class Extractor(BasicExtractor):
                 for p in preprocessors:
                     text = p.run(text)
                 new_row = []
-                for doc_type, model in self.models.iteritems():
+                for doc_type, model in self.models.items():
                     new_row.extend(model.infer_vector(text.split()))
                 self.set_row_cache(str(row["pk"]), new_row)
             if type(new_row) != list:
@@ -69,7 +69,7 @@ class Extractor(BasicExtractor):
             else ""
         )
         feature_names = []
-        for doc_type, model in self.models.iteritems():
+        for doc_type, model in self.models.items():
             feature_names.extend(
                 [
                     "{0}{1}_{2}".format(prefix, doc_type, i)

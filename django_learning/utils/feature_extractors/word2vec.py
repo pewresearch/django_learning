@@ -47,7 +47,7 @@ class Extractor(BasicExtractor):
     def get_feature_names(self):
 
         feature_names = []
-        for doc_type, model in self.models.iteritems():
+        for doc_type, model in self.models.items():
             feature_names.extend(model.get_feature_names())
         if self.params["feature_name_prefix"]:
             return [

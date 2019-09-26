@@ -199,7 +199,7 @@ class Word2VecModel(LoggedExtendedModel):
 #
 #     word2vec_model = models.ForeignKey("django_learning.Word2VecModel", related_name="documents")
 #     document = models.ForeignKey("django_learning.Document", related_name="word2vec_models")
-#     features = ArrayField(models.FloatField(), default=[])
+#     features = ArrayField(models.FloatField(), default=list)
 # TODO: store W2V features in arrayfields; write "apply_model' function for w2v models (and same for ngramsets and topics)
 # TODO: modify feature extractors to use precomputed DB values instead of local caching (and to compute and save them when needed)
 # TODO: what about preprocessors though?  should those be saved as immutable params on the DB objects?

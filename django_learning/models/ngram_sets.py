@@ -11,7 +11,7 @@ class NgramSet(LoggedExtendedModel):
     name = models.CharField(max_length=100, db_index=True)
     dictionary = models.CharField(max_length=100, db_index=True)
     label = models.CharField(max_length=100, db_index=True, null=True)
-    words = ArrayField(models.CharField(max_length=50), default=[])
+    words = ArrayField(models.CharField(max_length=50), default=list)
 
     objects = NgramSetManager().as_manager()
 
