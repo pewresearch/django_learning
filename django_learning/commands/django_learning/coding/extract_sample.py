@@ -26,6 +26,7 @@ class Command(BasicCommand):
         parser.add_argument(
             "--clear_existing_documents", default=False, action="store_true"
         )
+        parser.add_argument("--seed", default=None, type=int)
         parser.add_argument("--force_rerun", default=False, action="store_true")
         parser.add_argument("--skip_weighting", default=False, action="store_true")
         parser.add_argument("--sandbox", default=False, action="store_true")
@@ -81,6 +82,7 @@ class Command(BasicCommand):
                 recompute_weights=self.options["recompute_weights"],
                 clear_existing_documents=self.options["clear_existing_documents"],
                 skip_weighting=self.options["skip_weighting"],
+                seed=self.options["seed"],
             )
 
     def cleanup(self):

@@ -48,6 +48,7 @@ class CodingTests(DjangoTestCase):
             sampling_frame_name="all_documents",
             size=1000,
             sandbox=True,
+            seed=42,
         ).run()
         commands["django_learning_coding_create_sample_hits"](
             project_name="test_project",
@@ -62,6 +63,7 @@ class CodingTests(DjangoTestCase):
             sampling_frame_name="all_documents",
             size=100,
             sandbox=True,
+            seed=42,
         ).run()
         commands["django_learning_coding_create_sample_hits"](
             project_name="test_project",
@@ -75,10 +77,6 @@ class CodingTests(DjangoTestCase):
         test_project = Project.objects.get(name="test_project")
         test_project.coders.add(coder1)
         test_project.coders.add(coder2)
-
-        import random
-
-        random.seed(42)
 
         for sample_name in ["test_sample", "test_sample_holdout"]:
             df = Document.objects.filter(samples__name=sample_name).dataframe(
@@ -128,17 +126,13 @@ class CodingTests(DjangoTestCase):
             ignore_stratification_weights=True,
             sandbox=True,
         )
-        # TODO: figure out how to get the seed working consistently
         scores = extractor.compute_scores(
             refresh=True, min_overlap=5, discrete_classes=True
         )
-        import pdb
-
-        pdb.set_trace()
-        self.assertAlmostEqual(scores["cohens_kappa"].mean(), 0.76737, 4)
+        self.assertAlmostEqual(scores["cohens_kappa"].mean(), 0.78978, 4)
         scores = extractor.compute_overall_scores()
-        self.assertAlmostEqual(scores["alpha"], 0.72962, 4)
-        self.assertAlmostEqual(scores["fleiss_kappa"], 0.72826, 4)
+        self.assertAlmostEqual(scores["alpha"], 0.789885, 4)
+        self.assertAlmostEqual(scores["fleiss_kappa"], 0.78978, 4)
 
         df = extractor.extract()
         self.assertEqual(len(df), 2000)
@@ -172,7 +166,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                (885, 42, 73, 73, 42, 885),
+                (901, 32, 67, 67, 32, 901),
             ),
             (
                 {
@@ -181,7 +175,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                (885, 0, 115, 73, 0, 927),
+                (901, 0, 99, 67, 0, 933),
             ),
             (
                 {
@@ -190,7 +184,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                (927, 0, 73, 115, 0, 885),
+                (933, 0, 67, 99, 0, 901),
             ),
             (
                 {
@@ -199,7 +193,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                (885, 42, 73, 73, 42, 885),
+                (901, 32, 67, 67, 32, 901),
             ),
         ]:
             params.update(update_params)
@@ -222,7 +216,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                {"12": 885, "11": 73, "None": 42},
+                {"12": 901, "11": 67, "None": 32},
             ),
             (
                 {
@@ -232,7 +226,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                {"12": 885, "11": 115},
+                {"12": 901, "11": 99},
             ),
             (
                 {
@@ -242,7 +236,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": label_pos.pk,
                     "question_names": ["test_checkbox"],
                 },
-                {"12": 927, "11": 73},
+                {"12": 933, "11": 67},
             ),
             (
                 {
@@ -252,7 +246,7 @@ class CodingTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                {"0101": 889, "1001": 33, "0110": 36, "1010": 42},
+                {"0101": 905, "1001": 25, "0110": 30, "1010": 40},
             ),
         ]:
             params.update(update_params)
