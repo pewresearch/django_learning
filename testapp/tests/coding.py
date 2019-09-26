@@ -76,11 +76,16 @@ class CodingTests(DjangoTestCase):
         test_project.coders.add(coder1)
         test_project.coders.add(coder2)
 
+        import random
+
+        random.seed(42)
+
         for sample_name in ["test_sample", "test_sample_holdout"]:
             df = Document.objects.filter(samples__name=sample_name).dataframe(
                 "document_text", refresh=True
             )
             df["is_good"] = df["text"].str.contains(r"good|great|excellent").astype(int)
+            df = df.sort_values("pk")
             random_seed = 42
             for question in ["test_checkbox", "test_radio"]:
                 coder1_docs = df[df["is_good"] == 1].sample(
@@ -110,6 +115,8 @@ class CodingTests(DjangoTestCase):
                         )
                 random_seed += 42
 
+        # coder1_docs['pk'] = [257, 1955, 1155, 1507, 11, 1724]
+        # .7741
         from django_learning.utils.dataset_extractors import dataset_extractors
 
         extractor = dataset_extractors["document_coder_label_dataset"](
@@ -122,11 +129,16 @@ class CodingTests(DjangoTestCase):
             sandbox=True,
         )
         # TODO: figure out how to get the seed working consistently
-        # scores = extractor.compute_scores(refresh=True, min_overlap=5, discrete_classes=True)
-        # self.assertAlmostEqual(scores['cohens_kappa'].mean(), .72826, 4)
-        # scores = extractor.compute_overall_scores()
-        # self.assertAlmostEqual(scores['alpha'], .72962, 4)
-        # self.assertAlmostEqual(scores['fleiss_kappa'], .72826, 4)
+        scores = extractor.compute_scores(
+            refresh=True, min_overlap=5, discrete_classes=True
+        )
+        import pdb
+
+        pdb.set_trace()
+        self.assertAlmostEqual(scores["cohens_kappa"].mean(), 0.76737, 4)
+        scores = extractor.compute_overall_scores()
+        self.assertAlmostEqual(scores["alpha"], 0.72962, 4)
+        self.assertAlmostEqual(scores["fleiss_kappa"], 0.72826, 4)
 
         df = extractor.extract()
         self.assertEqual(len(df), 2000)
@@ -310,4 +322,8 @@ class CodingTests(DjangoTestCase):
         self.assertEqual(list(set(fold_scores["n"].values))[0], 200)
 
     def tearDown(self):
-        pass
+
+        from django.conf import settings
+        import shutil
+
+        shutil.rmtree(os.path.join(settings.BASE_DIR, settings.LOCAL_CACHE_ROOT))

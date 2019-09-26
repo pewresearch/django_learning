@@ -4,12 +4,10 @@ import os
 SITE_NAME = "testapp"
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..").decode("utf-8")
-).replace("\\", "/")
-APP_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__)).decode("utf-8")
-).replace("\\", "/")
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")).replace(
+    "\\", "/"
+)
+APP_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__))).replace("\\", "/")
 LOCAL_CACHE_ROOT = "cache"
 
 SITE_NAME = "testapp"
@@ -17,14 +15,6 @@ SITE_NAME = "testapp"
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.sites",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "django.contrib.redirects",
-    "django.contrib.sitemaps",
-    "django.contrib.admin",
-    "django.contrib.admindocs",
     "django_commander",
     "django_queries",
     "django_learning",
