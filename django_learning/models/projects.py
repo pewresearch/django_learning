@@ -73,7 +73,7 @@ class Project(LoggedExtendedModel):
                     {"name": qual_test, "sandbox": self.sandbox}
                 )
             )
-        self.qualification_tests = qual_tests
+        self.qualification_tests.set(qual_tests)
 
         for i, q in enumerate(config["questions"]):
             Question.objects.create_from_config("project", self, q, i)
@@ -101,8 +101,8 @@ class Project(LoggedExtendedModel):
             if c in admin_names:
                 admins.append(coder.pk)
 
-        self.coders = get_model("Coder").objects.filter(pk__in=coders)
-        self.admins = get_model("Coder").objects.filter(pk__in=admins)
+        self.coders.set(get_model("Coder").objects.filter(pk__in=coders))
+        self.admins.set(get_model("Coder").objects.filter(pk__in=admins))
 
     def expert_coders(self):
 

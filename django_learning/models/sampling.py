@@ -236,7 +236,7 @@ class Sample(LoggedExtendedModel):
     def save(self, *args, **kwargs):
 
         super(Sample, self).save(*args, **kwargs)
-        self.qualification_tests = self.project.qualification_tests.all()
+        self.qualification_tests.set(self.project.qualification_tests.all())
 
     def get_params(self):
 
@@ -277,6 +277,7 @@ class Sample(LoggedExtendedModel):
         allow_overlap_with_existing_project_samples=False,
         clear_existing_documents=False,
         skip_weighting=False,
+        seed=None,
     ):
 
         if clear_existing_documents:
@@ -345,6 +346,7 @@ class Sample(LoggedExtendedModel):
                             sampling_strategy=params["sampling_strategy"],
                             id_col="pk",
                             stratify_by=stratify_by,
+                            seed=seed,
                         ).extract(frame, sample_size=int(size))
                     )
 
@@ -362,6 +364,7 @@ class Sample(LoggedExtendedModel):
                             sampling_strategy=params["sampling_strategy"],
                             id_col="pk",
                             stratify_by=stratify_by,
+                            seed=seed,
                         ).extract(
                             frame[frame["search_none"] == 1],
                             sample_size=int(
@@ -376,6 +379,7 @@ class Sample(LoggedExtendedModel):
                                 sampling_strategy=params["sampling_strategy"],
                                 id_col="pk",
                                 stratify_by=stratify_by,
+                                seed=seed,
                             ).extract(
                                 frame[frame["search_{}".format(search)] == 1],
                                 sample_size=int(math.ceil(size * p["proportion"])),
@@ -385,6 +389,8 @@ class Sample(LoggedExtendedModel):
                 sample_ids = list(set(list(itertools.chain(*sample_chunks))))
                 if len(sample_ids) < size:
                     fill_ids = list(docs.values_list("pk", flat=True))
+                    if seed:
+                        random.seed(seed)
                     random.shuffle(fill_ids)
                     while len(sample_ids) < size:
                         try:
