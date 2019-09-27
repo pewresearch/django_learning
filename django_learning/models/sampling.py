@@ -286,6 +286,8 @@ class Sample(LoggedExtendedModel):
 
         if recompute_weights:
             override_doc_ids = list(self.documents.values_list("pk", flat=True))
+            if len(override_doc_ids) == 0:
+                override_doc_ids = None
             self.sync_with_frame(override_doc_ids=override_doc_ids)
 
         params = self.get_params()
