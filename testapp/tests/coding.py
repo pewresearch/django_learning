@@ -1,16 +1,9 @@
 from __future__ import print_function
-import unittest
-import copy
-import os
+import datetime
 import pandas as pd
-import time
 
 from django.test import TestCase as DjangoTestCase
-from django.conf import settings
 
-from pewtils import is_not_null
-
-from django_learning.mturk import MTurk
 from django_learning.models import *
 from django_commander.commands import commands
 
@@ -25,12 +18,17 @@ class CodingTests(DjangoTestCase):
 
     def setUp(self):
 
+        now = datetime.date(2000, 1, 1)
         reviews = pd.read_csv(
             os.path.join(settings.BASE_DIR, "testapp", "test_data.csv")
         )
         for index, row in reviews.iterrows():
             if is_not_null(row["text"]):
-                doc = Document.objects.create(text=row["text"][:200], id=index)
+                doc = Document.objects.create(
+                    text=row["text"][:200],
+                    id=index,
+                    date=now + datetime.timedelta(days=index),
+                )
                 review = MovieReview.objects.create(document=doc, id=index)
 
     def test_coding(self):
