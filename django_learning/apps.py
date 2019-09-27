@@ -73,8 +73,11 @@ class DjangoLearningConfig(AppConfig):
         new_templates = []
         for template in templates:
             template["DIRS"] = (
-                template["DIRS"] + settings.DJANGO_LEARNING_HIT_TEMPLATE_DIRS
+                template["DIRS"]
+                + settings.DJANGO_LEARNING_HIT_TEMPLATE_DIRS
+                + [os.path.join(DJANGO_LEARNING_BASE_DIR, "templates")]
             )
+            template["DIRS"] = list(set(template["DIRS"]))
             template["OPTIONS"]["context_processors"].extend(
                 [
                     "django_learning.context_processors.identify_template",
