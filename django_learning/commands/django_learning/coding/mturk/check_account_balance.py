@@ -1,6 +1,6 @@
 from django_commander.commands import BasicCommand
 
-from django_learning.mturk import MTurk
+from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
