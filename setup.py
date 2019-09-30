@@ -2,11 +2,12 @@ from builtins import str
 import os
 from setuptools import setup, find_packages
 
+
 with open(os.path.join(os.path.dirname(__file__), "django_learning", "VERSION"), "rb") as version_file:
-    __version__ = str(version_file.read().strip())
+    __version__ = str(version_file.read()).strip()
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md'), "rb") as readme:
-    README = readme.read()
+    README = str(readme.read())
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
