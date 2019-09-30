@@ -17,6 +17,12 @@ from django_learning.utils import project_qualification_tests
 from django_learning.utils import project_qualification_scorers
 from django_learning.utils import dataset_extractors
 
+try:
+    from importlib import reload
+
+except ImportError:
+    pass
+
 
 class Project(LoggedExtendedModel):
 
