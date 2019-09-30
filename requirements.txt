@@ -8,7 +8,6 @@ census>=0.8.1
 cffi>=1.9.1
 characteristic>=14.3.0
 chardet>=2.3.0
-corextopic
 cryptography>=1.7.2
 cssselect>=1.0.1
 datefinder>=0.6.1
@@ -85,6 +84,7 @@ xlrd>=1.0.0
 xlsxwriter>=0.9.6
 xvfbwrapper>=0.2.9
 zope.interface>=4.3.3
+git+ssh://labsdeploy/gregversteeg/corex_topic#egg=corextopic
 git+ssh://labsdeploy/pewresearch/pewtils#egg=pewtils
 git+ssh://labsdeploy/pewresearch/django_pewtils#egg=django_pewtils
 git+ssh://labsdeploy/pewresearch/django_queries#egg=django_queries
