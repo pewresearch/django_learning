@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+
+
 def filter(self, df, min_date=None, max_date=None):
 
     if min_date:

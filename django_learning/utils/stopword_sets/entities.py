@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from tqdm import tqdm
 
 from django.db.models import Count

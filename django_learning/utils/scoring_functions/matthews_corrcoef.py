@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import pandas
 
 from sklearn.metrics import matthews_corrcoef

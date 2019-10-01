@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import pandas, inspect
 
 from pewtils import is_not_null

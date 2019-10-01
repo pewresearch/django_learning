@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import re, pandas, numpy
 
 from django_learning.utils.regex_filters import regex_filters

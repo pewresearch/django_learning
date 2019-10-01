@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 from django.conf import settings
 from pewtils import is_not_null, is_null, extract_attributes_from_folder_modules
 from django_pewtils import CacheHandler, get_app_settings_folders

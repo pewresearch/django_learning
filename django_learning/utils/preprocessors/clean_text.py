@@ -1,4 +1,5 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
+
 import re
 
 from pewtils import is_not_null, decode_text
