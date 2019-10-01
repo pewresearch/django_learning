@@ -148,8 +148,8 @@ def edit_project_coders(request, project_name, mode):
                     else:
                         inactive_coders.append(coder.pk)
 
-            project.coders = Coder.objects.filter(pk__in=active_coders)
-            project.inactive_coders = Coder.objects.filter(pk__in=inactive_coders)
+            project.coders.set(Coder.objects.filter(pk__in=active_coders))
+            project.inactive_coders.set(Coder.objects.filter(pk__in=inactive_coders))
             project.save()
 
         coders = []
