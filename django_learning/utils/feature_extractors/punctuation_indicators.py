@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import re, pandas
 
 from django_learning.utils.feature_extractors import BasicExtractor

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import itertools
 
 from django_learning.utils.preprocessors import BasicPreprocessor

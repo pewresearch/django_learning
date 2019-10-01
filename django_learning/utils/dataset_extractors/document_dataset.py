@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from django_learning.utils.dataset_extractors.document_coder_dataset import (
     Extractor as DocumentCoderDatasetExtractor,
 )

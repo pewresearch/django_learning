@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from sklearn.neighbors import KNeighborsClassifier
 
 # http://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html

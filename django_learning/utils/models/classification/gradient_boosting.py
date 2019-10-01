@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from sklearn.ensemble import GradientBoostingClassifier
 
 # http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingClassifier.html
