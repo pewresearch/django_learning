@@ -98,12 +98,16 @@ class ClassificationModel(LearningModel):
     @require_model
     def show_top_features(self, n=10):
 
-        if hasattr(self.model.best_estimator_, "named_steps"):
-            steps = self.model.best_estimator_.named_steps
+        if hasattr(self.model, "best_estimator_"):
+            model = self.model.best_estimator_
         else:
-            steps = self.model.best_estimator_.steps
+            model = self.model
+        if hasattr(model, "named_steps"):
+            steps = model.named_steps
+        else:
+            steps = model.steps
 
-        feature_names = self.get_feature_names(self.model.best_estimator_)
+        feature_names = self.get_feature_names(model)
         class_labels = steps["model"].classes_
 
         top_features = {}
@@ -233,7 +237,11 @@ class ClassificationModel(LearningModel):
 
         print("Computing cross-fold predictions")
         _final_model = self.model
-        _final_model_best_estimator = self.model.best_estimator_
+        if hasattr(self.model, "best_estimator_"):
+            _final_model_best_estimator = self.model.best_estimator_
+        else:
+            _final_model_best_estimator = self.model
+
         dataset = copy.copy(self.train_dataset)
 
         all_fold_scores = []
