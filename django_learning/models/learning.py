@@ -394,9 +394,9 @@ class LearningModel(LoggedExtendedModel):
                 % (len(train_ids), len(test_ids))
             )
 
-        train_dataset = df.ix[train_ids]
+        train_dataset = df.loc[train_ids]
         test_dataset = (
-            df.ix[test_ids] if is_not_null(test_ids) and len(test_ids) > 0 else None
+            df.loc[test_ids] if is_not_null(test_ids) and len(test_ids) > 0 else None
         )
 
         scoring_function = None
