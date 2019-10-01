@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 from __future__ import unicode_literals
 from django_commander.commands import BasicCommand
 from django_learning.models import Project, Sample
