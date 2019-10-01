@@ -137,15 +137,15 @@ class CodingTests(DjangoTestCase):
         self.assertEqual(df["document_id"].nunique(), 1000)
         self.assertEqual(df["coder_id"].nunique(), 2)
 
-        # extractor = dataset_extractors["document_coder_dataset"](
-        #     project_name="test_project",
-        #     sample_names=["test_sample"],
-        #     question_names=["test_checkbox"],
-        #     coder_filters=[],
-        #     document_filters=[],
-        #     ignore_stratification_weights=True,
-        #     sandbox=True
-        # )
+        extractor = dataset_extractors["document_coder_dataset"](
+            project_name="test_project",
+            sample_names=["test_sample"],
+            question_names=["test_checkbox"],
+            coder_filters=[],
+            document_filters=[],
+            ignore_stratification_weights=True,
+            sandbox=True,
+        )
 
         params = {
             "project_name": "test_project",
@@ -261,7 +261,7 @@ class CodingTests(DjangoTestCase):
             name="test_model", pipeline_name="test", sampling_frame=frame
         )
         model.extract_dataset(refresh=True)
-        model.load_model(refresh=True, num_cores=1)
+        model.load_model(refresh=True, num_cores=2)
         model.describe_model()
         model.get_cv_prediction_results(refresh=True)
         model.get_test_prediction_results(refresh=True)

@@ -1,13 +1,16 @@
+from __future__ import absolute_import
+
 import numpy as np
 
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.impute import SimpleImputer
 
 from django_pewtils import get_model
-from django_learning.utils.feature_extractors import feature_extractors
 
 
 def get_pipeline():
+
+    from django_learning.utils.feature_extractors import feature_extractors
 
     base_class_id = (
         get_model("Question", app_name="django_learning")
@@ -57,8 +60,8 @@ def get_pipeline():
             "cv": 5,
             "params": {},
             "fit_params": {"eval_metric": "error"},
-            "use_sample_weights": True,
-            "use_class_weights": True,
+            "use_sample_weights": False,
+            "use_class_weights": False,
             "test_percent": 0.0,
             "scoring_function": "maxmin",
         },

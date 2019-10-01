@@ -1,13 +1,16 @@
+from __future__ import absolute_import
+
 import numpy as np
 
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.impute import SimpleImputer
 
 from django_pewtils import get_model
-from django_learning.utils.feature_extractors import feature_extractors
 
 
 def get_pipeline():
+
+    from django_learning.utils.feature_extractors import feature_extractors
 
     base_class_id = (
         get_model("Question", app_name="django_learning")
@@ -62,7 +65,7 @@ def get_pipeline():
                 "tfidf_counts": {
                     "sublinear_tf": [False],
                     "max_df": [0.9],
-                    "min_df": [10],
+                    "min_df": [10, 20],
                     "max_features": [None],
                     "ngram_range": [[1, 4]],
                     "use_idf": [True],
