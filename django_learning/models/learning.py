@@ -408,18 +408,6 @@ class LearningModel(LoggedExtendedModel):
                 else None,
             )
 
-        fit_params = self._get_fit_params(train_dataset)
-
-        if len(ParameterGrid(fit_params)):
-            grid_search_cv = 2
-        else:
-            grid_search_cv = self.parameters["model"].get("cv", 5)
-
-        print(
-            "Beginning grid search using %s and %i cores for %s"
-            % (str(scoring_function), num_cores, self.dataset_extractor.outcome_column)
-        )
-
         try:
             sklearn_cache = mkdtemp(
                 prefix="sklearn",
@@ -431,21 +419,42 @@ class LearningModel(LoggedExtendedModel):
         except:
             print("Couldn't create local sklearn cache dir")
             sklearn_cache = None
-        model = GridSearchCV(
-            Pipeline(pipeline_steps, memory=sklearn_cache),
-            params,
-            fit_params=fit_params,
-            cv=grid_search_cv,
-            n_jobs=num_cores,
-            verbose=2,
-            scoring=scoring_function,
-        )
 
-        model.fit(train_dataset, train_dataset[self.dataset_extractor.outcome_column])
+        fit_params = self._get_fit_params(train_dataset)
+        estimator = Pipeline(pipeline_steps, memory=sklearn_cache)
+
+        if len(ParameterGrid(params)) == 1:
+            print("Singular parameter set detected; skipping grid search")
+            params = ParameterGrid(params)[0]
+            model = estimator.set_params(**params)
+        else:
+            grid_search_cv = self.parameters["model"].get("cv", 5)
+
+            print(
+                "Beginning grid search using %s and %i cores for %s"
+                % (
+                    str(scoring_function),
+                    num_cores,
+                    self.dataset_extractor.outcome_column,
+                )
+            )
+
+            model = GridSearchCV(
+                estimator,
+                params,
+                cv=grid_search_cv,
+                n_jobs=num_cores,
+                verbose=2,
+                scoring=scoring_function,
+            )
+
+        model.fit(
+            train_dataset,
+            train_dataset[self.dataset_extractor.outcome_column],
+            **fit_params
+        )
         if sklearn_cache:
             rmtree(sklearn_cache)
-
-        print("Finished training model, best score: {}".format(model.best_score_))
 
         cache_data = {
             "model": model,
@@ -460,19 +469,6 @@ class LearningModel(LoggedExtendedModel):
     def describe_model(self):
 
         print("'{}' results".format(self.dataset_extractor.outcome_column))
-
-        print(
-            "Best score: {} ({} std.)".format(
-                self.model.best_score_, getattr(self.model, "best_score_std_", None)
-            )
-        )
-
-        # print "Best parameters:"
-        # params = self.model.best_params_
-        # for p in params.keys():
-        #     if p.endswith("__stop_words"):
-        #         del params[p]
-        # print params
 
     @require_model
     def get_test_prediction_results(self, refresh=False, only_load_existing=False):
