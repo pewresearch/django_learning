@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 from django_commander.commands import BasicCommand, log_command
 
