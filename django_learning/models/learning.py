@@ -29,11 +29,7 @@ from sklearn.model_selection import ParameterGrid
 from django_commander.models import LoggedExtendedModel
 
 from django_learning.utils import get_pipeline_repr, get_param_repr
-from django_learning.utils.pipelines import pipelines
-from django_learning.utils.dataset_extractors import dataset_extractors
 from django_learning.utils.decorators import require_model, temp_cache_wrapper
-from django_learning.utils.feature_extractors import BasicExtractor
-from django_learning.utils.models import models as learning_models
 from django_learning.utils.scoring import compute_scores_from_datasets_as_coders
 
 from pewtils import is_not_null, is_null, recursive_update
@@ -123,6 +119,8 @@ class LearningModel(LoggedExtendedModel):
         params = {}
         if self.pipeline_name:
             try:
+                from django_learning.utils.pipelines import pipelines
+
                 params.update(pipelines[self.pipeline_name]())
             except KeyError:
                 print("WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name))
@@ -150,6 +148,8 @@ class LearningModel(LoggedExtendedModel):
 
         dataset_extractor = None
         try:
+            from django_learning.utils.dataset_extractors import dataset_extractors
+
             dataset_extractor = dataset_extractors[self.parameters[key]["name"]](
                 **self.parameters[key]["parameters"]
             )
@@ -274,6 +274,8 @@ class LearningModel(LoggedExtendedModel):
             )
 
             if "name" in self.parameters["model"].keys():
+
+                from django_learning.utils.models import models as learning_models
 
                 model_params = learning_models[self.parameters["model"]["name"]]()
                 model_class = model_params.pop("model_class")
@@ -655,6 +657,8 @@ class LearningModel(LoggedExtendedModel):
                     #     v = preprocessor_sets
                     if len(v) > 0:
                         final_params["__".join(names + [k])] = v
+            from django_learning.utils.feature_extractors import BasicExtractor
+
             if isinstance(pipeline, BasicExtractor):
                 final_params["{}__cache_identifier".format("__".join(names))] = [
                     self.cache_identifier
@@ -724,6 +728,8 @@ class LearningModel(LoggedExtendedModel):
         only_load_existing=False,
         disable_probability_threshold_warning=False,
     ):
+
+        from django_learning.utils.dataset_extractors import dataset_extractors
 
         predicted_df = dataset_extractors["model_prediction_dataset"](
             dataset=df_to_predict,
