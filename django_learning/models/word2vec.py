@@ -4,8 +4,8 @@ import numpy, pandas, random, gensim
 from django.db import models
 
 from picklefield.fields import PickledObjectField
+from tqdm import tqdm
 
-from django_learning.utils.preprocessors import preprocessors
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
 
@@ -146,6 +146,8 @@ class Word2VecModel(LoggedExtendedModel):
             stopword_sets = []
         if not regex_filters:
             regex_filters = []
+
+        from django_learning.utils.preprocessors import preprocessors
 
         cleaner = preprocessors["clean_text"](
             lemmatize=False, stopword_sets=stopword_sets, regex_filters=regex_filters
