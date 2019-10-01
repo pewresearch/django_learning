@@ -52,7 +52,12 @@ def get_param_repr(params):
             new_params[k] = get_param_repr(v)
         return new_params
     elif type(params) in [list, tuple]:
-        return sorted([get_param_repr(p) for p in params])
+        repr = [get_param_repr(p) for p in params]
+        try:
+            repr = sorted(repr)
+        except TypeError:
+            pass
+        return repr
     else:
         val = {}
         function = False
