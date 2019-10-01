@@ -345,9 +345,10 @@ class LearningModel(LoggedExtendedModel):
             for k, v in self.parameters["model"].get("fit_params", {}).items()
         }
         # if self.parameters["model"].get("use_sample_weights", False) or self.parameters["model"].get("use_class_weights", False):
-        fit_params["model__sample_weight"] = [
-            x for x in train_dataset["training_weight"].values
-        ]
+        if len(train_dataset["training_weight"].unique()) > 1:
+            fit_params["model__sample_weight"] = [
+                x for x in train_dataset["training_weight"].values
+            ]
 
         return fit_params
 
