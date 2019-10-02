@@ -86,7 +86,7 @@ def compute_scores_from_datasets_as_coders(
         dataset1["index"] = dataset1.index
         dataset2["index"] = dataset2.index
 
-    dataset = pandas.concat([dataset1, dataset2])
+    dataset = pandas.concat([dataset1, dataset2], sort=False)
 
     return compute_scores_from_dataset(
         dataset,
@@ -157,7 +157,7 @@ def compute_scores_from_dataset(
 
             coder_df = code_subset[
                 [coder_column, document_column, outcome_column, weight_column]
-            ]
+            ].reset_index()
             if not pos_label:
                 scores.append(
                     compute_scores(
