@@ -30,7 +30,7 @@ class DataFrame(DataFrameQuery):
         elif self.options["clean_text"]:
             c = TextCleaner(
                 **{
-                    "lemmatize": True,
+                    "process_method": "lemmatize",
                     "regex_filters": [],
                     "stopword_sets": ["english", "months", "misc_boilerplate"],
                     "strip_html": True,

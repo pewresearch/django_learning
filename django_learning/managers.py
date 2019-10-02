@@ -154,7 +154,7 @@ class DocumentManager(QueryModelManager):
         dimensions=300,
     ):
 
-        cleaner = TextCleaner(lemmatize=False, strip_html=True)
+        cleaner = TextCleaner(process_method=None, strip_html=True)
         tokenizer = SentenceTokenizer()
         w2v_model = None
 
@@ -231,7 +231,7 @@ class DocumentManager(QueryModelManager):
                 self.words = words
                 self.tags = []
 
-        cleaner = TextCleaner(lemmatize=False, strip_html=True)
+        cleaner = TextCleaner(process_method=None, strip_html=True)
         d2v_model = None
 
         cache = CacheHandler(

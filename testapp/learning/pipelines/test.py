@@ -75,7 +75,7 @@ def get_pipeline():
                             (
                                 "clean_text",
                                 {
-                                    "lemmatize": True,
+                                    "process_method": ["lemmatize"],
                                     "regex_filters": [],
                                     "stopword_sets": ["english", "test"],
                                     "stopword_whitelists": ["test"],
@@ -97,7 +97,7 @@ def get_pipeline():
                             (
                                 "clean_text",
                                 {
-                                    "lemmatize": True,
+                                    "process_method": ["lemmatize"],
                                     "regex_filters": [],
                                     "stopword_sets": ["english", "test"],
                                     "stopword_whitelists": ["test"],
