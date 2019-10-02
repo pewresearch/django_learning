@@ -60,7 +60,7 @@ class Word2VecModel(LoggedExtendedModel):
 
         if not self.finalized:
 
-            cleaner = TextCleaner(lemmatize=False, strip_html=True)
+            cleaner = TextCleaner(process_method=None, strip_html=True)
             tokenizer = SentenceTokenizer()
             w2v_model = self.model
 
@@ -150,7 +150,9 @@ class Word2VecModel(LoggedExtendedModel):
         from django_learning.utils.preprocessors import preprocessors
 
         cleaner = preprocessors["clean_text"](
-            lemmatize=False, stopword_sets=stopword_sets, regex_filters=regex_filters
+            process_method=None,
+            stopword_sets=stopword_sets,
+            regex_filters=regex_filters,
         )
         df["text"] = df["text"].map(cleaner.run)
 
