@@ -160,6 +160,7 @@ class ClassificationModel(LearningModel):
             self.predict_dataset[self.dataset_extractor.outcome_column],
             sample_weight=self.test_dataset["sampling_weight"]
             if "sampling_weight" in self.test_dataset.columns
+            and self._check_for_valid_weights(self.test_dataset["sampling_weight"])
             else None,
         )
 
@@ -350,6 +351,9 @@ class ClassificationModel(LearningModel):
                     outcome_column=self.dataset_extractor.outcome_column,
                     weight_column="sampling_weight"
                     if "sampling_weight" in predict_dataset.columns
+                    and self._check_for_valid_weights(
+                        predict_dataset["sampling_weight"]
+                    )
                     else None,
                     base_code=base_code,
                     pos_code=pos_code,
@@ -383,6 +387,9 @@ class ClassificationModel(LearningModel):
                         outcome_column=self.dataset_extractor.outcome_column,
                         weight_column="sampling_weight"
                         if "sampling_weight" in fold_predict_dataset.columns
+                        and self._check_for_valid_weights(
+                            fold_predict_dataset["sampling_weight"]
+                        )
                         else None,
                         base_code=base_code,
                         pos_code=pos_code,
