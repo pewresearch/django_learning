@@ -165,6 +165,9 @@ class LearningModel(LoggedExtendedModel):
         super(LearningModel, self).save(*args, **kwargs)
         self.refresh_from_db()  # pickles and unpickles self.parameters so it remains in a consistent format
 
+    def _check_for_valid_weights(self, weight_col):
+        return len(set(weight_col)) > 1 or float(weight_col.unique()[0]) != 1.0
+
     def extract_dataset(self, refresh=False, only_load_existing=False, **kwargs):
 
         test_dataset = None
@@ -235,7 +238,10 @@ class LearningModel(LoggedExtendedModel):
             self.dataset["training_weight"] = (
                 self.dataset["training_weight"] * self.dataset["sampling_weight"]
             )
-        elif "sampling_weight" in self.dataset.columns:
+        elif (
+            "sampling_weight" in self.dataset.columns
+            and self._check_for_valid_weights(self.dataset["sampling_weight"])
+        ):
             print(
                 "Okay, we'll skip the sampling weights for training, but they WILL be used in model scoring during performance evaluation"
             )
@@ -345,7 +351,7 @@ class LearningModel(LoggedExtendedModel):
             for k, v in self.parameters["model"].get("fit_params", {}).items()
         }
         # if self.parameters["model"].get("use_sample_weights", False) or self.parameters["model"].get("use_class_weights", False):
-        if len(train_dataset["training_weight"].unique()) > 1:
+        if self._check_for_valid_weights(train_dataset["training_weight"]):
             fit_params["model__sample_weight"] = [
                 x for x in train_dataset["training_weight"].values
             ]
@@ -747,7 +753,10 @@ class LearningModel(LoggedExtendedModel):
         only_load_existing=False,
     ):
 
-        if "sampling_weight" in df_to_predict.columns:
+        if (
+            "sampling_weight" in df_to_predict.columns
+            and self._check_for_valid_weights(df_to_predict["sampling_weight"])
+        ):
             weight_col = "sampling_weight"
         else:
             weight_col = None
