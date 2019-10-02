@@ -129,6 +129,8 @@ class LearningModel(LoggedExtendedModel):
                     )
                 )
                 params = self.parameters
+        else:
+            params = self.parameters
 
         if key:
             self.parameters[key] = params[key]
@@ -805,8 +807,6 @@ class DocumentLearningModel(LearningModel):
 
     def save(self, *args, **kwargs):
 
-        # if hasattr(self.dataset_extractor, "sampling_frame") and self.dataset_extractor.sampling_frame:
-        #     self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
         super(DocumentLearningModel, self).save(*args, **kwargs)
 
     def extract_dataset(self, refresh=False, **kwargs):
@@ -818,10 +818,3 @@ class DocumentLearningModel(LearningModel):
         ):
             self.sampling_frame = self.dataset_extractor.sampling_frame
             self.save()
-            # try: self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
-            # except:
-            #     # TODO: this is very hacky and needs to be fixed
-            #     from django_pewtils import reset_django_connection
-            #     reset_django_connection("logos")
-            #     self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=self.dataset_extractor.sampling_frame.name)
-            # self.save()
