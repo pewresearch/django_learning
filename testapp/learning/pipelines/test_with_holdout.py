@@ -57,7 +57,7 @@ def get_pipeline():
         },
         "model": {
             "name": "classification_xgboost",
-            "cv": 5,
+            "cv": 1,
             "params": {},
             "fit_params": {"eval_metric": "error"},
             "use_sample_weights": False,
