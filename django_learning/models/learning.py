@@ -123,15 +123,12 @@ class LearningModel(LoggedExtendedModel):
 
                 params.update(pipelines[self.pipeline_name]())
             except KeyError:
-                print("WARNING: PIPELINE '{}' NOT FOUND".format(self.pipeline_name))
-        try:
-            params = recursive_update(
-                params, self.parameters if self.parameters else {}
-            )
-        except (AttributeError, LookupError):
-            print(
-                "WARNING: couldn't update parameters from pipeline, it may not exist anymore!"
-            )
+                print(
+                    "WARNING: PIPELINE '{}' NOT FOUND, STICKING WITH STORED PARAMS".format(
+                        self.pipeline_name
+                    )
+                )
+                params = self.parameters
 
         if key:
             self.parameters[key] = params[key]
