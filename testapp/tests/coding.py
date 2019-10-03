@@ -111,8 +111,6 @@ class CodingTests(DjangoTestCase):
                         )
                 random_seed += 42
 
-        # coder1_docs['pk'] = [257, 1955, 1155, 1507, 11, 1724]
-        # .7741
         from django_learning.utils.dataset_extractors import dataset_extractors
 
         extractor = dataset_extractors["document_coder_label_dataset"](
@@ -137,15 +135,15 @@ class CodingTests(DjangoTestCase):
         self.assertEqual(df["document_id"].nunique(), 1000)
         self.assertEqual(df["coder_id"].nunique(), 2)
 
-        extractor = dataset_extractors["document_coder_dataset"](
-            project_name="test_project",
-            sample_names=["test_sample"],
-            question_names=["test_checkbox"],
-            coder_filters=[],
-            document_filters=[],
-            ignore_stratification_weights=True,
-            sandbox=True,
-        )
+        # extractor = dataset_extractors["document_coder_dataset"](
+        #     project_name="test_project",
+        #     sample_names=["test_sample"],
+        #     question_names=["test_checkbox"],
+        #     coder_filters=[],
+        #     document_filters=[],
+        #     ignore_stratification_weights=True,
+        #     sandbox=True,
+        # )
 
         params = {
             "project_name": "test_project",
@@ -261,47 +259,6 @@ class CodingTests(DjangoTestCase):
             name="test_model", pipeline_name="test", sampling_frame=frame
         )
         model.extract_dataset(refresh=True)
-        model.load_model(refresh=True, num_cores=2)
-        model.describe_model()
-        model.get_cv_prediction_results(refresh=True)
-        model.get_test_prediction_results(refresh=True)
-        model.find_probability_threshold(save=True)
-        test_scores = model.get_test_prediction_results()
-        fold_scores = model.get_cv_prediction_results()
-
-        self.assertEqual(len(model.cv_folds), 5)
-
-        precision_11 = test_scores.loc[test_scores["outcome_column"] == "label_id__11"][
-            "precision"
-        ].values[0]
-        recall_11 = test_scores.loc[test_scores["outcome_column"] == "label_id__11"][
-            "recall"
-        ].values[0]
-        self.assertGreater(precision_11, 0.85)
-        self.assertLessEqual(precision_11, 1.0)
-        self.assertGreater(recall_11, 0.7)
-        self.assertLessEqual(recall_11, 1.0)
-        self.assertEqual(list(set(test_scores["n"].values))[0], 250)
-
-        precision_12 = test_scores.loc[test_scores["outcome_column"] == "label_id__12"][
-            "precision"
-        ].values[0]
-        recall_12 = test_scores.loc[test_scores["outcome_column"] == "label_id__12"][
-            "recall"
-        ].values[0]
-        self.assertGreater(precision_12, 0.9)
-        self.assertLessEqual(precision_12, 1.0)
-        self.assertGreater(recall_12, 0.95)
-        self.assertLessEqual(recall_12, 1.0)
-        self.assertEqual(list(set(fold_scores["n"].values))[0], 150)
-
-        ### Classifier with holdout
-        model = DocumentClassificationModel.objects.create(
-            name="test_model_with_holdout",
-            pipeline_name="test_with_holdout",
-            sampling_frame=frame,
-        )
-        model.extract_dataset(refresh=True)
         model.load_model(refresh=True, num_cores=1)
         model.describe_model()
         model.get_cv_prediction_results(refresh=True)
@@ -310,8 +267,83 @@ class CodingTests(DjangoTestCase):
         test_scores = model.get_test_prediction_results()
         fold_scores = model.get_cv_prediction_results()
 
+        self.assertEqual(len(model.dataset), 1000)
+        self.assertEqual(len(model.train_dataset), 750)
+        self.assertEqual(len(model.test_dataset), 250)
+        self.assertEqual(len(model.cv_folds), 5)
+        for a, b in model.cv_folds:
+            self.assertGreaterEqual(len(a), 599)
+            self.assertLessEqual(len(a), 601)
+            self.assertGreaterEqual(len(b), 149)
+            self.assertLessEqual(len(b), 151)
+        self.assertEqual(list(set(test_scores["n"].values))[0], 250)
+        self.assertEqual(list(set(fold_scores["n"].values))[0], 150)
+
+        for label_id, metric, expected_val in [
+            (11, "precision", 0.96),
+            (11, "recall", 0.82),
+            (11, "n", 250),
+            (11, "matthews_corrcoef", 0.87),
+            (11, "cohens_kappa", 0.87),
+            (11, "accuracy", 0.972),
+            (12, "precision", 0.97),
+            (12, "recall", 1.0),
+            (12, "n", 250),
+            (12, "matthews_corrcoef", 0.87),
+            (12, "cohens_kappa", 0.87),
+            (12, "accuracy", 0.97),
+        ]:
+            val = test_scores.loc[
+                test_scores["outcome_column"] == "label_id__{}".format(label_id)
+            ][metric].values[0]
+            self.assertAlmostEqual(val, expected_val, 2)
+            # print("{}: {} ({} expected".format(metric, val, expected_val))
+
+        model = DocumentClassificationModel.objects.create_or_update(
+            {"name": "test_model"}, {"pipeline_name": "test", "sampling_frame": frame}
+        )
+        model.extract_dataset(refresh=False)
+        model.load_model(refresh=False)
+
+        ### Classifier with holdout
+        model = DocumentClassificationModel.objects.create(
+            name="test_model_with_holdout",
+            pipeline_name="test_with_holdout",
+            sampling_frame=frame,
+        )
+        model.extract_dataset(refresh=True)
+        model.load_model(refresh=True, num_cores=2)
+        model.describe_model()
+        model.get_test_prediction_results(refresh=True)
+        model.find_probability_threshold(save=True)
+        test_scores = model.get_test_prediction_results()
+
+        self.assertEqual(len(model.dataset), 1100)
+        self.assertEqual(len(model.train_dataset), 1000)
+        self.assertEqual(len(model.test_dataset), 100)
         self.assertEqual(list(set(test_scores["n"].values))[0], 100)
-        self.assertEqual(list(set(fold_scores["n"].values))[0], 200)
+
+        for label_id, metric, expected_val in [
+            (11, "precision", 1.0),
+            (11, "recall", 0.82),
+            (11, "n", 100),
+            (11, "matthews_corrcoef", 0.89),
+            (11, "cohens_kappa", 0.89),
+            (11, "accuracy", 0.98),
+            (12, "precision", 0.98),
+            (12, "recall", 1.0),
+            (12, "n", 100),
+            (12, "matthews_corrcoef", 0.89),
+            (12, "cohens_kappa", 0.89),
+            (12, "accuracy", 0.98),
+        ]:
+            val = test_scores.loc[
+                test_scores["outcome_column"] == "label_id__{}".format(label_id)
+            ][metric].values[0]
+            # print("{}: {} ({} expected".format(metric, val, expected_val))
+            self.assertAlmostEqual(val, expected_val, 2)
+
+        # TODO: test keyword oversampling and weighting
 
     def tearDown(self):
 
