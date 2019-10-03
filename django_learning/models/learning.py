@@ -268,15 +268,13 @@ class LearningModel(LoggedExtendedModel):
 
         if is_null(cache_data) and not only_load_existing:
 
-            self._refresh_parameters(
-                "model"
-            )  # refresh the model and pipeline parameters (but not the dataset ones)
+            # refresh the model and pipeline parameters (but not the dataset ones)
+            self._refresh_parameters("model")
             self._refresh_parameters("pipeline")
 
             pipeline_steps = copy.copy(self.parameters["pipeline"]["steps"])
-            params = self._collapse_pipeline_params(
-                pipeline_steps, self.parameters["pipeline"]["params"]
-            )
+            pipeline_params = copy.copy(self.parameters["pipeline"]["params"])
+            params = self._collapse_pipeline_params(pipeline_steps, pipeline_params)
 
             if "name" in self.parameters["model"].keys():
 
