@@ -216,8 +216,10 @@ def _fit_and_score(
     if (
         hasattr(X, "columns")
         and "sampling_weight" in X.columns
-        and len(set(X["sampling_weight"])) != 1
-        and float(X["sampling_weight"][0]) > 1.0
+        and not (
+            len(set(X["sampling_weight"])) == 1
+            and float(X["sampling_weight"][0]) == 1.0
+        )
     ):
         score_params_train["sample_weight"] = X_train["sampling_weight"]
         score_params_test["sample_weight"] = X_test["sampling_weight"]
