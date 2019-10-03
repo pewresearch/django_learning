@@ -208,18 +208,21 @@ def _fit_and_score(
 
     score_params_train = {}
     score_params_test = {}
-    try:
-        # NOTE: since sample_weight is only passed in fit_params for the training data, we can't pass it on to scorers
-        # Also, because different weights may be used for training than for sampling, we don't want to do that anyway
-        # Sadly the best way to ensure that models are evaluated using known sampling weights for both train and test
-        # Is to directly check for and grab the sampling_weight column from the django learning dataset
-        if "sampling_weight" in X.columns:
-            score_params_train["sample_weight"] = X_train["sampling_weight"]
-            score_params_test["sample_weight"] = X_test["sampling_weight"]
-            print("DETECTED DJANGO_LEARNING SAMPLING WEIGHTS, PASSING TO SCORERS")
-    except Exception as e:
-        pass
-        # print("COULDN'T CHECK FOR DJANGO_LEARNING SAMPLING WEIGHTS")
+
+    # NOTE: since sample_weight is only passed in fit_params for the training data, we can't pass it on to scorers
+    # Also, because different weights may be used for training than for sampling, we don't want to do that anyway
+    # Sadly the best way to ensure that models are evaluated using known sampling weights for both train and test
+    # Is to directly check for and grab the sampling_weight column from the django learning dataset
+    if (
+        hasattr(X, "columns")
+        and "sampling_weight" in X.columns
+        and len(set(X["sampling_weight"])) != 1
+        and float(X["sampling_weight"][0]) > 1.0
+    ):
+        score_params_train["sample_weight"] = X_train["sampling_weight"]
+        score_params_test["sample_weight"] = X_test["sampling_weight"]
+        print("DETECTED DJANGO_LEARNING SAMPLING WEIGHTS, PASSING TO SCORERS")
+
     # if is_multimetric:
     #     score_param_names = []
     #     for name, func in scorer.items():
