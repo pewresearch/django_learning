@@ -1,7 +1,6 @@
 beautifulsoup4>=4.5.3
 boto>=2.46.1
 boto3>=1.4.4
-corextopic>=1.0.4
 celery>=4.0.2
 chardet>=2.3.0
 Cython>=0.25.2
@@ -46,6 +45,7 @@ Unidecode>=0.4.20
 xgboost>=0.82
 xlsxwriter>=1.1.8
 xlrd>=1.2.0
+git+ssh://labsdeploy/gregversteeg/corex_topic#egg=corextopic
 git+ssh://labsdeploy/pewresearch/pewtils#egg=pewtils
 git+ssh://labsdeploy/pewresearch/django_pewtils#egg=django_pewtils
 git+ssh://labsdeploy/pewresearch/pewanalytics#egg=pewanalytics
