@@ -2,8 +2,8 @@ alembic>=0.9.1,<1.0
 beautifulsoup4>=4.5.3
 boto>=2.46.1
 boto3>=1.9.128
-Cerberus>=1.1
-Cython>=0.25.2
+cerberus>=1.1
+cython>=0.25.2
 census>=0.8.1
 cffi>=1.9.1
 characteristic>=14.3.0
@@ -24,7 +24,7 @@ django-simple-history>=1.8.2
 django<2.0; python_version < '3.0'
 django>=2.2; python_version >= '3.0'
 enum34>=1.1.6
-facebook-sdk
+facebook-sdk>=3.1.0
 fuzzywuzzy>=0.15.0
 gensim>=1.0.1
 html5lib>=0.99
@@ -38,7 +38,8 @@ ner>=0.1
 nilsimsa>=0.3.8
 nltk>=3.2.2
 nose>=1.3.7
-numpy>=1.12.0
+numpy<1.17.0; python_version < '3.0'
+numpy>=1.16.0; python_version >= '3.0'
 pandas>=0.19.2
 pattern>=2.6
 polyglot
@@ -48,7 +49,7 @@ pyasn1>=0.2.3
 pycparser>=2.17
 pyopenssl>=16.2.0
 python-dateutil>=2.6.0
-python-Levenshtein>=0.12.0
+python-levenshtein>=0.12.0
 pytz>=2016.10
 pyvirtualdisplay>=0.2.1
 PyYAML>=3.12
@@ -74,7 +75,7 @@ stopit>=1.1.1
 tqdm>=4.11.2
 tweepy>=3.5.0
 Twisted>=17.1.0
-Unidecode>=0.4.20
+unidecode>=0.4.20
 untangle>=1.1.0
 urllib3==1.24.2
 us>=0.9.1
