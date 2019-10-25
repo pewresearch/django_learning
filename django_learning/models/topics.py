@@ -14,7 +14,7 @@ from django_learning.models import SamplingFrame
 
 from pewtils import is_null, is_not_null
 from django_pewtils import get_model
-from django_pewtils.sampling import SampleExtractor
+from pewanalytics.stats.sampling import SampleExtractor
 
 
 class TopicModel(LoggedExtendedModel):
