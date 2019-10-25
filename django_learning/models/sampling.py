@@ -17,7 +17,7 @@ from django_learning.utils.sampling_frames import sampling_frames
 from django_learning.utils.sampling_methods import sampling_methods
 from pewtils import is_null, decode_text, is_not_null
 from django_pewtils import get_model, CacheHandler
-from django_pewtils.sampling import SampleExtractor
+from pewanalytics.stats.sampling import SampleExtractor
 from pewtils import get_hash
 from pewanalytics.stats.sampling import compute_sample_weights_from_frame
 
