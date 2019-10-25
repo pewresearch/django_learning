@@ -412,7 +412,7 @@ class Sample(LoggedExtendedModel):
                 frame = frame.join(dummies)
 
             weight_vars = list(set(weight_vars))
-            df = frame[frame["pk"].isin(sample_ids)]
+            df = frame.loc[frame["pk"].isin(sample_ids)].copy()
             if not skip_weighting:
                 print("Computing weights")
                 df["weight"] = list(
