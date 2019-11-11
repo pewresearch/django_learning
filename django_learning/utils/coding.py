@@ -26,9 +26,9 @@ def filter_hits(
     elif experts_only:
         hits = hits.filter(turk=False)
     if finished_only:
-        hits = get_model("HIT", app_name="django_learning").objects.filter(finished=True)
+        hits = hits.filter(finished=True)
     elif unfinished_only:
-        hits = get_model("HIT", app_name="django_learning").objects.filter(finished=False)
+        hits = hits.filter(finished=False)
     if exclude_coders != None:
         hits = hits.exclude(assignments__coder__in=exclude_coders)
     if filter_coders != None:
