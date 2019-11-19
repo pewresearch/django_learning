@@ -69,6 +69,7 @@ class Assignment(LoggedExtendedModel):
         self.sample = self.hit.sample
         self.project = self.hit.sample.project
         super(Assignment, self).save(*args, **kwargs)
+        self.hit.save()
 
 
 class Code(LoggedExtendedModel):
