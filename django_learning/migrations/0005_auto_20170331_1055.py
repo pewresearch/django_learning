@@ -10,171 +10,68 @@ import picklefield.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("contenttypes", "0002_remove_content_type_name"),
-        ("django_commander", "0001_initial"),
-        ("django_learning", "0004_auto_20170316_1151"),
+        ('contenttypes', '0002_remove_content_type_name'),
+        ('django_commander', '0001_initial'),
+        ('django_learning', '0004_auto_20170316_1151'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name="Classification",
+            name='Classification',
             fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("object_id", models.PositiveIntegerField()),
-                (
-                    "probability",
-                    models.FloatField(
-                        help_text=b"The probability of the assigned label, if applicable",
-                        null=True,
-                    ),
-                ),
-                (
-                    "command_logs",
-                    models.ManyToManyField(
-                        related_name="classification_related",
-                        to="django_commander.CommandLog",
-                    ),
-                ),
-                (
-                    "commands",
-                    models.ManyToManyField(
-                        related_name="classification_related",
-                        to="django_commander.Command",
-                    ),
-                ),
-                (
-                    "content_type",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="contenttypes.ContentType",
-                    ),
-                ),
-                (
-                    "document",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="classifications",
-                        to="django_learning.Document",
-                    ),
-                ),
-                (
-                    "label",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="classifications",
-                        to="django_learning.Label",
-                    ),
-                ),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('object_id', models.PositiveIntegerField()),
+                ('probability', models.FloatField(help_text=b'The probability of the assigned label, if applicable', null=True)),
+                ('command_logs', models.ManyToManyField(related_name='classification_related', to='django_commander.CommandLog')),
+                ('commands', models.ManyToManyField(related_name='classification_related', to='django_commander.Command')),
+                ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.ContentType')),
+                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='classifications', to='django_learning.Document')),
+                ('label', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='classifications', to='django_learning.Label')),
             ],
-            options={"abstract": False},
+            options={
+                'abstract': False,
+            },
         ),
         migrations.CreateModel(
-            name="ClassificationModel",
+            name='ClassificationModel',
             fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "name",
-                    models.CharField(
-                        help_text=b"Unique name of the classifier",
-                        max_length=100,
-                        unique=True,
-                    ),
-                ),
-                (
-                    "pipeline_name",
-                    models.CharField(
-                        help_text=b"The named pipeline used to seed the handler's parameters, if any; note that the JSON pipeline file may have changed since this classifier was created; refer to the parameters field to view the exact parameters used to compute the model",
-                        max_length=150,
-                        null=True,
-                    ),
-                ),
-                (
-                    "parameters",
-                    picklefield.fields.PickledObjectField(
-                        editable=False,
-                        help_text=b"A pickle file of the parameters used to process the codes and generate the model",
-                        null=True,
-                    ),
-                ),
-                (
-                    "cv_folds",
-                    picklefield.fields.PickledObjectField(editable=False, null=True),
-                ),
-                (
-                    "cv_folds_test",
-                    picklefield.fields.PickledObjectField(editable=False, null=True),
-                ),
-                ("cache_hash", models.CharField(max_length=256, null=True)),
-                ("num_cores", models.IntegerField(default=1)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(help_text=b'Unique name of the classifier', max_length=100, unique=True)),
+                ('pipeline_name', models.CharField(help_text=b"The named pipeline used to seed the handler's parameters, if any; note that the JSON pipeline file may have changed since this classifier was created; refer to the parameters field to view the exact parameters used to compute the model", max_length=150, null=True)),
+                ('parameters', picklefield.fields.PickledObjectField(editable=False, help_text=b'A pickle file of the parameters used to process the codes and generate the model', null=True)),
+                ('cv_folds', picklefield.fields.PickledObjectField(editable=False, null=True)),
+                ('cv_folds_test', picklefield.fields.PickledObjectField(editable=False, null=True)),
+                ('cache_hash', models.CharField(max_length=256, null=True)),
+                ('num_cores', models.IntegerField(default=1)),
             ],
-            options={"abstract": False},
+            options={
+                'abstract': False,
+            },
         ),
         migrations.CreateModel(
-            name="DocumentClassificationModel",
+            name='DocumentClassificationModel',
             fields=[
-                (
-                    "classificationmodel_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="django_learning.ClassificationModel",
-                    ),
-                ),
-                (
-                    "sampling_frame",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="learning_models",
-                        to="django_learning.SamplingFrame",
-                    ),
-                ),
+                ('classificationmodel_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='django_learning.ClassificationModel')),
+                ('sampling_frame', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='learning_models', to='django_learning.SamplingFrame')),
             ],
-            options={"abstract": False},
-            bases=("django_learning.classificationmodel", models.Model),
+            options={
+                'abstract': False,
+            },
+            bases=('django_learning.classificationmodel', models.Model),
         ),
         migrations.AddField(
-            model_name="classificationmodel",
-            name="command_logs",
-            field=models.ManyToManyField(
-                related_name="classificationmodel_related",
-                to="django_commander.CommandLog",
-            ),
+            model_name='classificationmodel',
+            name='command_logs',
+            field=models.ManyToManyField(related_name='classificationmodel_related', to='django_commander.CommandLog'),
         ),
         migrations.AddField(
-            model_name="classificationmodel",
-            name="commands",
-            field=models.ManyToManyField(
-                related_name="classificationmodel_related",
-                to="django_commander.Command",
-            ),
+            model_name='classificationmodel',
+            name='commands',
+            field=models.ManyToManyField(related_name='classificationmodel_related', to='django_commander.Command'),
         ),
         migrations.AddField(
-            model_name="classificationmodel",
-            name="project",
-            field=models.ForeignKey(
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="+",
-                to="django_learning.Project",
-            ),
+            model_name='classificationmodel',
+            name='project',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='+', to='django_learning.Project'),
         ),
     ]

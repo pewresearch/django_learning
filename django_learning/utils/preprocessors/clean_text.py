@@ -1,5 +1,4 @@
-from __future__ import print_function, absolute_import
-
+from __future__ import print_function
 import re
 
 from pewtils import is_not_null, decode_text
@@ -14,6 +13,7 @@ from django_learning.utils.preprocessors import BasicPreprocessor
 
 
 class Preprocessor(BasicPreprocessor):
+
     def __init__(self, *args, **kwargs):
 
         self.name = "clean_text"
@@ -25,35 +25,22 @@ class Preprocessor(BasicPreprocessor):
                 whitelist.extend(stopword_whitelists[stopword_whitelist]())
         stopwords = []
         if "stopword_sets" in self.params.keys():
-            for stopword_set in self.params["stopword_sets"]:
+            for stopword_set in self.params['stopword_sets']:
                 slist = None
                 if self.cache and not self.params.get("refresh_stopwords", False):
                     slist = self.cache.read(stopword_set)
                 if not slist:
                     slist = stopword_sets[stopword_set]()
-                    slist = [
-                        decode_text(s)
-                        for s in slist
-                        if len(s) > 2
-                        or stopword_set in ["english", "months", "misc_boilerplate"]
-                    ]
+                    slist = [decode_text(s) for s in slist if len(s) > 2 or stopword_set in ["english", "months", "misc_boilerplate"]]
                     if stopword_set not in ["english", "months", "misc_boilerplate"]:
                         final_slist = []
                         for s in slist:
                             s = s.lower()
-                            if (
-                                len(s) > 3
-                                or is_probable_stopword(s)
-                                or self.params.get("override_stopword_check", False)
-                            ):
+                            if len(s) > 3 or is_probable_stopword(s) or self.params.get("override_stopword_check", False):
                                 final_slist.append(s)
                         slist = final_slist
                     if self.cache:
-                        # print(
-                        #     "Recomputed stopword set {}, saving to local cache".format(
-                        #         stopword_set
-                        #     )
-                        # )
+                        print("Recomputed stopword set {}, saving to local cache".format(stopword_set))
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
         stopwords = list(set(stopwords))
@@ -65,28 +52,15 @@ class Preprocessor(BasicPreprocessor):
         for r in self.params.get("regex_replacers", []):
             replacers.extend(regex_replacers[r]())
         kwargs = {"stopwords": stopwords, "strip_html": True, "replacers": replacers}
-        kwargs.update(
-            {
-                k: v
-                for k, v in self.params.items()
-                if k
-                not in [
-                    "regex_replacers",
-                    "stopword_sets",
-                    "regex_filters",
-                    "cache_identifier",
-                    "stopword_whitelists",
-                    "refresh_stopwords",
-                    "override_stopword_check",
-                ]
-            }
-        )
+        kwargs.update({k: v for k, v in self.params.items() if k not in ["regex_replacers", "stopword_sets", "regex_filters",
+                                                                         "cache_identifier", "stopword_whitelists", "refresh_stopwords",
+                                                                         "override_stopword_check"]})
         self.cleaner = TextCleaner(**kwargs)
         self.tokenizer = SentenceTokenizer()
 
         self.regex_filters = []
         if "regex_filters" in self.params.keys():
-            for regex_filter in self.params["regex_filters"]:
+            for regex_filter in self.params['regex_filters']:
                 self.regex_filters.append(regex_filters[regex_filter]())
 
         self.url_regex = re.compile(

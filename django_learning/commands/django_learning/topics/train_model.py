@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from django_commander.commands import BasicCommand
 
 from django_learning.models import SamplingFrame, TopicModel
@@ -23,7 +21,7 @@ class Command(BasicCommand):
         model.save()
         model.load_model(
             refresh_model=self.options["refresh_model"],
-            refresh_vectorizer=self.options["refresh_vectorizer"],
+            refresh_vectorizer=self.options["refresh_vectorizer"]
         )
 
     def cleanup(self):

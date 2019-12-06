@@ -7,15 +7,18 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [("django_learning", "0005_auto_20170331_1055")]
+    dependencies = [
+        ('django_learning', '0005_auto_20170331_1055'),
+    ]
 
     operations = [
-        migrations.RemoveField(model_name="project", name="blacklist"),
+        migrations.RemoveField(
+            model_name='project',
+            name='blacklist',
+        ),
         migrations.AddField(
-            model_name="project",
-            name="inactive_coders",
-            field=models.ManyToManyField(
-                related_name="inactive_projects", to="django_learning.Coder"
-            ),
+            model_name='project',
+            name='inactive_coders',
+            field=models.ManyToManyField(related_name='inactive_projects', to='django_learning.Coder'),
         ),
     ]

@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from sklearn.feature_extraction import text as sklearn_text
 
 

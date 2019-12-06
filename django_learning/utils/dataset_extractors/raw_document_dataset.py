@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import pandas, inspect
 
 from pewtils import is_not_null
@@ -13,6 +11,7 @@ from django_learning.utils.dataset_extractors import DatasetExtractor
 
 
 class Extractor(DatasetExtractor):
+
     def __init__(self, **kwargs):
 
         document_ids = kwargs.get("document_ids", [])
@@ -25,9 +24,7 @@ class Extractor(DatasetExtractor):
 
         self.sampling_frame = None
         if is_not_null(sampling_frame_name):
-            self.sampling_frame = get_model(
-                "SamplingFrame", app_name="django_learning"
-            ).objects.get(name=sampling_frame_name)
+            self.sampling_frame = get_model("SamplingFrame", app_name="django_learning").objects.get(name=sampling_frame_name)
             self.documents = self.sampling_frame.documents.all()
         if is_not_null(document_ids, empty_lists_are_null=True):
             self.documents = self.documents.filter(pk__in=document_ids)
@@ -50,9 +47,7 @@ class Extractor(DatasetExtractor):
     def _test_index(self, dataset):
 
         if len(dataset) != len(dataset.groupby(self.index_levels).count()):
-            raise Exception(
-                "All {} combinations must be unique!".format(self.index_levels)
-            )
+            raise Exception("All {} combinations must be unique!".format(self.index_levels))
 
     def _get_preserved_state(self, **kwargs):
 
@@ -60,13 +55,17 @@ class Extractor(DatasetExtractor):
             "outcome_column": self.outcome_column,
             "outcome_columns": self.outcome_columns,
             "discrete_classes": self.discrete_classes,
-            "valid_label_ids": self.valid_label_ids,
+            "valid_label_ids": self.valid_label_ids
         }
 
     def _get_dataset(self, **kwargs):
 
         dataset = pandas.DataFrame.from_records(
-            self.documents.values("pk", "text", "date")
+            self.documents.values(
+                "pk",
+                "text",
+                "date"
+            )
         )
         dataset = dataset.rename(columns={"pk": "document_id"})
 
@@ -75,11 +74,7 @@ class Extractor(DatasetExtractor):
             dataset = self._apply_filters(dataset)
             dataset = self._additional_steps(dataset, **kwargs)
             self._test_index(dataset)
-            dataset["document_type"] = dataset["document_id"].map(
-                lambda x: get_model("Document", app_name="django_learning")
-                .objects.get(pk=x)
-                .document_type
-            )
+            dataset["document_type"] = dataset["document_id"].map(lambda x: get_model("Document", app_name="django_learning").objects.get(pk=x).document_type)
 
         return dataset
 
@@ -90,8 +85,6 @@ class Extractor(DatasetExtractor):
     def _apply_filters(self, dataset):
 
         for filter_name, filter_args, filter_kwargs in self.document_filters:
-            dataset = dataset_document_filters[filter_name](
-                self, dataset, *filter_args, **filter_kwargs
-            )
+            dataset = dataset_document_filters[filter_name](self, dataset, *filter_args, **filter_kwargs)
 
         return dataset

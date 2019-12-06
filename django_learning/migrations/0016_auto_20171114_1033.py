@@ -7,12 +7,14 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [("django_learning", "0015_auto_20171114_1033")]
+    dependencies = [
+        ('django_learning', '0015_auto_20171114_1033'),
+    ]
 
     operations = [
         migrations.AlterField(
-            model_name="topicmodel",
-            name="name",
+            model_name='topicmodel',
+            name='name',
             field=models.CharField(max_length=200, unique=True),
-        )
+        ),
     ]

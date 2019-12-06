@@ -1,6 +1,4 @@
-from __future__ import print_function, absolute_import
-
-
+from __future__ import print_function
 from django_commander.commands import BasicCommand
 
 from django_learning.models import SamplingFrame
@@ -19,10 +17,8 @@ class Command(BasicCommand):
 
     def run(self):
 
-        frame, created = SamplingFrame.objects.get_or_create(
-            name=self.parameters["sampling_frame_name"]
-        )
-        frame.extract_documents(refresh=self.options["refresh"])
+        frame, created = SamplingFrame.objects.get_or_create(name=self.parameters['sampling_frame_name'])
+        frame.extract_documents(refresh=self.options['refresh'])
         if self.options["refresh"]:
             frame.get_sampling_flags(refresh=True)
         print(frame)

@@ -1,3 +1,4 @@
+
 import os
 
 from django.apps import apps as global_apps
@@ -15,8 +16,7 @@ from django_commander.commands import commands
 def forwards(apps, schema_editor):
 
     if not hasattr(settings, "SITE_NAME") or not settings.SITE_NAME == "testapp":
-        commands["django_learning_nlp_reload_liwc"]().run()
-
+        commands["reload_liwc"]().run()
 
 def backwards(apps, schema_editor):
 
@@ -26,6 +26,10 @@ def backwards(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = [("django_learning", "0002_load_nrc_emotions")]
+    dependencies = [
+        ('django_learning', '0002_load_nrc_emotions'),
+    ]
 
-    operations = [migrations.RunPython(forwards, backwards)]
+    operations = [
+        migrations.RunPython(forwards, backwards),
+    ]
