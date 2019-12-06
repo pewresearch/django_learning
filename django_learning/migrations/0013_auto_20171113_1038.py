@@ -11,205 +11,82 @@ import picklefield.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("django_commander", "0001_initial"),
-        ("django_learning", "0012_auto_20171113_1038"),
+        ('django_commander', '0001_initial'),
+        ('django_learning', '0012_auto_20171113_1038'),
     ]
 
     operations = [
         migrations.CreateModel(
-            name="DocumentTopic",
+            name='DocumentTopic',
             fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("value", models.FloatField()),
-                (
-                    "command_logs",
-                    models.ManyToManyField(
-                        related_name="documenttopic_related",
-                        to="django_commander.CommandLog",
-                    ),
-                ),
-                (
-                    "commands",
-                    models.ManyToManyField(
-                        related_name="documenttopic_related",
-                        to="django_commander.Command",
-                    ),
-                ),
-                (
-                    "document",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="topics",
-                        to="django_learning.Document",
-                    ),
-                ),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('value', models.FloatField()),
+                ('command_logs', models.ManyToManyField(related_name='documenttopic_related', to='django_commander.CommandLog')),
+                ('commands', models.ManyToManyField(related_name='documenttopic_related', to='django_commander.Command')),
+                ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='topics', to='django_learning.Document')),
             ],
         ),
         migrations.CreateModel(
-            name="Topic",
+            name='Topic',
             fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("num", models.IntegerField()),
-                ("name", models.CharField(db_index=True, max_length=50, null=True)),
-                ("label", models.CharField(db_index=True, max_length=100, null=True)),
-                (
-                    "anchors",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=100),
-                        default=[],
-                        size=None,
-                    ),
-                ),
-                (
-                    "command_logs",
-                    models.ManyToManyField(
-                        related_name="topic_related", to="django_commander.CommandLog"
-                    ),
-                ),
-                (
-                    "commands",
-                    models.ManyToManyField(
-                        related_name="topic_related", to="django_commander.Command"
-                    ),
-                ),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('num', models.IntegerField()),
+                ('name', models.CharField(db_index=True, max_length=50, null=True)),
+                ('label', models.CharField(db_index=True, max_length=100, null=True)),
+                ('anchors', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=100), default=[], size=None)),
+                ('command_logs', models.ManyToManyField(related_name='topic_related', to='django_commander.CommandLog')),
+                ('commands', models.ManyToManyField(related_name='topic_related', to='django_commander.Command')),
             ],
         ),
         migrations.CreateModel(
-            name="TopicModel",
+            name='TopicModel',
             fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("num_topics", models.IntegerField(default=100)),
-                ("sample_size", models.IntegerField(default=None, null=True)),
-                ("anchor_strength", models.IntegerField(default=4)),
-                (
-                    "model",
-                    picklefield.fields.PickledObjectField(editable=False, null=True),
-                ),
-                (
-                    "vectorizer",
-                    picklefield.fields.PickledObjectField(editable=False, null=True),
-                ),
-                (
-                    "command_logs",
-                    models.ManyToManyField(
-                        related_name="topicmodel_related",
-                        to="django_commander.CommandLog",
-                    ),
-                ),
-                (
-                    "commands",
-                    models.ManyToManyField(
-                        related_name="topicmodel_related", to="django_commander.Command"
-                    ),
-                ),
-                (
-                    "frame",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="topic_models",
-                        to="django_learning.SamplingFrame",
-                    ),
-                ),
-                (
-                    "training_documents",
-                    models.ManyToManyField(
-                        related_name="topic_models_trained",
-                        to="django_learning.Document",
-                    ),
-                ),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('num_topics', models.IntegerField(default=100)),
+                ('sample_size', models.IntegerField(default=None, null=True)),
+                ('anchor_strength', models.IntegerField(default=4)),
+                ('model', picklefield.fields.PickledObjectField(editable=False, null=True)),
+                ('vectorizer', picklefield.fields.PickledObjectField(editable=False, null=True)),
+                ('command_logs', models.ManyToManyField(related_name='topicmodel_related', to='django_commander.CommandLog')),
+                ('commands', models.ManyToManyField(related_name='topicmodel_related', to='django_commander.Command')),
+                ('frame', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='topic_models', to='django_learning.SamplingFrame')),
+                ('training_documents', models.ManyToManyField(related_name='topic_models_trained', to='django_learning.Document')),
             ],
         ),
         migrations.CreateModel(
-            name="TopicNgram",
+            name='TopicNgram',
             fields=[
-                (
-                    "id",
-                    models.AutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(db_index=True, max_length=40)),
-                ("weight", models.FloatField()),
-                (
-                    "command_logs",
-                    models.ManyToManyField(
-                        related_name="topicngram_related",
-                        to="django_commander.CommandLog",
-                    ),
-                ),
-                (
-                    "commands",
-                    models.ManyToManyField(
-                        related_name="topicngram_related", to="django_commander.Command"
-                    ),
-                ),
-                (
-                    "topic",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="ngrams",
-                        to="django_learning.Topic",
-                    ),
-                ),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(db_index=True, max_length=40)),
+                ('weight', models.FloatField()),
+                ('command_logs', models.ManyToManyField(related_name='topicngram_related', to='django_commander.CommandLog')),
+                ('commands', models.ManyToManyField(related_name='topicngram_related', to='django_commander.Command')),
+                ('topic', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ngrams', to='django_learning.Topic')),
             ],
-            options={"abstract": False},
+            options={
+                'abstract': False,
+            },
         ),
         migrations.AddField(
-            model_name="topic",
-            name="model",
-            field=models.ForeignKey(
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="topics",
-                to="django_learning.TopicModel",
-            ),
+            model_name='topic',
+            name='model',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='topics', to='django_learning.TopicModel'),
         ),
         migrations.AddField(
-            model_name="documenttopic",
-            name="topic",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE,
-                related_name="documents",
-                to="django_learning.Topic",
-            ),
+            model_name='documenttopic',
+            name='topic',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='documents', to='django_learning.Topic'),
         ),
         migrations.AlterUniqueTogether(
-            name="topicmodel",
-            unique_together=set(
-                [("frame", "num_topics", "anchor_strength", "sample_size")]
-            ),
+            name='topicmodel',
+            unique_together=set([('frame', 'num_topics', 'anchor_strength', 'sample_size')]),
         ),
         migrations.AlterUniqueTogether(
-            name="topic", unique_together=set([("num", "model")])
+            name='topic',
+            unique_together=set([('num', 'model')]),
         ),
         migrations.AlterUniqueTogether(
-            name="documenttopic", unique_together=set([("topic", "document")])
+            name='documenttopic',
+            unique_together=set([('topic', 'document')]),
         ),
     ]

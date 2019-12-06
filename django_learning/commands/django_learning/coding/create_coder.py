@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from django.contrib.auth.models import User
 
 from django_commander.commands import BasicCommand
@@ -33,10 +31,11 @@ class Command(BasicCommand):
             user = User.objects.create_user(
                 self.parameters["coder_name"],
                 "{}@pewresearch.org".format(self.parameters["coder_name"]),
-                "pass",
+                "pass"
             )
         get_model("Coder").objects.create_or_update(
-            {"name": self.parameters["coder_name"]}, {"is_mturk": False, "user": user}
+            {"name": self.parameters["coder_name"]},
+            {"is_mturk": False, "user": user}
         )
 
     def cleanup(self):

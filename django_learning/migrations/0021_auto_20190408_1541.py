@@ -7,11 +7,17 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [("django_learning", "0020_auto_20190404_1327")]
+    dependencies = [
+        ('django_learning', '0020_auto_20190404_1327'),
+    ]
 
     operations = [
-        migrations.RemoveField(model_name="hittype", name="qualification_tests"),
         migrations.RemoveField(
-            model_name="qualificationassignment", name="is_qualified"
+            model_name='hittype',
+            name='qualification_tests',
+        ),
+        migrations.RemoveField(
+            model_name='qualificationassignment',
+            name='is_qualified',
         ),
     ]

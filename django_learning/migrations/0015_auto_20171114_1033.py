@@ -8,25 +8,35 @@ import picklefield.fields
 
 class Migration(migrations.Migration):
 
-    dependencies = [("django_learning", "0014_auto_20171113_1701")]
+    dependencies = [
+        ('django_learning', '0014_auto_20171113_1701'),
+    ]
 
     operations = [
         migrations.AddField(
-            model_name="topicmodel",
-            name="name",
-            field=models.CharField(default=b"w29_life", max_length=200, unique=True),
+            model_name='topicmodel',
+            name='name',
+            field=models.CharField(default=b'w29_life', max_length=200, unique=True),
         ),
         migrations.AddField(
-            model_name="topicmodel",
-            name="parameters",
-            field=picklefield.fields.PickledObjectField(
-                editable=False,
-                help_text=b"A pickle file of the parameters used",
-                null=True,
-            ),
+            model_name='topicmodel',
+            name='parameters',
+            field=picklefield.fields.PickledObjectField(editable=False, help_text=b'A pickle file of the parameters used', null=True),
         ),
-        migrations.AlterUniqueTogether(name="topicmodel", unique_together=set([])),
-        migrations.RemoveField(model_name="topicmodel", name="anchor_strength"),
-        migrations.RemoveField(model_name="topicmodel", name="num_topics"),
-        migrations.RemoveField(model_name="topicmodel", name="sample_size"),
+        migrations.AlterUniqueTogether(
+            name='topicmodel',
+            unique_together=set([]),
+        ),
+        migrations.RemoveField(
+            model_name='topicmodel',
+            name='anchor_strength',
+        ),
+        migrations.RemoveField(
+            model_name='topicmodel',
+            name='num_topics',
+        ),
+        migrations.RemoveField(
+            model_name='topicmodel',
+            name='sample_size',
+        ),
     ]

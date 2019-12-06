@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import copy
 
 from pewtils import is_null
@@ -12,8 +10,8 @@ from django_learning.utils.dataset_extractors import DatasetExtractor
 
 
 class Extractor(DatasetExtractor):
-    def __init__(
-        self,
+
+    def __init__(self,
         dataset=None,
         learning_model=None,
         cache_key=None,
@@ -27,9 +25,7 @@ class Extractor(DatasetExtractor):
         self.learning_model = learning_model
         self.cache_key = cache_key
 
-        self.disable_probability_threshold_warning = (
-            disable_probability_threshold_warning
-        )
+        self.disable_probability_threshold_warning = disable_probability_threshold_warning
 
     def get_hash(self, **kwargs):
 
@@ -43,13 +39,8 @@ class Extractor(DatasetExtractor):
         if is_null(self.learning_model.model):
             self.learning_model.load_model()
         dataset = self.dataset
-        predictions = self.learning_model.apply_model(
-            dataset,
-            disable_probability_threshold_warning=self.disable_probability_threshold_warning,
-        )
-        dataset[self.learning_model.dataset_extractor.outcome_column] = predictions[
-            self.learning_model.dataset_extractor.outcome_column
-        ]
+        predictions = self.learning_model.apply_model(dataset, disable_probability_threshold_warning=self.disable_probability_threshold_warning)
+        dataset[self.learning_model.dataset_extractor.outcome_column] = predictions[self.learning_model.dataset_extractor.outcome_column]
         dataset["probability"] = predictions["probability"]
 
         return dataset

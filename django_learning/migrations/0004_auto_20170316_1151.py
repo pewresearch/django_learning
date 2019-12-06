@@ -7,12 +7,14 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [("django_learning", "0003_load_liwc")]
+    dependencies = [
+        ('django_learning', '0003_load_liwc'),
+    ]
 
     operations = [
         migrations.AlterField(
-            model_name="document",
-            name="external_link",
+            model_name='document',
+            name='external_link',
             field=models.URLField(max_length=500, null=True),
-        )
+        ),
     ]

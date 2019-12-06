@@ -1,11 +1,10 @@
-from __future__ import absolute_import
-
 import itertools
 
 from django_learning.utils.preprocessors import BasicPreprocessor
 
 
 class Preprocessor(BasicPreprocessor):
+
     def __init__(self, *args, **kwargs):
 
         self.name = "run_function"

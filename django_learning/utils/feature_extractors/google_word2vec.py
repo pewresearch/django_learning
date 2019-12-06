@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import pandas, time, numpy, copy
 
 from tqdm import tqdm
@@ -12,6 +10,7 @@ from django_learning.utils.feature_extractors import BasicExtractor
 
 
 class Extractor(BasicExtractor):
+
     def __init__(self, *args, **kwargs):
 
         self.name = "google_word2vec"
@@ -26,32 +25,25 @@ class Extractor(BasicExtractor):
 
         X = copy.deepcopy(X)
         for p in self.get_preprocessors():
-            X["text"] = X["text"].apply(p.run)
+            X['text'] = X['text'].apply(p.run)
 
         full_vocab = set(self.w2v.vocab.keys())
-
         def mapper(x):
             words = x.split()
             words.extend(["_".join(pair) for pair in zip(words, words[1:])])
             # words = list(set(words).intersection(vocab))
             return words
 
-        X["words"] = X["text"].map(mapper)
-        sample_vocab = flatten_list(X["words"].values)
+        X['words'] = X['text'].map(mapper)
+        sample_vocab = flatten_list(X['words'].values)
         intersect = set(sample_vocab).intersection(full_vocab)
-        X["words"] = X["words"].map(lambda x: [w for w in x if w in intersect])
-        X["w2v"] = X["words"].map(lambda x: [self.w2v[w] for w in x])
+        X['words'] = X['words'].map(lambda x: [w for w in x if w in intersect])
+        X['w2v'] = X['words'].map(lambda x: [self.w2v[w] for w in x])
 
         rows = []
         for index, row in X.iterrows():
-            doc = pandas.DataFrame(row["w2v"])
-            rows.append(
-                list(doc.mean())
-                + list(doc.max())
-                + list(doc.min())
-                + list(doc.std())
-                + list(doc.median())
-            )
+            doc = pandas.DataFrame(row['w2v'])
+            rows.append(list(doc.mean()) + list(doc.max()) + list(doc.min()) + list(doc.std()) + list(doc.median()))
 
         # rows = []
         # for index, row in tqdm(X.iterrows(), desc="mapping w2v"):
@@ -81,18 +73,11 @@ class Extractor(BasicExtractor):
 
     def get_feature_names(self):
 
-        return [
-            "{}_{}".format(self.params["feature_name_prefix"], x)
-            for x in xrange(0, 1500)
-        ]
+        return ["{}_{}".format(self.params["feature_name_prefix"], x) for x in xrange(0, 1500)]
 
     def _get_w2v(self):
 
-        return KeyedVectors.load_word2vec_format(
-            "{}/GoogleNews-vectors-negative300.bin.gz".format(settings.FILE_ROOT),
-            binary=True,
-            limit=self.params["limit"],
-        )
+        return KeyedVectors.load_word2vec_format('{}/GoogleNews-vectors-negative300.bin.gz'.format(settings.FILE_ROOT), binary=True, limit=self.params["limit"])
 
     # def _cleanup(self):
     #
