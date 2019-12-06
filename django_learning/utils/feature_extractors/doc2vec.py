@@ -1,4 +1,5 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
+
 import pandas, time
 
 from tqdm import tqdm
@@ -8,7 +9,6 @@ from django_learning.utils.feature_extractors import BasicExtractor
 
 
 class Extractor(BasicExtractor):
-
     def __init__(self, *args, **kwargs):
 
         self.name = "doc2vec"
@@ -22,15 +22,15 @@ class Extractor(BasicExtractor):
 
         vecs = []
         for index, row in tqdm(X.iterrows(), desc="Computing Doc2Vec features"):
-            new_row = self.get_row_cache(str(row['pk']))
+            new_row = self.get_row_cache(str(row["pk"]))
             if not new_row:
-                text = row['text']
+                text = row["text"]
                 for p in preprocessors:
                     text = p.run(text)
                 new_row = []
-                for doc_type, model in self.models.iteritems():
+                for doc_type, model in self.models.items():
                     new_row.extend(model.infer_vector(text.split()))
-                self.set_row_cache(str(row['pk']), new_row)
+                self.set_row_cache(str(row["pk"]), new_row)
             if type(new_row) != list:
                 print("WAHH!")
                 print(new_row)
@@ -46,10 +46,15 @@ class Extractor(BasicExtractor):
                 print("Loading Doc2Vec {} model".format(doc_type))
                 self.models[doc_type] = self.get_row_cache("model")
                 if self.models[doc_type] == None:
-                    try: self.models[doc_type] = get_model("Document").objects.doc2vec(doc_type)
+                    try:
+                        self.models[doc_type] = get_model("Document").objects.doc2vec(
+                            doc_type
+                        )
                     except EOFError:
                         time.sleep(1)
-                        self.models[doc_type] = get_model("Document").objects.doc2vec(doc_type)
+                        self.models[doc_type] = get_model("Document").objects.doc2vec(
+                            doc_type
+                        )
                         if self.models[doc_type] == None:
                             print("Couldn't load doc2vec model!")
                             raise Exception
@@ -59,10 +64,17 @@ class Extractor(BasicExtractor):
 
     def get_feature_names(self):
 
-        prefix = "{0}_".format(self.params["feature_name_prefix"]) if self.params["feature_name_prefix"] else ""
+        prefix = (
+            "{0}_".format(self.params["feature_name_prefix"])
+            if self.params["feature_name_prefix"]
+            else ""
+        )
         feature_names = []
-        for doc_type, model in self.models.iteritems():
+        for doc_type, model in self.models.items():
             feature_names.extend(
-                ["{0}{1}_{2}".format(prefix, doc_type, i) for i in range(0, model.vector_size)]
+                [
+                    "{0}{1}_{2}".format(prefix, doc_type, i)
+                    for i in range(0, model.vector_size)
+                ]
             )
         return feature_names

@@ -11,7 +11,7 @@ class NgramSet(LoggedExtendedModel):
     name = models.CharField(max_length=100, db_index=True)
     dictionary = models.CharField(max_length=100, db_index=True)
     label = models.CharField(max_length=100, db_index=True, null=True)
-    words = ArrayField(models.CharField(max_length=50), default=[])
+    words = ArrayField(models.CharField(max_length=50), default=list)
 
     objects = NgramSetManager().as_manager()
 
@@ -25,8 +25,12 @@ class NgramSet(LoggedExtendedModel):
 
 class DocumentNgramSet(LoggedExtendedModel):
 
-    ngram_set = models.ForeignKey("django_learning.NgramSet", related_name="documents", on_delete=models.CASCADE)
-    document = models.ForeignKey("django_learning.Document", related_name="ngram_sets", on_delete=models.CASCADE)
+    ngram_set = models.ForeignKey(
+        "django_learning.NgramSet", related_name="documents", on_delete=models.CASCADE
+    )
+    document = models.ForeignKey(
+        "django_learning.Document", related_name="ngram_sets", on_delete=models.CASCADE
+    )
     count = models.IntegerField()
     percent = models.FloatField()
 
@@ -34,9 +38,8 @@ class DocumentNgramSet(LoggedExtendedModel):
         unique_together = ("ngram_set", "document")
 
     def __str__(self):
-        print("{0}, {1}: {2}".format(
-            str(self.document),
-            str(self.ngram_set),
-            self.percent
-        ))
-
+        print(
+            "{0}, {1}: {2}".format(
+                str(self.document), str(self.ngram_set), self.percent
+            )
+        )
