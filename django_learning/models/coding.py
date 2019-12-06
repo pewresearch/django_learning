@@ -8,7 +8,9 @@ from django_learning.managers import CodeManager
 
 class HIT(LoggedExtendedModel):
 
-    sample_unit = models.ForeignKey("django_learning.SampleUnit", related_name="hits", on_delete=models.CASCADE)
+    sample_unit = models.ForeignKey(
+        "django_learning.SampleUnit", related_name="hits", on_delete=models.CASCADE
+    )
     template_name = models.CharField(max_length=250, null=True)
     num_coders = models.IntegerField(default=1)
 
@@ -16,18 +18,30 @@ class HIT(LoggedExtendedModel):
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
 
+    finished = models.NullBooleanField(null=True)
+
     # AUTO-FILLED RELATIONS
-    sample = models.ForeignKey("django_learning.Sample", related_name="hits", on_delete=models.CASCADE)
+    sample = models.ForeignKey(
+        "django_learning.Sample", related_name="hits", on_delete=models.CASCADE
+    )
 
     def save(self, *args, **kwargs):
+        if self.assignments.filter(time_finished__isnull=False).count() >= self.num_coders:
+            self.finished = True
+        else:
+            self.finished = False
         self.sample = self.sample_unit.sample
         super(HIT, self).save(*args, **kwargs)
 
 
 class Assignment(LoggedExtendedModel):
 
-    hit = models.ForeignKey("django_learning.HIT", related_name="assignments", on_delete=models.CASCADE)
-    coder = models.ForeignKey("django_learning.Coder", related_name="assignments", on_delete=models.CASCADE)
+    hit = models.ForeignKey(
+        "django_learning.HIT", related_name="assignments", on_delete=models.CASCADE
+    )
+    coder = models.ForeignKey(
+        "django_learning.Coder", related_name="assignments", on_delete=models.CASCADE
+    )
 
     time_started = models.DateTimeField(null=True, auto_now_add=True)
     time_finished = models.DateTimeField(null=True)
@@ -40,8 +54,12 @@ class Assignment(LoggedExtendedModel):
     uncodeable = models.BooleanField(default=False)
 
     # AUTO-FILLED RELATIONS
-    sample = models.ForeignKey("django_learning.Sample", related_name="assignments", on_delete=models.CASCADE)
-    project = models.ForeignKey("django_learning.Project", related_name="assignments", on_delete=models.CASCADE)
+    sample = models.ForeignKey(
+        "django_learning.Sample", related_name="assignments", on_delete=models.CASCADE
+    )
+    project = models.ForeignKey(
+        "django_learning.Project", related_name="assignments", on_delete=models.CASCADE
+    )
 
     def __str__(self):
         return "{}, {}".format(self.hit, self.coder)
@@ -51,31 +69,65 @@ class Assignment(LoggedExtendedModel):
         self.sample = self.hit.sample
         self.project = self.hit.sample.project
         super(Assignment, self).save(*args, **kwargs)
+        self.hit.save()
 
 
 class Code(LoggedExtendedModel):
 
-    label = models.ForeignKey("django_learning.Label", related_name="codes", on_delete=models.CASCADE)
-    assignment = models.ForeignKey("django_learning.Assignment", related_name="codes", null=True, on_delete=models.CASCADE)
-    qualification_assignment = models.ForeignKey("django_learning.QualificationAssignment", related_name="codes", null=True, on_delete=models.CASCADE)
+    label = models.ForeignKey(
+        "django_learning.Label", related_name="codes", on_delete=models.CASCADE
+    )
+    assignment = models.ForeignKey(
+        "django_learning.Assignment",
+        related_name="codes",
+        null=True,
+        on_delete=models.CASCADE,
+    )
+    qualification_assignment = models.ForeignKey(
+        "django_learning.QualificationAssignment",
+        related_name="codes",
+        null=True,
+        on_delete=models.CASCADE,
+    )
 
-    date_added = models.DateTimeField(auto_now_add=True, help_text="The date the document code was added")
-    date_last_updated = models.DateTimeField(auto_now=True, help_text="The last date the document code was modified")
+    date_added = models.DateTimeField(
+        auto_now_add=True, help_text="The date the document code was added"
+    )
+    date_last_updated = models.DateTimeField(
+        auto_now=True, help_text="The last date the document code was modified"
+    )
 
     consensus_ignore = models.BooleanField(default=False)
 
     notes = models.TextField(null=True)
 
     # AUTO-FILLED RELATIONS
-    coder = models.ForeignKey("django_learning.Coder", related_name="codes", on_delete=models.CASCADE)
-    hit = models.ForeignKey("django_learning.HIT", related_name="codes", null=True, on_delete=models.CASCADE)
-    sample_unit = models.ForeignKey("django_learning.SampleUnit", related_name="codes", null=True, on_delete=models.CASCADE)
-    document = models.ForeignKey("django_learning.Document", related_name="codes", null=True, on_delete=models.CASCADE)
+    coder = models.ForeignKey(
+        "django_learning.Coder", related_name="codes", on_delete=models.CASCADE
+    )
+    hit = models.ForeignKey(
+        "django_learning.HIT", related_name="codes", null=True, on_delete=models.CASCADE
+    )
+    sample_unit = models.ForeignKey(
+        "django_learning.SampleUnit",
+        related_name="codes",
+        null=True,
+        on_delete=models.CASCADE,
+    )
+    document = models.ForeignKey(
+        "django_learning.Document",
+        related_name="codes",
+        null=True,
+        on_delete=models.CASCADE,
+    )
 
     objects = CodeManager().as_manager()
 
     def __str__(self):
-        return "{}: {}".format(self.assignment if self.assignment else self.qualification_assignment, self.label)
+        return "{}: {}".format(
+            self.assignment if self.assignment else self.qualification_assignment,
+            self.label,
+        )
 
     def save(self, *args, **kwargs):
 
@@ -128,9 +180,15 @@ class Coder(LoggedExtendedModel):
     "experts".
     """
 
-    name = models.CharField(max_length=200, unique=True, help_text="Unique name of the coder")
-    user = models.OneToOneField(User, related_name="coder", null=True, on_delete=models.SET_NULL)
-    is_mturk = models.BooleanField(default=False, help_text="Whether or not the coder is a Mechanical Turk worker")
+    name = models.CharField(
+        max_length=200, unique=True, help_text="Unique name of the coder"
+    )
+    user = models.OneToOneField(
+        User, related_name="coder", null=True, on_delete=models.SET_NULL
+    )
+    is_mturk = models.BooleanField(
+        default=False, help_text="Whether or not the coder is a Mechanical Turk worker"
+    )
 
     def __str__(self):
         return "{} ({})".format(self.name, "MTurk" if self.is_mturk else "In-House")
@@ -141,9 +199,11 @@ class Coder(LoggedExtendedModel):
 
     def _clear_abandoned_sample_assignments(self, sample):
 
-        assignments = self.assignments.filter(hit__sample=sample) \
-            .filter(time_finished__isnull=True) \
-            .annotate(c=Count("codes")) \
+        assignments = (
+            self.assignments.filter(hit__sample=sample)
+            .filter(time_finished__isnull=True)
+            .annotate(c=Count("codes"))
             .filter(c=0)
+        )
 
         assignments.delete()  # delete assignments that were accidentally abandoned
