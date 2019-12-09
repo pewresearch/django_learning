@@ -20,7 +20,9 @@ class Command(BasicCommand):
 
         NgramSet = apps.get_model("django_learning", "NgramSet")
         h = FileHandler(
-            os.path.join(settings.BASE_DIR, "static/django_learning/dictionaries"),
+            os.path.join(
+                settings.DJANGO_LEARNING_BASE_DIR, "static/django_learning/dictionaries"
+            ),
             use_s3=False,
         )
         df = h.read(

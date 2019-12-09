@@ -13,6 +13,7 @@ class DjangoLearningConfig(AppConfig):
     def update_settings(self):
         from django.conf import settings
 
+        setattr(settings, "DJANGO_LEARNING_BASE_DIR", DJANGO_LEARNING_BASE_DIR)
         for setting, default in [
             ("AWS_ACCESS_KEY_ID", None),
             ("AWS_SECRET_ACCESS_KEY", None),
