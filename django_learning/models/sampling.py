@@ -126,7 +126,7 @@ class SamplingFrame(LoggedExtendedModel):
             # print("Recomputing frame sampling flags")
 
             vals = (
-                ["pk", "text"]
+                ["pk", "text", "date"]
                 + stratification_variables
                 + [a["field_lookup"] for a in additional_variables.values()]
             )
