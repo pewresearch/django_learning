@@ -17,7 +17,7 @@ from django_commander.utils import run_command_task
 
 from django_learning.exceptions import RequiredResponseException
 from django_learning.models import *
-from django_learning.utils.coding import *
+from django_learning.utils.filters import *
 from django_learning.utils.projects import projects as project_configs
 from django_learning.utils.sampling_frames import (
     sampling_frames as sampling_frame_configs,
