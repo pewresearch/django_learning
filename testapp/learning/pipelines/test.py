@@ -7,6 +7,8 @@ from sklearn.impute import SimpleImputer
 
 from django_pewtils import get_model
 
+from testapp.utils import get_base_dataset_parameters
+
 
 def get_pipeline():
 
@@ -23,19 +25,7 @@ def get_pipeline():
     return {
         "dataset_extractor": {
             "name": "document_dataset",
-            "parameters": {
-                "project_name": "test_project",
-                "sandbox": True,
-                "sample_names": ["test_sample"],
-                "question_names": ["test_checkbox"],
-                "document_filters": [],
-                "coder_filters": [("exclude_mturk", [], {})],
-                "base_class_id": base_class_id,
-                "threshold": 0.4,
-                "convert_to_discrete": True,
-                "balancing_variables": [],
-                "ignore_stratification_weights": False,
-            },
+            "parameters": get_base_dataset_parameters("document_dataset"),
             "outcome_column": "label_id",
         },
         "model": {
