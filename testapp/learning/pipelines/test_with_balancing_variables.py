@@ -25,24 +25,19 @@ def get_pipeline():
     return {
         "dataset_extractor": {
             "name": "document_dataset",
-            "parameters": get_base_dataset_parameters("document_dataset"),
-            "outcome_column": "label_id",
-        },
-        "test_dataset_extractor": {
-            "name": "document_dataset",
             "parameters": get_base_dataset_parameters(
-                "document_dataset", sample_name="test_sample_holdout"
+                "document_dataset", params={"balancing_variables": ["test"]}
             ),
             "outcome_column": "label_id",
         },
         "model": {
             "name": "classification_xgboost",
-            "cv": 1,
+            "cv": 5,
             "params": {},
             "fit_params": {"eval_metric": "error"},
-            "use_sample_weights": False,
+            "use_sample_weights": True,
             "use_class_weights": False,
-            "test_percent": 0.0,
+            "test_percent": 0.25,
             "scoring_function": "maxmin",
         },
         "pipeline": {
@@ -62,7 +57,7 @@ def get_pipeline():
                 "tfidf_counts": {
                     "sublinear_tf": [False],
                     "max_df": [0.9],
-                    "min_df": [10],
+                    "min_df": [10, 20],
                     "max_features": [None],
                     "ngram_range": [[1, 4]],
                     "use_idf": [True],

@@ -99,6 +99,9 @@ def set_up_test_sample(sample_name, size):
                 )
         random_seed += 42
 
+    for assignment in Assignment.objects.all():
+        assignment.save()  # update the HIT
+
 
 def get_base_dataset_parameters(extractor_name, sample_name="test_sample", params=None):
 
