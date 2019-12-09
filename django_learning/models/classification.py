@@ -216,10 +216,7 @@ class ClassificationModel(LearningModel):
         self.predict_dataset = None
         if is_not_null(self.dataset):
             self.predict_dataset = self.produce_prediction_dataset(
-                self.dataset,
-                cache_key="predict_all",
-                refresh=refresh,
-                only_load_existing=only_load_existing,
+                self.dataset, refresh=refresh, only_load_existing=only_load_existing
             )
         merged = self.dataset.merge(
             self.predict_dataset[["document_id", "label_id"]],
@@ -365,10 +362,10 @@ class ClassificationModel(LearningModel):
             for i, folds in enumerate(self.cv_folds):
                 fold_train_index, fold_test_index = folds
                 # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
-                fold_train_dataset = dataset.ix[
+                fold_train_dataset = dataset.loc[
                     pandas.Series(dataset.index).iloc[fold_train_index].values
                 ]  # self.dataset.ix[fold_train_index]
-                fold_test_dataset = dataset.ix[
+                fold_test_dataset = dataset.loc[
                     pandas.Series(dataset.index).iloc[fold_test_index].values
                 ]  # self.dataset.ix[fold_test_index]
 
