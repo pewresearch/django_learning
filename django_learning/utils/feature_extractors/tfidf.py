@@ -16,10 +16,10 @@ class Extractor(BasicExtractor):
 
         self.name = "tfidf"
         self.vectorizer = TfidfVectorizer()
-        if kwargs.get("normalize_document_types", False):
-            self.normalize_document_types = True
-        else:
-            self.normalize_document_types = False
+        # if kwargs.get("normalize_document_types", False):
+        #     self.normalize_document_types = True
+        # else:
+        #     self.normalize_document_types = False
 
         super(Extractor, self).__init__(*args, **kwargs)
 
@@ -31,15 +31,15 @@ class Extractor(BasicExtractor):
 
         ngrams = self.vectorizer.transform(text, **transform_params)
 
-        if hasattr(self, "normalize_document_types") and self.normalize_document_types:
-
-            # Normalizing across document types (transform)
-            ngrams = pandas.DataFrame(ngrams.todense(), index=X.index)
-            for doctype, group in X.groupby("document_type"):
-                for col in ngrams.columns:
-                    ngrams.ix[group.index, col] = (
-                        ngrams[col] - self.mean_mapper[doctype][col]
-                    ) / self.std_mapper[doctype][col]
+        # if hasattr(self, "normalize_document_types") and self.normalize_document_types:
+        #
+        #     # Normalizing across document types (transform)
+        #     ngrams = pandas.DataFrame(ngrams.todense(), index=X.index)
+        #     for doctype, group in X.groupby("document_type"):
+        #         for col in ngrams.columns:
+        #             ngrams.ix[group.index, col] = (
+        #                 ngrams[col] - self.mean_mapper[doctype][col]
+        #             ) / self.std_mapper[doctype][col]
 
         return ngrams
 
@@ -51,24 +51,24 @@ class Extractor(BasicExtractor):
 
         self.vectorizer.fit(text, y, **fit_params)
 
-        if hasattr(self, "normalize_document_types") and self.normalize_document_types:
-
-            # Computing normalization parameters (fit)
-            ngrams = pandas.DataFrame(
-                self.vectorizer.transform(text).todense(), index=X.index
-            )
-            self.mean_mapper = defaultdict(dict)
-            self.std_mapper = defaultdict(dict)
-            for doctype, group in X.groupby("document_type"):
-                for col in ngrams.columns:
-                    mean, err, std = wmom(
-                        ngrams[col][group.index],
-                        group["sampling_weight"],
-                        calcerr=True,
-                        sdev=True,
-                    )
-                    self.mean_mapper[doctype][col] = mean
-                    self.std_mapper[doctype][col] = std
+        # if hasattr(self, "normalize_document_types") and self.normalize_document_types:
+        #
+        #     # Computing normalization parameters (fit)
+        #     ngrams = pandas.DataFrame(
+        #         self.vectorizer.transform(text).todense(), index=X.index
+        #     )
+        #     self.mean_mapper = defaultdict(dict)
+        #     self.std_mapper = defaultdict(dict)
+        #     for doctype, group in X.groupby("document_type"):
+        #         for col in ngrams.columns:
+        #             mean, err, std = wmom(
+        #                 ngrams[col][group.index],
+        #                 group["sampling_weight"],
+        #                 calcerr=True,
+        #                 sdev=True,
+        #             )
+        #             self.mean_mapper[doctype][col] = mean
+        #             self.std_mapper[doctype][col] = std
 
         return self
 
