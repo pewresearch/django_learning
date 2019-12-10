@@ -13,7 +13,7 @@ from django_commander.commands import commands
 def forwards(apps, schema_editor):
 
     if not hasattr(settings, "SITE_NAME") or not settings.SITE_NAME == "testapp":
-        commands["reload_nrc_emotions"]().run()
+        commands["django_learning_nlp_reload_nrc_emotions"]().run()
 
 def backwards(apps, schema_editor):
 
