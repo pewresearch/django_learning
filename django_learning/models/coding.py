@@ -18,12 +18,21 @@ class HIT(LoggedExtendedModel):
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
 
+    finished = models.NullBooleanField(null=True)
+
     # AUTO-FILLED RELATIONS
     sample = models.ForeignKey(
         "django_learning.Sample", related_name="hits", on_delete=models.CASCADE
     )
 
     def save(self, *args, **kwargs):
+        if (
+            self.assignments.filter(time_finished__isnull=False).count()
+            >= self.num_coders
+        ):
+            self.finished = True
+        else:
+            self.finished = False
         self.sample = self.sample_unit.sample
         super(HIT, self).save(*args, **kwargs)
 
