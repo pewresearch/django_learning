@@ -1,5 +1,5 @@
-from __future__ import absolute_import
-
+from statsmodels.stats.inter_rater import cohens_kappa
+from collections import defaultdict
 from sklearn.metrics import cohen_kappa_score
 
 

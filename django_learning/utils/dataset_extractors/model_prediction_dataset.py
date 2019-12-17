@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import copy
 
 from pewtils import is_null

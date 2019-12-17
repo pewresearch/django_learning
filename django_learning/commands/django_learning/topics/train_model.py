@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from django_commander.commands import BasicCommand
 
 from django_learning.models import SamplingFrame, TopicModel
