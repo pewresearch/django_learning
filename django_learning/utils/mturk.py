@@ -237,7 +237,7 @@ class MTurk(object):
         if is_not_null(hit_type.turk_id) and hit_type.turk_id != hit_type_id:
 
             existing_hits = (
-                HIT.objects.filter(sample__hit_type=hit_type)
+                HIT.objects.filter(hit_type=hit_type)
                 .filter(turk=True)
                 .filter(turk_id__isnull=False)
             )
@@ -259,7 +259,7 @@ class MTurk(object):
         hit_type.turk_id = hit_type_id
         hit_type.save()
 
-    def create_sample_hits(self, sample, num_coders=1, template_name=None):
+    def create_sample_hits(self, sample, hit_type, num_coders=1, template_name=None):
 
         if template_name:
             # template_path = "custom_hits/{}.html".format(template_name)
@@ -281,7 +281,7 @@ class MTurk(object):
 
                 hit = HIT.objects.create_or_update(
                     {"sample_unit": su, "turk": True},
-                    {"template_name": template_name, "num_coders": num_coders},
+                    {"template_name": template_name, "num_coders": num_coders, "hit_type": hit_type},
                 )
 
                 html = render_to_string(
@@ -315,8 +315,8 @@ class MTurk(object):
                     response = self.conn.create_hit_with_hit_type(
                         Question=turk_hit,
                         MaxAssignments=num_coders,
-                        LifetimeInSeconds=sample.hit_type.lifetime_days * 60 * 60 * 24,
-                        HITTypeId=sample.hit_type.turk_id,
+                        LifetimeInSeconds=hit_type.lifetime_days * 60 * 60 * 24,
+                        HITTypeId=hit_type.turk_id,
                     )
                     hit.turk_id = response["HIT"]["HITId"]
                     hit.save()
@@ -326,11 +326,11 @@ class MTurk(object):
                         response = self.conn.create_hit_with_hit_type(
                             Question=turk_hit,
                             MaxAssignments=num_coders,
-                            LifetimeInSeconds=sample.hit_type.lifetime_days
+                            LifetimeInSeconds=hit_type.lifetime_days
                             * 60
                             * 60
                             * 24,
-                            HITTypeId=sample.hit_type.turk_id,
+                            HITTypeId=hit_type.turk_id,
                         )
                         hit.turk_id = response["HIT"]["HITId"]
                         hit.save()

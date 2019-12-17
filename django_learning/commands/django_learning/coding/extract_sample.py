@@ -6,13 +6,12 @@ from django_learning.models import Project, Sample, SamplingFrame, HITType
 
 class Command(BasicCommand):
 
-    parameter_names = ["project_name", "hit_type_name", "sample_name"]
+    parameter_names = ["project_name", "sample_name"]
     dependencies = []
 
     @staticmethod
     def add_arguments(parser):
         parser.add_argument("project_name", type=str)
-        parser.add_argument("hit_type_name", type=str)
         parser.add_argument("sample_name", type=str)
         parser.add_argument("--sampling_frame_name", default="all_documents", type=str)
         parser.add_argument("--sampling_method", default="random", type=str)
@@ -36,9 +35,6 @@ class Command(BasicCommand):
 
         project = Project.objects.get(
             name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
-        hit_type = HITType.objects.create_or_update(
-            {"project": project, "name": self.parameters["hit_type_name"]}
         )
 
         frame, created = SamplingFrame.objects.get_or_create(
@@ -69,7 +65,6 @@ class Command(BasicCommand):
             sample = Sample.objects.create_or_update(
                 {"project": project, "name": self.parameters["sample_name"]},
                 {
-                    "hit_type": hit_type,
                     "sampling_method": self.options["sampling_method"],
                     "frame": frame,
                 },

@@ -181,12 +181,6 @@ class Sample(LoggedExtendedModel):
         "django_learning.Project", related_name="samples", on_delete=models.CASCADE
     )
 
-    hit_type = models.ForeignKey(
-        "django_learning.HITType",
-        related_name="samples",
-        on_delete=models.SET_NULL,
-        null=True,
-    )
     frame = models.ForeignKey(
         "django_learning.SamplingFrame",
         related_name="samples",
@@ -220,13 +214,12 @@ class Sample(LoggedExtendedModel):
     def __str__(self):
 
         if not self.parent:
-            return "{}: sample '{}', {} documents using '{}' from {}, HITType {}".format(
+            return "{}: sample '{}', {} documents using '{}' from {}".format(
                 self.project,
                 self.name,
                 self.documents.count(),
                 self.sampling_method,
                 self.frame,
-                self.hit_type,
             )
         else:
             return "Subsample '{}' from {}, {} documents".format(

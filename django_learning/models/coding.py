@@ -4,12 +4,71 @@ from django.contrib.auth.models import User
 
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import CodeManager
+from django_learning.utils import project_hit_types
+
+
+class HITType(LoggedExtendedModel):
+
+    project = models.ForeignKey(
+        "django_learning.Project", related_name="hit_types", on_delete=models.CASCADE
+    )
+    name = models.CharField(max_length=50)
+
+    title = models.TextField(null=True)
+    description = models.TextField(null=True)
+    keywords = ArrayField(models.TextField(), default=list)
+    price = models.FloatField(null=True)
+    approval_wait_hours = models.IntegerField(null=True)
+    duration_minutes = models.IntegerField(null=True)
+    lifetime_days = models.IntegerField(null=True)
+    min_approve_pct = models.FloatField(null=True)
+    min_approve_cnt = models.IntegerField(null=True)
+
+    turk_id = models.CharField(max_length=250, unique=True, null=True)
+
+    class Meta:
+        unique_together = ("project", "name")
+
+    def __str__(self):
+        return "{}: {}".format(self.project, self.name)
+
+    def save(self, *args, **kwargs):
+
+        if self.name not in project_hit_types.project_hit_types.keys():
+            raise Exception(
+                "HIT Type '{}' is not defined in any of the known folders".format(
+                    self.name
+                )
+            )
+
+        config = project_hit_types.project_hit_types[self.name]
+        for attr in [
+            "title",
+            "description",
+            "keywords",
+            "price",
+            "approval_wait_hours",
+            "duration_minutes",
+            "lifetime_days",
+            "min_approve_pct",
+            "min_approve_cnt",
+        ]:
+            val = config.get(attr, None)
+            setattr(self, attr, val)
+
+        super(HITType, self).save(*args, **kwargs)
 
 
 class HIT(LoggedExtendedModel):
 
     sample_unit = models.ForeignKey(
         "django_learning.SampleUnit", related_name="hits", on_delete=models.CASCADE
+    )
+    hit_type = models.ForeignKey(
+        "django_learning.HITType",
+        related_name="hits",
+        on_delete=models.SET_NULL,
+        null=True,
     )
     template_name = models.CharField(max_length=250, null=True)
     num_coders = models.IntegerField(default=1)
@@ -72,6 +131,7 @@ class Assignment(LoggedExtendedModel):
         self.sample = self.hit.sample
         self.project = self.hit.sample.project
         super(Assignment, self).save(*args, **kwargs)
+        self.hit.save()
 
 
 class Code(LoggedExtendedModel):
