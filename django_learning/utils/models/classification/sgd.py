@@ -14,8 +14,7 @@ def get_params():
             "penalty": ("l2",),  # can also be 'none', 'l1', 'elasticnet'
             "l1_ratio": (0.15,),
             "alpha": (0.0001,),
-            "n_iter": (5,),
-            "class_weight": (None,),  # can also be 'auto' or 'balanced'
+            "class_weight": ("balanced",),  # can also be 'auto' or 'balanced'
             "average": (False,),
         },
     }
