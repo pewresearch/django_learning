@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Count
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import ArrayField
 
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import CodeManager
