@@ -52,8 +52,9 @@ def filter_assignments(
     incomplete_only=False,
     hits=None,
     exclude_coders=None,
-    filter_coders=None,
+    # filter_coders=None,
     documents=None,
+    **kwargs
 ):
 
     assignments = get_model("Assignment", app_name="django_learning").objects.all()
@@ -79,12 +80,12 @@ def filter_assignments(
         assignments = assignments.filter(time_finished__isnull=True)
     if exclude_coders != None:
         assignments = assignments.exclude(coder__in=exclude_coders)
-    if filter_coders != None:
-        assignments = assignments.filter(coder__in=filter_coders)
+    if "filter_coders" in kwargs and kwargs["filter_coders"] != None:
+        assignments = assignments.filter(coder__in=kwargs["filter_coders"])
     if hits != None:
         assignments = assignments.filter(hit__in=hits)
     if documents != None:
-        assignments = assignments.filter(hits__sample_unit__document__in=documents)
+        assignments = assignments.filter(hit__sample_unit__document__in=documents)
 
     return assignments.distinct()
 
