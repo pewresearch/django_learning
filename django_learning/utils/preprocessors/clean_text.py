@@ -3,7 +3,6 @@ import re
 
 from pewtils import is_not_null, decode_text
 from pewanalytics.text import TextCleaner, SentenceTokenizer
-from pewanalytics.internal.stopwords import is_probable_stopword
 
 from django_learning.utils.stopword_sets import stopword_sets
 from django_learning.utils.stopword_whitelists import stopword_whitelists
@@ -14,6 +13,17 @@ from django_learning.utils.preprocessors import BasicPreprocessor
 
 class Preprocessor(BasicPreprocessor):
     def __init__(self, *args, **kwargs):
+        """
+
+        :param stopword_sets: Names of `django_learning` stopword lists
+        :param stopword_whitelists: Names of `django_learning` stopword whitelists (used to override stopword_sets)
+        :param regex_filters: Names of `django_learning` regex filters; sentences that don't match to *all* of the
+        provided filters will be removed
+        :param regex_replacers: Names of `django_learning` regex replacers to use
+        :param refresh_stopwords: Whether or not to refresh a custom list of stopwords from the cache (default is False)
+        :param kwargs: All other keyword arguments are passed along to a `pewanalytics.text.TextCleaner` object
+
+        """
 
         self.name = "clean_text"
         super(Preprocessor, self).__init__(*args, **kwargs)
@@ -36,23 +46,12 @@ class Preprocessor(BasicPreprocessor):
                         if len(s) > 2
                         or stopword_set in ["english", "months", "misc_boilerplate"]
                     ]
-                    if stopword_set not in ["english", "months", "misc_boilerplate"]:
-                        final_slist = []
-                        for s in slist:
-                            s = s.lower()
-                            if (
-                                len(s) > 3
-                                or is_probable_stopword(s)
-                                or self.params.get("override_stopword_check", False)
-                            ):
-                                final_slist.append(s)
-                        slist = final_slist
                     if self.cache:
-                        # print(
-                        #     "Recomputed stopword set {}, saving to local cache".format(
-                        #         stopword_set
-                        #     )
-                        # )
+                        print(
+                            "Recomputed stopword set {}, saving to local cache".format(
+                                stopword_set
+                            )
+                        )
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
         stopwords = list(set(stopwords))
@@ -76,7 +75,6 @@ class Preprocessor(BasicPreprocessor):
                     "cache_identifier",
                     "stopword_whitelists",
                     "refresh_stopwords",
-                    "override_stopword_check",
                 ]
             }
         )
