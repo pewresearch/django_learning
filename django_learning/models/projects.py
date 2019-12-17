@@ -85,8 +85,6 @@ class Project(LoggedExtendedModel):
         admin_names = [c for c in config.get("admins", [])]
         coder_names = list(admin_names)
         for c in config.get("coders", []):
-            if c["is_admin"] and c["name"] not in admin_names:
-                admin_names.append(c["name"])
             coder_names.append(c["name"])
 
         coders = []
@@ -98,6 +96,7 @@ class Project(LoggedExtendedModel):
                 user = User.objects.create_user(
                     c, "{}@pewresearch.org".format(c), "pass"
                 )
+                # TODO: build in better user management
             coder = get_model("Coder").objects.create_or_update(
                 {"name": c}, {"is_mturk": False, "user": user}
             )
