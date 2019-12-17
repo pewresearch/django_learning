@@ -34,29 +34,55 @@ class FiltersTests(DjangoTestCase):
             ({"turk_only": True}, 0),
             ({"finished_only": True}, 25),
             ({"unfinished_only": True}, 0),
-            ({"assignments": Assignment.objects.all()[:5]}, 5),
-            ({"exclude_coders": Coder.objects.all()[0]}, 0),
-            ({"filter_coders": Coder.objects.all()[0]}, 25),
-            ({"documents": Sample.objects.all()[0].documents.all()[0]}, 1),
+            ({"assignments": Assignment.objects.all()[:1]}, 1),
+            ({"exclude_coders": Coder.objects.filter(name="coder1")}, 0),
+            ({"filter_coders": Coder.objects.filter(name="coder1")}, 25),
+            ({"documents": Sample.objects.all()[0].documents.all()[:1]}, 1),
         ]:
             hits = filter_hits(
                 project=Project.objects.get(name="test_project"), **params
             )
-            if hits.count() != count:
-                import pdb
-
-                pdb.set_trace()
             self.assertEqual(hits.count(), count)
 
-        import pdb
+    def test_filter_assignments(self):
 
-        pdb.set_trace()
+        from django_learning.utils.filters import filter_assignments
 
-    # def test_filter_assignments(self):
-    #     pass
-    #
-    # def test_filter_coders(self):
-    #     pass
+        for params, count in [
+            ({}, 50),
+            ({"sample": Sample.objects.get(name="test_sample")}, 30),
+            ({"turk_only": True}, 0),
+            ({"experts_only": True}, 50),
+            ({"coder_min_hit_count": 50}, 0),
+            ({"coder": Coder.objects.get(name="coder1")}, 25),
+            ({"completed_only": True}, 50),
+            ({"incomplete_only": True}, 0),
+            ({"hits": HIT.objects.all()[:1]}, 2),
+            ({"exclude_coders": Coder.objects.filter(name="coder1")}, 25),
+            ({"filter_coders": Coder.objects.filter(name="coder1")}, 25),
+            ({"documents": Sample.objects.all()[0].documents.all()[:1]}, 2),
+        ]:
+            assignments = filter_assignments(
+                project=Project.objects.get(name="test_project"), **params
+            )
+            self.assertEqual(assignments.count(), count)
+
+    def test_filter_coders(self):
+
+        from django_learning.utils.filters import filter_coders
+
+        hit_ids = list(Coder.objects.get(name="coder1").assignments.values_list("pk", flat=True))
+        HIT.objects.filter(pk__in=hit_ids).delete()
+
+        for params, count in [
+            ({}, 2),
+            ({"sample": Sample.objects.get(name="test_sample")}, 2),
+            ({"min_hit_count": 50}, 0),
+        ]:
+            coders = filter_coders(
+                project=Project.objects.get(name="test_project"), **params
+            )
+            self.assertEqual(coders.count(), count)
 
     def tearDown(self):
 
