@@ -20,7 +20,7 @@ class ProjectQualificationScorersTests(DjangoTestCase):
     def setUp(self):
         set_up_test_project()
 
-    def test_project_qualification_scorers(self):
+    def test_loading(self):
         from django_learning.utils.project_qualification_scorers import (
             project_qualification_scorers,
         )
@@ -28,6 +28,9 @@ class ProjectQualificationScorersTests(DjangoTestCase):
         for val in ["test_qualification"]:
             self.assertIn(val, project_qualification_scorers.keys())
             self.assertIsNotNone(project_qualification_scorers[val])
+
+    def test_project_qualification_scorer(self):
+        pass
 
     def tearDown(self):
 

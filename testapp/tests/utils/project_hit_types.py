@@ -18,14 +18,26 @@ class ProjectHITTypesTests(DjangoTestCase):
     """
 
     def setUp(self):
-        set_up_test_project()
+        pass
 
-    def test_project_hit_types(self):
+    def test_loading(self):
+
         from django_learning.utils.project_hit_types import project_hit_types
 
         for val in ["test_hit_type"]:
             self.assertIn(val, project_hit_types.keys())
             self.assertIsNotNone(project_hit_types[val])
+
+    def test_project_hit_types(self):
+
+        from django_learning.models import HITType
+        from django_learning.utils.project_hit_types import project_hit_types
+
+        project = Project.objects.create(name="test_project")
+        hit_type = HITType.objects.create(name="test_hit_type", project=project)
+        config = project_hit_types['test_hit_type']
+        for key, value in config.items():
+            self.assertEqual(getattr(hit_type, key), value)
 
     def tearDown(self):
 

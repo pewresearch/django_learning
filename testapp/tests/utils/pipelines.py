@@ -21,7 +21,7 @@ class PipelinesTests(DjangoTestCase):
         set_up_test_project()
         set_up_test_sample("test_sample", 100)
 
-    def test_pipelines(self):
+    def test_loading(self):
         from django_learning.utils.pipelines import pipelines
 
         for val in ["test", "test_with_holdout"]:

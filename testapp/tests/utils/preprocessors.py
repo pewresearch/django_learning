@@ -18,10 +18,10 @@ class PreprocessorsTests(DjangoTestCase):
     """
 
     def setUp(self):
-        set_up_test_project()
-        set_up_test_sample("test_sample", 100)
+        pass
 
-    def test_preprocessors(self):
+    def test_loading(self):
+
         from django_learning.utils.preprocessors import preprocessors
 
         for val in [
@@ -32,6 +32,42 @@ class PreprocessorsTests(DjangoTestCase):
         ]:
             self.assertIn(val, preprocessors.keys())
             self.assertIsNotNone(preprocessors[val]())
+
+    def test_clean_text(self):
+
+        from django_learning.utils.preprocessors import preprocessors
+
+        text = "Testing one two three and four but not five. This is an action movie and it's exciting."
+        for params, expected in [
+            ({}, "testing one two three four five action movie exciting"),
+            ({"regex_replacers": ["test"]}, "testing one two three four five action replacer_worked exciting"),
+            ({"stopword_sets": ["english"]}, "testing action movie exciting"),
+            ({"stopword_sets": ["english", "test"]}, "testing action exciting"),
+            ({"regex_filters": ["test"]}, "action movie exciting"),
+            ({"stopword_sets": ["english"], "stopword_whitelists": ["test"]}, "testing and action movie and exciting"),
+            ({"refresh_stopwords": True}, "testing one two three four five action movie exciting"),
+        ]:
+            preprocessor = preprocessors["clean_text"](**params)
+            result = preprocessor.run(text)
+            self.assertEqual(result, expected)
+
+    def test_expand_text_cooccurrences(self):
+
+        from django_learning.utils.preprocessors import preprocessors
+
+        text = "one two three"
+        preprocessor = preprocessors["expand_text_cooccurrences"]()
+        result = preprocessor.run(text)
+        self.assertEqual(result, "one two one three two three")
+
+    def test_run_function(self):
+
+        from django_learning.utils.preprocessors import preprocessors
+
+        text = "one two three"
+        preprocessor = preprocessors["run_function"](function=lambda x: "woot")
+        result = preprocessor.run(text)
+        self.assertEqual(result, "woot")
 
     def tearDown(self):
 
