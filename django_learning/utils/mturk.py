@@ -525,15 +525,9 @@ class MTurk(object):
                             AssignmentId=a["AssignmentId"], OverrideRejection=True
                         )
                 try:
-                    try:
-                        self.conn.update_expiration_for_hit(
-                            HITId=hit_id, ExpireAt=datetime.datetime.now()
-                        )
-                    except:
-                        time.sleep(30)
-                        self.conn.update_expiration_for_hit(
-                            HITId=hit_id, ExpireAt=datetime.datetime.now()
-                        )
+                    self.conn.update_expiration_for_hit(
+                        HITId=hit_id, ExpireAt=datetime.datetime.now()
+                    )
                     try:
                         self.conn.delete_hit(HITId=hit_id)
                     except:
