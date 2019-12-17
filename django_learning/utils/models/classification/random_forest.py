@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from sklearn.ensemble import RandomForestClassifier
 
 # http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html

@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import pandas, copy
 
 from django_pewtils import get_model

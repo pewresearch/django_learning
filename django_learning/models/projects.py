@@ -8,14 +8,12 @@ from pewtils import is_not_null
 from django_pewtils import get_model
 
 from django_commander.models import LoggedExtendedModel
-
 from django_learning.managers import QuestionManager
 from django_learning.exceptions import RequiredResponseException
 from django_learning.utils import projects
-from django_learning.utils import project_hit_types
+from django_learning.utils import dataset_extractors
 from django_learning.utils import project_qualification_tests
 from django_learning.utils import project_qualification_scorers
-from django_learning.utils import dataset_extractors
 
 try:
     from importlib import reload
@@ -335,7 +333,6 @@ class Example(LoggedExtendedModel):
 
 
 class QualificationTest(LoggedExtendedModel):
-
     name = models.CharField(max_length=50)
     coders = models.ManyToManyField(
         "django_learning.Coder",
@@ -365,8 +362,8 @@ class QualificationTest(LoggedExtendedModel):
     def save(self, *args, **kwargs):
 
         if (
-            self.name
-            not in project_qualification_tests.project_qualification_tests.keys()
+                self.name
+                not in project_qualification_tests.project_qualification_tests.keys()
         ):
             raise Exception(
                 "Qualification test '{}' is not defined in any of the known folders".format(
@@ -405,7 +402,6 @@ class QualificationTest(LoggedExtendedModel):
 
 
 class QualificationAssignment(LoggedExtendedModel):
-
     test = models.ForeignKey(
         "django_learning.QualificationTest",
         related_name="assignments",

@@ -1,6 +1,4 @@
-from __future__ import print_function, absolute_import
-
-
+from __future__ import print_function
 from django_commander.commands import BasicCommand
 
 from django_learning.models import SamplingFrame

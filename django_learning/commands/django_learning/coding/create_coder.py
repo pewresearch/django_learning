@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from django.contrib.auth.models import User
 
 from django_commander.commands import BasicCommand

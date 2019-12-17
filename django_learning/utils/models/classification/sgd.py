@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from sklearn.linear_model import SGDClassifier
 
 # http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html
