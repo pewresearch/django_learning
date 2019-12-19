@@ -18,14 +18,21 @@ class StopwordSetsTests(DjangoTestCase):
     """
 
     def setUp(self):
-        set_up_test_project()
+        set_up_test_project(10)
 
-    def test_stopword_sets(self):
+    def test_loading(self):
+
         from django_learning.utils.stopword_sets import stopword_sets
+        from django_commander.commands import commands
 
+        commands["django_learning_nlp_extract_entities"](
+            document_type="movie_review"
+        ).run()
         for val in ["english", "entities", "misc_boilerplate", "months"]:
             self.assertIn(val, stopword_sets.keys())
-            self.assertIsNotNone(stopword_sets[val]())
+            stopwords = stopword_sets[val]()
+            self.assertIsNotNone(stopwords)
+            self.assertGreater(len(stopwords), 0)
 
     def tearDown(self):
 

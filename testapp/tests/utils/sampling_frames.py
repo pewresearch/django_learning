@@ -18,14 +18,25 @@ class SamplingFramesTests(DjangoTestCase):
     """
 
     def setUp(self):
-        set_up_test_project()
+        set_up_test_project(50)
 
-    def test_sampling_frames(self):
+    def test_loading(self):
+
         from django_learning.utils.sampling_frames import sampling_frames
 
         for val in ["all_documents", "test"]:
             self.assertIn(val, sampling_frames.keys())
             self.assertIsNotNone(sampling_frames[val]())
+
+    def test_sampling_frames(self):
+
+        from django_learning.models import SamplingFrame
+
+        frame = SamplingFrame.objects.get(name="all_documents")
+        self.assertEqual(frame.documents.count(), 50)
+        frame = SamplingFrame.objects.create(name="test")
+        frame.extract_documents()
+        self.assertEqual(frame.documents.count(), 4)
 
     def tearDown(self):
 
