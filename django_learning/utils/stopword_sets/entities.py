@@ -9,10 +9,9 @@ def get_stopwords():
 
     stopwords = []
     for e in tqdm(
-        Entity.objects.annotate(c=Count("documents")).filter(c__gte=10),
-        desc="Adding entity stopwords",
+        Entity.objects.annotate(c=Count("documents")), desc="Adding entity stopwords"
     ):
-        if len(e) > 2:
-            stopwords.append(e)
-        # stopwords.extend(e.name.lower().split(" "))
+        if len(e.name) > 2:
+            stopwords.append(e.name)
+
     return list(set(stopwords))
