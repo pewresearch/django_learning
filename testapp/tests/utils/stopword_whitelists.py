@@ -20,7 +20,7 @@ class StopwordWhitelistsTests(DjangoTestCase):
     def setUp(self):
         set_up_test_project()
 
-    def test_stopword_whitelists(self):
+    def test_loading(self):
         from django_learning.utils.stopword_whitelists import stopword_whitelists
 
         for val in ["test"]:
