@@ -39,9 +39,10 @@ class DatasetCodeFiltersTests(DjangoTestCase):
         df = extract_dataset(
             "document_coder_label_dataset", params={"code_filters": [("test", [], {})]}
         )
-        self.assertEqual(len(df), 38)
+        pk = Question.objects.get(name="test_checkbox").labels.get(value="1").pk
+        self.assertEqual(len(df), 2)
         self.assertEqual(df["label_id"].nunique(), 1)
-        self.assertEqual(df["label_id"].values[0], 12)
+        self.assertEqual(df["label_id"].values[0], pk)
 
     def tearDown(self):
 

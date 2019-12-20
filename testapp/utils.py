@@ -53,7 +53,6 @@ def set_up_test_sample(sample_name, size):
 
     commands["django_learning_coding_extract_sample"](
         project_name="test_project",
-        hit_type_name="test_hit_type",
         sample_name=sample_name,
         sampling_frame_name="all_documents",
         sampling_method=method,
@@ -62,7 +61,11 @@ def set_up_test_sample(sample_name, size):
         seed=42,
     ).run()
     commands["django_learning_coding_create_sample_hits"](
-        project_name="test_project", sample_name=sample_name, num_coders=2, sandbox=True
+        project_name="test_project",
+        sample_name=sample_name,
+        hit_type_name="test_hit_type",
+        num_coders=2,
+        sandbox=True,
     ).run()
 
     coder1 = Coder.objects.create_or_update({"name": "coder1"})
