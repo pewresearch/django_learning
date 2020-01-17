@@ -428,7 +428,7 @@ class HITType(LoggedExtendedModel):
     project = models.ForeignKey(
         "django_learning.Project", related_name="hit_types", on_delete=models.CASCADE
     )
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=250)
 
     title = models.TextField(null=True)
     description = models.TextField(null=True)
