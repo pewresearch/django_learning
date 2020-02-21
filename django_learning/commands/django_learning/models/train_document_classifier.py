@@ -26,12 +26,17 @@ class Command(BasicCommand):
         from django_learning.utils.pipelines import pipelines
 
         pipeline = pipelines[self.parameters["pipeline_name"]]()
-        samples = Sample.objects.filter(name__in=pipeline["parameters"]["sample_names"])
+        sample_names = pipeline["dataset_extractor"]["parameters"]["sample_names"]
+        if "test_dataset_extractor" in pipeline.keys():
+            sample_names.extend(
+                pipeline["test_dataset_extractor"]["parameters"]["sample_names"]
+            )
+        samples = Sample.objects.filter(name__in=sample_names)
         frames = SamplingFrame.objects.filter(samples__in=samples).distinct()
         if frames.count() == 1:
             DocumentClassificationModel.objects.filter(
                 name=self.parameters["name"]
-            ).update(parameters={})
+            )  # .update(parameters={})
             model = DocumentClassificationModel.objects.create_or_update(
                 {
                     "name": self.parameters["name"],
@@ -47,15 +52,15 @@ class Command(BasicCommand):
                 num_cores=self.options["num_cores"],
                 only_load_existing=self.options["export_results"],
             )
-            if is_not_null(self.model.model):
-                self.model.describe_model()
+            if is_not_null(model.model):
+                model.describe_model()
 
                 if self.options["refresh_dataset"] or self.options["refresh_model"]:
-                    self.model.get_cv_prediction_results(refresh=True)
-                    self.model.get_test_prediction_results(refresh=True)
-                    self.model.find_probability_threshold(save=True)
-                test_scores = self.model.get_test_prediction_results()
-                fold_scores = self.model.get_cv_prediction_results()
+                    model.get_cv_prediction_results(refresh=True)
+                    model.get_test_prediction_results(refresh=True)
+                    model.find_probability_threshold(save=True)
+                test_scores = model.get_test_prediction_results()
+                fold_scores = model.get_cv_prediction_results()
         else:
             raise Exception(
                 "The dataset extractor specified in the pipeline uses samples from multiple frames"
