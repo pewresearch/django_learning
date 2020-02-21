@@ -48,6 +48,7 @@ class Extractor(DatasetExtractor):
         dataset[self.learning_model.dataset_extractor.outcome_column] = predictions[
             self.learning_model.dataset_extractor.outcome_column
         ]
-        dataset["probability"] = predictions["probability"]
+        if "probability" in predictions.columns:
+            dataset["probability"] = predictions["probability"]
 
         return dataset

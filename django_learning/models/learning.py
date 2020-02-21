@@ -703,8 +703,10 @@ class LearningModel(LoggedExtendedModel):
             keep_cols = []
 
         predictions = self.model.predict(data)
+        has_probabilities = False
         try:
             probabilities = self.model.predict_proba(data)
+            has_probabilities = True
         except AttributeError:
             probabilities = [None] * len(data)
 
@@ -717,7 +719,11 @@ class LearningModel(LoggedExtendedModel):
                 label[col] = data.loc[index, col]
             labels.append(label)
 
-        return pandas.DataFrame(labels, index=data.index)
+        labels = pandas.DataFrame(labels, index=data.index)
+        if not has_probabilities:
+            del labels["probability"]
+
+        return labels
 
     @require_model
     def produce_prediction_dataset(
