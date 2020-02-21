@@ -340,6 +340,8 @@ class ClassificationModel(LearningModel):
                 only_load_existing=True,
                 ignore_probability_threshold=True,
             )
+            if "probability" not in predict_dataset.columns:
+                raise Exception("This model does not produce probabilities")
             test_threshold_scores = None
             if is_not_null(predict_dataset):
                 test_threshold_scores = get_probability_threshold_score_df(
