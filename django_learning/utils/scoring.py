@@ -271,43 +271,57 @@ def apply_probability_threshold(
     predicted_df, threshold, outcome_column="label_id", base_code=None, pos_code=None
 ):
 
-    predicted_df = copy.copy(predicted_df)
-    if base_code == None:
-        base_code = (
-            predicted_df[outcome_column]
-            .value_counts()
-            .sort_values(ascending=False)
-            .index[0]
-        )
-        print(
-            "apply_probability_threshold: 'base_code' not provided, setting base_code to most frequent code"
-        )
-    if not pos_code:
-        if len(predicted_df[outcome_column].unique()) == 2:
-            try:
-                pos_code = (
-                    set(predicted_df[outcome_column].unique())
-                    .difference(set([base_code]))
-                    .pop()
-                )
-            except KeyError:
-                pos_code = None
-        else:
-            print(
-                "Probability thresholding currently only works with binary classifications; setting all predictions to base_code"
-            )
-            print("Pass a pos_code if you wish to override it")
-    predicted_df["probability"] = predicted_df.apply(
-        lambda x: x["probability"]
-        if x[outcome_column] != base_code
-        else 1.0 - x["probability"],
-        axis=1,
-    )
-    if pos_code:
-        predicted_df[outcome_column] = predicted_df.apply(
-            lambda x: pos_code if x["probability"] >= threshold else base_code, axis=1
-        )
-    else:
-        predicted_df[outcome_column] = base_code
+    if (
+        "probability" not in predicted_df.columns
+        or predicted_df["probability"].isnull().astype(int).sum() > 0
+    ):
 
-    return predicted_df
+        print(
+            "This model doesn't appear to produce probabilities or some are missing; cannot apply a threshold"
+        )
+        print("apply_probability_threshold will be skipped")
+
+    else:
+
+        predicted_df = copy.copy(predicted_df)
+        if base_code == None:
+            base_code = (
+                predicted_df[outcome_column]
+                .value_counts()
+                .sort_values(ascending=False)
+                .index[0]
+            )
+            print(
+                "apply_probability_threshold: 'base_code' not provided, setting base_code to most frequent code"
+            )
+        if not pos_code:
+            if len(predicted_df[outcome_column].unique()) == 2:
+                try:
+                    pos_code = (
+                        set(predicted_df[outcome_column].unique())
+                        .difference(set([base_code]))
+                        .pop()
+                    )
+                except KeyError:
+                    pos_code = None
+            else:
+                print(
+                    "Probability thresholding currently only works with binary classifications; setting all predictions to base_code"
+                )
+                print("Pass a pos_code if you wish to override it")
+
+        predicted_df["probability"] = predicted_df.apply(
+            lambda x: x["probability"]
+            if x[outcome_column] != base_code
+            else 1.0 - x["probability"],
+            axis=1,
+        )
+        if pos_code:
+            predicted_df[outcome_column] = predicted_df.apply(
+                lambda x: pos_code if x["probability"] >= threshold else base_code,
+                axis=1,
+            )
+        else:
+            predicted_df[outcome_column] = base_code
+
+        return predicted_df
