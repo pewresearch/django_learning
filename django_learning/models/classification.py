@@ -111,20 +111,26 @@ class ClassificationModel(LearningModel):
         class_labels = steps["model"].classes_
 
         top_features = {}
-        if hasattr(steps["model"], "coef_"):
-            try:
-                coefs = list(steps["model"].coef_.todense().tolist())
-            except AttributeError:
-                coefs = list(steps["model"].coef_)
-            if len(class_labels) == 2:
-                top_features[0] = sorted(zip(coefs[0], feature_names))[:n]
-                top_features[1] = sorted(zip(coefs[0], feature_names))[: -(n + 1) : -1]
-            else:
-                for i, class_label in enumerate(class_labels):
-                    top_features[class_label] = sorted(zip(coefs[i], feature_names))[
-                        -n:
-                    ]
-        elif hasattr(steps["model"], "feature_importances_"):
+        try:
+            if hasattr(steps["model"], "coef_"):
+                try:
+                    coefs = list(steps["model"].coef_.todense().tolist())
+                except AttributeError:
+                    coefs = list(steps["model"].coef_)
+                except KeyError:
+                    coefs = None
+                if coefs:
+                    if len(class_labels) == 2:
+                        top_features[0] = sorted(zip(coefs[0], feature_names))[:n]
+                        top_features[1] = sorted(zip(coefs[0], feature_names))[: -(n + 1) : -1]
+                    else:
+                        for i, class_label in enumerate(class_labels):
+                            top_features[class_label] = sorted(zip(coefs[i], feature_names))[
+                                -n:
+                            ]
+        except KeyError:
+            pass
+        if len(top_features.keys()) == 0 and hasattr(steps["model"], "feature_importances_"):
             top_features["n/a"] = sorted(
                 zip(steps["model"].feature_importances_, feature_names)
             )[: -(n + 1) : -1]
