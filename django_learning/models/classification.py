@@ -365,12 +365,12 @@ class ClassificationModel(LearningModel):
             for i, folds in enumerate(self.cv_folds):
                 fold_train_index, fold_test_index = folds
                 # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
-                fold_train_dataset = dataset.ix[
+                fold_train_dataset = dataset.loc[
                     pandas.Series(dataset.index).iloc[fold_train_index].values
-                ]  # self.dataset.ix[fold_train_index]
-                fold_test_dataset = dataset.ix[
+                ]  # self.dataset.loc[fold_train_index]
+                fold_test_dataset = dataset.loc[
                     pandas.Series(dataset.index).iloc[fold_test_index].values
-                ]  # self.dataset.ix[fold_test_index]
+                ]  # self.dataset.loc[fold_test_index]
 
                 fold_predict_dataset = self.produce_prediction_dataset(
                     fold_test_dataset,
