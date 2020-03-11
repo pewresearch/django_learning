@@ -92,7 +92,7 @@ class ClassificationModel(LearningModel):
         #                            'training_weight'].sum() / \
         #                        df[df[self.dataset_extractor.outcome_column].astype(str) != str(largest_code)][
         #                            'training_weight'].sum()
-        #     df.ix[df[self.dataset_extractor.outcome_column].astype(str) != str(
+        #     df.loc[df[self.dataset_extractor.outcome_column].astype(str) != str(
         #         largest_code), "training_weight"] *= scale_pos_weight
 
     @require_model

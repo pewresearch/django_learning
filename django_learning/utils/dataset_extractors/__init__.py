@@ -56,7 +56,7 @@ class DatasetExtractor(object):
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
             try:
-                self.cache.write(self.cache_hash, cache_data)
+                self.cache.write(self.cache_hash, cache_data, timeout=None)
             except Exception as e:
                 print("Couldn't write to cache: {}".format(e))
 
