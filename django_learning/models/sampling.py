@@ -155,7 +155,7 @@ class SamplingFrame(LoggedExtendedModel):
                 except KeyError:
                     pass
 
-            cache.write(self.name, frame)
+            cache.write(self.name, frame, timeout=None)
 
         if len(sampling_searches) > 0:
             if sampling_search_subset and len(sampling_search_subset) > 0:
