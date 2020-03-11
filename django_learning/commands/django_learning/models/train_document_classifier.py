@@ -42,13 +42,16 @@ class Command(BasicCommand):
                 },
                 {"sampling_frame": frames[0]},
             )
-            model.extract_dataset(refresh=self.options["refresh_dataset"])
+            model.extract_dataset(
+                refresh=self.options["refresh_dataset"],
+                only_load_existing=(not self.options["refresh_dataset"]),
+            )
             model.load_model(
                 refresh=(
                     self.options["refresh_model"] or self.options["refresh_dataset"]
                 ),
                 num_cores=self.options["num_cores"],
-                only_load_existing=(self.options["refresh_model"] or self.options["refresh_dataset"]),
+                only_load_existing=(not self.options["refresh_model"] and not self.options["refresh_dataset"]),
             )
             if is_not_null(model.model):
                 model.describe_model()
