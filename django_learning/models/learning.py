@@ -489,12 +489,12 @@ class LearningModel(LoggedExtendedModel):
             )
             return scores
 
-    def print_test_prediction_report(self):
+    def print_test_prediction_report(self, refresh=False, only_load_existing=True):
 
-        print(self.get_test_prediction_results())
+        print(self.get_test_prediction_results(refresh=refresh, only_load_existing=only_load_existing))
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
+    def get_cv_prediction_results(self, refresh=False, only_load_existing=False, return_averages=True):
 
         print("Computing cross-fold predictions")
         _final_model = self.model
@@ -556,18 +556,20 @@ class LearningModel(LoggedExtendedModel):
             return None
         else:
             fold_score_df = pandas.concat(all_fold_scores)
-            fold_score_df = pandas.concat(
-                [
-                    all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-                    fold_score_df.groupby(fold_score_df.index).mean(),
-                ],
-                axis=1,
-            )
+            if return_averages:
+                fold_score_df = pandas.concat(
+                    [
+                        all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                        fold_score_df.groupby(fold_score_df.index).mean(),
+                    ],
+                    axis=1,
+                )
+
             return fold_score_df
 
-    def print_cv_prediction_report(self):
+    def print_cv_prediction_report(self, refresh=False, only_load_existing=True, return_averages=True):
 
-        print(self.get_cv_prediction_results())
+        print(self.get_cv_prediction_results(refresh=refresh, only_load_existing=only_load_existing, return_averages=return_averages))
 
     def _get_scoring_function(self, func_name, binary_base_code=None):
 
