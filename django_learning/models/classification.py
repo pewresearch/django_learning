@@ -151,9 +151,9 @@ class ClassificationModel(LearningModel):
         else:
             return None
 
-    def print_test_prediction_report(self):
+    def print_test_prediction_report(self, refresh=False, only_load_existing=True):
 
-        results = self.get_test_prediction_results()
+        results = self.get_test_prediction_results(refresh=refresh, only_load_existing=only_load_existing)
 
         report = classification_report(
             self.test_dataset[self.dataset_extractor.outcome_column],
@@ -231,7 +231,7 @@ class ClassificationModel(LearningModel):
         return incorrect
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
+    def get_cv_prediction_results(self, refresh=False, only_load_existing=False, return_averages=True):
 
         print("Computing cross-fold predictions")
         _final_model = self.model
@@ -300,13 +300,14 @@ class ClassificationModel(LearningModel):
             return None
         else:
             fold_score_df = pandas.concat(all_fold_scores)
-            fold_score_df = pandas.concat(
-                [
-                    all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-                    fold_score_df.groupby(fold_score_df.index).mean(),
-                ],
-                axis=1,
-            )
+            if return_averages:
+                fold_score_df = pandas.concat(
+                    [
+                        all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                        fold_score_df.groupby(fold_score_df.index).mean(),
+                    ],
+                    axis=1,
+                )
             return fold_score_df
 
     def find_probability_threshold(self, metric="precision_recall_min", save=False):
