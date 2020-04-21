@@ -17,7 +17,7 @@ class BasicPreprocessor(object):
         ):
             self.cache = CacheHandler(
                 os.path.join(
-                    settings.LOCAL_CACHE_PATH,
+                    settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
                     "feature_extractors/{}/{}".format(
                         self.params["cache_identifier"], self.name
                     ),

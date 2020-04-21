@@ -88,7 +88,7 @@ class LearningModel(LoggedExtendedModel):
 
         self.cache = CacheHandler(
             os.path.join(
-                settings.S3_CACHE_PATH,
+                settings.DJANGO_LEARNING_S3_CACHE_PATH,
                 "learning_models/{}".format(self.cache_identifier),
             ),
             hash=False,
@@ -98,7 +98,7 @@ class LearningModel(LoggedExtendedModel):
             bucket=settings.S3_BUCKET,
         )
         self.dataset_cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "datasets"),
+            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "datasets"),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,
@@ -107,7 +107,7 @@ class LearningModel(LoggedExtendedModel):
         )
         self.temp_cache = CacheHandler(
             os.path.join(
-                settings.LOCAL_CACHE_PATH,
+                settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
                 "feature_extractors/{}".format(self.cache_identifier),
             ),
             hash=False,
@@ -415,7 +415,7 @@ class LearningModel(LoggedExtendedModel):
             sklearn_cache = mkdtemp(
                 prefix="sklearn",
                 dir=os.path.join(
-                    settings.LOCAL_CACHE_PATH,
+                    settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
                     "feature_extractors/{}".format(self.cache_identifier),
                 ),
             )
