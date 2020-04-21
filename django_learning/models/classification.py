@@ -219,14 +219,14 @@ class ClassificationModel(LearningModel):
                 self.dataset, refresh=refresh, only_load_existing=only_load_existing
             )
         merged = self.dataset.merge(
-            self.predict_dataset[["document_id", "label_id"]],
+            self.predict_dataset[["document_id", self.dataset_extractor.outcome_column]],
             how="left",
             on="document_id",
             suffixes=("_test", "_predict"),
         )
-        incorrect = merged[merged["label_id_test"] != merged["label_id_predict"]]
+        incorrect = merged[merged["{}_test".format(self.dataset_extractor.outcome_column)] != merged["{}_predict".format(self.dataset_extractor.outcome_column)]]
         if correct_label_id:
-            incorrect = incorrect[incorrect["label_id_test"] == correct_label_id]
+            incorrect = incorrect[incorrect["{}_test".format(self.dataset_extractor.outcome_column)] == correct_label_id]
 
         return incorrect
 
