@@ -12,7 +12,7 @@ class DatasetExtractor(object):
         self.cache_hash = None
 
         self.cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "datasets"),
+            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "datasets"),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,

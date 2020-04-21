@@ -94,7 +94,7 @@ class SamplingFrame(LoggedExtendedModel):
     def get_sampling_flags(self, refresh=False, sampling_search_subset=None):
 
         cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "sampling_frame_flags"),
+            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "sampling_frame_flags"),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,
