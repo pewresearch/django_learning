@@ -9,7 +9,7 @@ from collections import OrderedDict
 from tempfile import mkdtemp
 from shutil import rmtree
 
-from sklearn.model_selection import KFold, train_test_split, GridSearchCV
+from sklearn.model_selection import StratifiedKFold, train_test_split, GridSearchCV
 from sklearn.metrics import (
     f1_score,
     precision_score,
@@ -505,7 +505,7 @@ class LearningModel(LoggedExtendedModel):
         if refresh or not self.cv_folds:
             self.cv_folds = [
                 f
-                for f in KFold(
+                for f in StratifiedKFold(
                     len(dataset.index),
                     n_folds=self.parameters["model"].get("cv", 5),
                     shuffle=True,
