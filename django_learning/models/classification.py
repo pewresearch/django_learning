@@ -80,7 +80,7 @@ class ClassificationModel(LearningModel):
 
             # total_weight = sum(class_weights.values())
             # class_weights = {k: float(v) / float(total_weight) for k, v in class_weights.items()}
-            print("Class weights: {}".format(class_weights))
+            # print("Class weights: {}".format(class_weights))
             self.dataset["training_weight"] = self.dataset.apply(
                 lambda x: x["training_weight"]
                 * class_weights[x[self.dataset_extractor.outcome_column]],
