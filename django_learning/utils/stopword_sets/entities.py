@@ -12,6 +12,6 @@ def get_stopwords():
         Entity.objects.annotate(c=Count("documents")), desc="Adding entity stopwords"
     ):
         if len(e.name) > 2:
-            stopwords.append(e.name)
+            stopwords.append(e.name.lower())
 
     return list(set(stopwords))

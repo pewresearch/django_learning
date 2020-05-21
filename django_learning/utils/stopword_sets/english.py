@@ -1,6 +1,10 @@
-from sklearn.feature_extraction import text as sklearn_text
+import nltk
+from sklearn.feature_extraction.stop_words import ENGLISH_STOP_WORDS
 
 
 def get_stopwords():
 
-    return list(sklearn_text.ENGLISH_STOP_WORDS)
+    return list(set.union(
+        set(nltk.corpus.stopwords.words('english')),
+        set(ENGLISH_STOP_WORDS)
+    ))
