@@ -316,7 +316,7 @@ class LearningModel(LoggedExtendedModel):
             cache_data = self._train_model(
                 pipeline_steps, params, num_cores=num_cores, **kwargs
             )
-            self.cache.write(updated_hashstr, cache_data)
+            self.cache.write(updated_hashstr, cache_data, timeout=None)
             self.model_cache_hash = updated_hashstr
             self.cv_folds = None
             self.save()
