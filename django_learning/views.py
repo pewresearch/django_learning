@@ -12,6 +12,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.http import StreamingHttpResponse
 from django.conf import settings
+from django.utils import timezone
 
 from django_commander.utils import run_command_task
 
@@ -369,7 +370,7 @@ def complete_qualification(request, project_name, sample_name, qualification_tes
         )
         if not assignment.time_finished:
 
-            assignment.time_finished = datetime.datetime.now()
+            assignment.time_finished = timezone.now()
             assignment.save()
 
             for field in list(request.POST.keys()):
@@ -691,7 +692,7 @@ def _save_response(request, overwrite=False):
                 assignment.uncodeable = False
                 assignment.save()
             if not overwrite and not incomplete:
-                assignment.time_finished = datetime.datetime.now()
+                assignment.time_finished = timezone.now()
                 assignment.save()
 
         if incomplete:

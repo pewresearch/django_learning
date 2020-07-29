@@ -62,9 +62,10 @@ class QuestionManager(BasicExtendedManager):
             label_ids.append(label.pk)
             label.pointers = [decode_text(p) for p in l.get("pointers", [])]
             label.save()
-        for l in question.labels.all():
-            if l.pk not in label_ids:
-                l.delete()
+        if q["display"] != "number":
+            for l in question.labels.all():
+                if l.pk not in label_ids:
+                    l.delete()
 
         example_ids = []
         for e in examples:
