@@ -1,24 +1,28 @@
 from __future__ import print_function
+from abc import ABCMeta, abstractmethod
 from builtins import str
 from builtins import zip
-import numbers
+from sklearn import __version__ as _sklearn_version
+from sklearn.exceptions import FitFailedWarning
+from sklearn.externals.six import with_metaclass
+from sklearn.metrics.scorer import _BaseScorer
+from sklearn.model_selection._split import BaseCrossValidator
+from sklearn.utils._joblib import logger
+from sklearn.utils.metaestimators import _safe_split
+from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import _num_samples
+from traceback import format_exception_only
 import inspect
+import numbers
+import numpy as np
 import time
 import warnings
-import numpy as np
 
-from traceback import format_exception_only
-from abc import ABCMeta, abstractmethod
+if _sklearn_version >= '0.22.1':
+    from sklearn.utils.validation import _check_fit_params
 
-from sklearn.exceptions import FitFailedWarning
-from sklearn.utils._joblib import logger
-from sklearn.metrics.scorer import _BaseScorer
-from sklearn.utils.multiclass import type_of_target
-from sklearn.model_selection._validation import _index_param_value
-from sklearn.utils.metaestimators import _safe_split
-from sklearn.utils.validation import _num_samples
-from sklearn.externals.six import with_metaclass
-from sklearn.model_selection._split import BaseCrossValidator
+else:
+    from sklearn.model_selection._validation import _index_param_value
 
 
 class _ProbaScorer(_BaseScorer):
@@ -190,9 +194,13 @@ def _fit_and_score(
 
     # Adjust length of sample weights
     fit_params = fit_params if fit_params is not None else {}
-    fit_params = dict(
-        [(k, _index_param_value(X, v, train)) for k, v in list(fit_params.items())]
-    )
+    if _sklearn_version >= '0.22.1':
+        fit_params = _check_fit_params(X, fit_params, train)
+
+    else:
+        fit_params = dict(
+            [(k, _index_param_value(X, v, train)) for k, v in list(fit_params.items())]
+        )
 
     train_scores = {}
     if parameters is not None:
