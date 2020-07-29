@@ -233,21 +233,6 @@ def _fit_and_score(
         score_params_test["sample_weight"] = X_test["sampling_weight"]
         print("DETECTED DJANGO_LEARNING SAMPLING WEIGHTS, PASSING TO SCORERS")
 
-    # if is_multimetric:
-    #     score_param_names = []
-    #     for name, func in scorer.items():
-    #         score_param_names.extend(inspect.getargspec(func._score_func).args)
-    #     score_param_names = list(set(score_param_names))
-    # else:
-    #     score_param_names = inspect.getargspec(scorer._score_func).args
-    # score_params_train = {}
-    # score_params_test = {}
-    # for param in score_param_names:
-    #     for k, v in fit_params.items():
-    #         if k.endswith(param):
-    #             score_params_train[param] = _index_param_value(X, v, train)
-    #             # score_params_test[param] = _index_param_value(X, v, test)
-
     try:
         if y_train is None:
             estimator.fit(X_train, **fit_params)
