@@ -5,7 +5,7 @@ from django_commander.models import LoggedExtendedModel
 from django_learning.managers import DocumentManager
 from django_queries.models import QueryModel
 from django.apps import apps
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.signals import class_prepared
 from langdetect import detect
