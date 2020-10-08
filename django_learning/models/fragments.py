@@ -1,8 +1,5 @@
 from django.db import models
-from django.contrib.postgres.fields import JSONField
-
 from django_commander.models import LoggedExtendedModel
-
 from pewtils import decode_text
 
 
@@ -15,7 +12,7 @@ class DocumentFragment(LoggedExtendedModel):
     indicates that the fragment has yet to be determined to be content or non-content.
     """
 
-    scope = JSONField(
+    scope = models.JSONField(
         default=dict,
         help_text="A dictionary of filter parameters for defining documents within which the fragment can exist",
     )
@@ -27,7 +24,7 @@ class DocumentFragment(LoggedExtendedModel):
     hash = models.CharField(max_length=256, db_index=True)
     text = models.TextField()
     # all_variations = ArrayField(models.TextField(), default=list)
-    # boilerplate = models.NullBooleanField(null=True)
+    # boilerplate = models.BooleanField(null=True)
 
     def __str__(self):
         return "{0}...".format(decode_text(self.text)[:50])
