@@ -491,10 +491,16 @@ class LearningModel(LoggedExtendedModel):
 
     def print_test_prediction_report(self, refresh=False, only_load_existing=True):
 
-        print(self.get_test_prediction_results(refresh=refresh, only_load_existing=only_load_existing))
+        print(
+            self.get_test_prediction_results(
+                refresh=refresh, only_load_existing=only_load_existing
+            )
+        )
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_load_existing=False, return_averages=True):
+    def get_cv_prediction_results(
+        self, refresh=False, only_load_existing=False, return_averages=True
+    ):
 
         print("Computing cross-fold predictions")
         _final_model = self.model
@@ -567,9 +573,17 @@ class LearningModel(LoggedExtendedModel):
 
             return fold_score_df
 
-    def print_cv_prediction_report(self, refresh=False, only_load_existing=True, return_averages=True):
+    def print_cv_prediction_report(
+        self, refresh=False, only_load_existing=True, return_averages=True
+    ):
 
-        print(self.get_cv_prediction_results(refresh=refresh, only_load_existing=only_load_existing, return_averages=return_averages))
+        print(
+            self.get_cv_prediction_results(
+                refresh=refresh,
+                only_load_existing=only_load_existing,
+                return_averages=return_averages,
+            )
+        )
 
     def _get_scoring_function(self, func_name, binary_base_code=None):
 

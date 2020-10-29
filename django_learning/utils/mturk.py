@@ -281,7 +281,11 @@ class MTurk(object):
 
                 hit = HIT.objects.create_or_update(
                     {"sample_unit": su, "turk": True},
-                    {"template_name": template_name, "num_coders": num_coders, "hit_type": hit_type},
+                    {
+                        "template_name": template_name,
+                        "num_coders": num_coders,
+                        "hit_type": hit_type,
+                    },
                 )
 
                 html = render_to_string(
@@ -326,10 +330,7 @@ class MTurk(object):
                         response = self.conn.create_hit_with_hit_type(
                             Question=turk_hit,
                             MaxAssignments=num_coders,
-                            LifetimeInSeconds=hit_type.lifetime_days
-                            * 60
-                            * 60
-                            * 24,
+                            LifetimeInSeconds=hit_type.lifetime_days * 60 * 60 * 24,
                             HITTypeId=hit_type.turk_id,
                         )
                         hit.turk_id = response["HIT"]["HITId"]

@@ -21,8 +21,12 @@ from django_learning.utils.models import models
 from django_learning.utils.pipelines import pipelines
 from django_learning.utils.preprocessors import preprocessors
 from django_learning.utils.project_hit_types import project_hit_types
-from django_learning.utils.project_qualification_scorers import project_qualification_scorers
-from django_learning.utils.project_qualification_tests import project_qualification_tests
+from django_learning.utils.project_qualification_scorers import (
+    project_qualification_scorers,
+)
+from django_learning.utils.project_qualification_tests import (
+    project_qualification_tests,
+)
 from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.regex_replacers import regex_replacers
 from django_learning.utils.sampling_frames import sampling_frames
