@@ -35,7 +35,7 @@ class ProjectHITTypesTests(DjangoTestCase):
 
         project = Project.objects.create(name="test_project")
         hit_type = HITType.objects.create(name="test_hit_type", project=project)
-        config = project_hit_types['test_hit_type']
+        config = project_hit_types["test_hit_type"]
         for key, value in config.items():
             self.assertEqual(getattr(hit_type, key), value)
 
