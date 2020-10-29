@@ -339,12 +339,11 @@ class Sample(LoggedExtendedModel):
                 if not use_keyword_searches:
 
                     sample_chunks.append(
-                        SampleExtractor(
+                        SampleExtractor(frame, "pk", seed=seed).extract(
+                            int(size),
                             sampling_strategy=params["sampling_strategy"],
-                            id_col="pk",
                             stratify_by=stratify_by,
-                            seed=seed,
-                        ).extract(frame, sample_size=int(size))
+                        )
                     )
 
                 else:
@@ -358,28 +357,24 @@ class Sample(LoggedExtendedModel):
                     )
                     sample_chunks.append(
                         SampleExtractor(
-                            sampling_strategy=params["sampling_strategy"],
-                            id_col="pk",
-                            stratify_by=stratify_by,
-                            seed=seed,
+                            frame[frame["search_none"] == 1], "pk", seed=seed
                         ).extract(
-                            frame[frame["search_none"] == 1],
-                            sample_size=int(
-                                math.ceil(float(size) * non_search_sample_size)
-                            ),
+                            int(math.ceil(float(size) * non_search_sample_size)),
+                            sampling_strategy=params["sampling_strategy"],
+                            stratify_by=stratify_by,
                         )
                     )
 
                     for search, p in params["sampling_searches"].items():
                         sample_chunks.append(
                             SampleExtractor(
-                                sampling_strategy=params["sampling_strategy"],
-                                id_col="pk",
-                                stratify_by=stratify_by,
+                                frame[frame["search_{}".format(search)] == 1],
+                                "pk",
                                 seed=seed,
                             ).extract(
-                                frame[frame["search_{}".format(search)] == 1],
-                                sample_size=int(math.ceil(size * p["proportion"])),
+                                int(math.ceil(size * p["proportion"])),
+                                sampling_strategy=params["sampling_strategy"],
+                                stratify_by=stratify_by,
                             )
                         )
 
