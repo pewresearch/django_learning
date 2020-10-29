@@ -4,7 +4,8 @@ from builtins import str
 from builtins import zip
 from sklearn import __version__ as _sklearn_version
 from sklearn.exceptions import FitFailedWarning
-from sklearn.externals.six import with_metaclass
+
+# from sklearn.externals.six import with_metaclass
 from sklearn.metrics.scorer import _BaseScorer
 from sklearn.model_selection._split import BaseCrossValidator
 from sklearn.utils._joblib import logger
@@ -18,7 +19,7 @@ import numpy as np
 import time
 import warnings
 
-if _sklearn_version >= '0.22.1':
+if _sklearn_version >= "0.22.1":
     from sklearn.utils.validation import _check_fit_params
 
 else:
@@ -194,7 +195,7 @@ def _fit_and_score(
 
     # Adjust length of sample weights
     fit_params = fit_params if fit_params is not None else {}
-    if _sklearn_version >= '0.22.1':
+    if _sklearn_version >= "0.22.1":
         fit_params = _check_fit_params(X, fit_params, train)
 
     else:
