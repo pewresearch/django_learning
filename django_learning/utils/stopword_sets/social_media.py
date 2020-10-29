@@ -21,5 +21,5 @@ def get_stopwords():
         "video",
         "youtube",
         "insta",
-        "tiktok"
+        "tiktok",
     ]

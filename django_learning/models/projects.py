@@ -361,8 +361,8 @@ class QualificationTest(LoggedExtendedModel):
     def save(self, *args, **kwargs):
 
         if (
-                self.name
-                not in project_qualification_tests.project_qualification_tests.keys()
+            self.name
+            not in project_qualification_tests.project_qualification_tests.keys()
         ):
             raise Exception(
                 "Qualification test '{}' is not defined in any of the known folders".format(
@@ -416,5 +416,3 @@ class QualificationAssignment(LoggedExtendedModel):
     time_finished = models.DateTimeField(null=True)
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
-
-
