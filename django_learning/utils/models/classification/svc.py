@@ -8,8 +8,8 @@ def get_params():
     return {
         "model_class": SVC(),
         "params": {
-            'kernel': ('linear', 'rbf', ),
-            'class_weight': ('balanced', ),  # can be None, 'auto', or 'balanced'
-            'gamma': ('auto', )
+            "kernel": ("linear", "rbf"),
+            "class_weight": ("balanced",),  # can be None, 'auto', or 'balanced'
+            "gamma": ("auto",),
         },
     }

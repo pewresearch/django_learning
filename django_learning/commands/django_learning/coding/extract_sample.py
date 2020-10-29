@@ -64,10 +64,7 @@ class Command(BasicCommand):
 
             sample = Sample.objects.create_or_update(
                 {"project": project, "name": self.parameters["sample_name"]},
-                {
-                    "sampling_method": self.options["sampling_method"],
-                    "frame": frame,
-                },
+                {"sampling_method": self.options["sampling_method"], "frame": frame},
             )
             sample.extract_documents(
                 size=self.options["size"],
