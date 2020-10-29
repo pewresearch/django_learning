@@ -71,7 +71,9 @@ class FiltersTests(DjangoTestCase):
 
         from django_learning.utils.filters import filter_coders
 
-        hit_ids = list(Coder.objects.get(name="coder1").assignments.values_list("pk", flat=True))
+        hit_ids = list(
+            Coder.objects.get(name="coder1").assignments.values_list("pk", flat=True)
+        )
         HIT.objects.filter(pk__in=hit_ids).delete()
 
         for params, count in [

@@ -51,25 +51,29 @@ class ModelsTests(DjangoTestCase):
         from django_learning.utils.feature_extractors import feature_extractors
         from pewanalytics.text import TextCleaner
 
-        df = extract_dataset("document_dataset", params={"threshold": .1})
+        df = extract_dataset("document_dataset", params={"threshold": 0.1})
         c = TextCleaner()
-        df['text'] = df['text'].map(c.clean)
-        tfidf = feature_extractors["tfidf"](max_df=.9, min_df=10, max_features=None).fit_transform(df)
+        df["text"] = df["text"].map(c.clean)
+        tfidf = feature_extractors["tfidf"](
+            max_df=0.9, min_df=10, max_features=None
+        ).fit_transform(df)
         base_class_id = (
             get_model("Question", app_name="django_learning")
-                .objects.filter(project__name="test_project")
-                .get(name="test_checkbox")
-                .labels.get(value="0")
-                .pk
+            .objects.filter(project__name="test_project")
+            .get(name="test_checkbox")
+            .labels.get(value="0")
+            .pk
         )
         # df['outcome'] = (df['label_id']!=str(base_class_id)).astype(int)
-        df['outcome'] = df['text'].str.contains(r"film", flags=re.IGNORECASE).astype(int)
+        df["outcome"] = (
+            df["text"].str.contains(r"film", flags=re.IGNORECASE).astype(int)
+        )
         X_train, X_test, y_train, y_test = train_test_split(
             tfidf,
-            df['outcome'],
-            test_size = 0.25,
-            random_state = 42,
-            stratify=df['outcome'].values
+            df["outcome"],
+            test_size=0.25,
+            random_state=42,
+            stratify=df["outcome"].values,
         )
         for val in [
             "classification_decision_tree",  # doesn't work in Python 2
@@ -83,16 +87,15 @@ class ModelsTests(DjangoTestCase):
             "classification_xgboost",
         ]:
             params = models[val]()
-            model = params['model_class']
+            model = params["model_class"]
             for params in ParameterGrid(params["params"]):
                 model.set_params(**params)
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
-                metrics  = precision_recall_fscore_support(y_test, y_pred)
+                metrics = precision_recall_fscore_support(y_test, y_pred)
                 for scores in metrics:
                     for score in scores:
                         self.assertGreater(score, 0.0)
-
 
     def tearDown(self):
 
