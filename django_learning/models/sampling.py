@@ -340,7 +340,7 @@ class Sample(LoggedExtendedModel):
 
                     sample_chunks.append(
                         SampleExtractor(frame, "pk", seed=seed).extract(
-                            int(size),
+                            min([len(frame), int(size)]),
                             sampling_strategy=params["sampling_strategy"],
                             stratify_by=stratify_by,
                         )
@@ -355,24 +355,29 @@ class Sample(LoggedExtendedModel):
                             for search, p in params["sampling_searches"].items()
                         ]
                     )
-                    sample_chunks.append(
-                        SampleExtractor(
-                            frame[frame["search_none"] == 1], "pk", seed=seed
-                        ).extract(
+                    subset = frame[frame["search_none"] == 1]
+                    sample_size = min(
+                        [
+                            len(subset),
                             int(math.ceil(float(size) * non_search_sample_size)),
+                        ]
+                    )
+                    sample_chunks.append(
+                        SampleExtractor(subset, "pk", seed=seed).extract(
+                            sample_size,
                             sampling_strategy=params["sampling_strategy"],
                             stratify_by=stratify_by,
                         )
                     )
 
                     for search, p in params["sampling_searches"].items():
+                        subset = frame[frame["search_{}".format(search)] == 1]
+                        sample_size = min(
+                            [len(subset), int(math.ceil(size * p["proportion"]))]
+                        )
                         sample_chunks.append(
-                            SampleExtractor(
-                                frame[frame["search_{}".format(search)] == 1],
-                                "pk",
-                                seed=seed,
-                            ).extract(
-                                int(math.ceil(size * p["proportion"])),
+                            SampleExtractor(subset, "pk", seed=seed).extract(
+                                sample_size,
                                 sampling_strategy=params["sampling_strategy"],
                                 stratify_by=stratify_by,
                             )
