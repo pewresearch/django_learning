@@ -42,23 +42,24 @@ class DatasetExtractor(object):
         if not self.cache_hash:
             self.cache_hash = self.get_hash(**kwargs)
 
-        if not refresh:
+        if not refresh and is_not_null(self.cache_hash):
             cache_data = self.cache.read(self.cache_hash)
             if is_not_null(cache_data):
                 for k, v in cache_data.items():
                     if k != "dataset":
                         setattr(self, k, v)
 
-        if is_null(cache_data) and not only_load_existing:
+        if (is_null(cache_data) and not only_load_existing) or is_null(self.cache_hash):
             # print("Refreshing dataset: {}".format(self.cache_hash))
             if hasattr(self, "name") and self.name:
                 print(self.name)
             cache_data = {"dataset": self._get_dataset(**kwargs)}
             cache_data.update(self._get_preserved_state())
-            try:
-                self.cache.write(self.cache_hash, cache_data, timeout=None)
-            except Exception as e:
-                print("Couldn't write to cache: {}".format(e))
+            if is_not_null(self.cache_hash):
+                try:
+                    self.cache.write(self.cache_hash, cache_data, timeout=None)
+                except Exception as e:
+                    print("Couldn't write to cache: {}".format(e))
 
         if is_not_null(cache_data):
             return cache_data.get("dataset", None)
