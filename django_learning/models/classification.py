@@ -680,14 +680,26 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
                 list(self.classifications.values_list("document_id", flat=True))
             )
             doc_ids = doc_ids.difference(existing_doc_ids)
-        self.apply_model_to_documents_multiprocessed(
-            list(doc_ids),
-            save=save,
-            document_filters=document_filters,
-            refresh=True,
-            num_cores=num_cores,
-            chunk_size=chunk_size,
-        )
+        if num_cores > 1:
+            self.apply_model_to_documents_multiprocessed(
+                get_model("Document", app_name="django_learning").objects.filter(
+                    pk__in=doc_ids
+                ),
+                save=save,
+                document_filters=document_filters,
+                refresh=True,
+                num_cores=num_cores,
+                chunk_size=chunk_size,
+            )
+        else:
+            self.apply_model_to_documents(
+                get_model("Document", app_name="django_learning").objects.filter(
+                    pk__in=doc_ids
+                ),
+                save=save,
+                document_filters=document_filters,
+                refresh=True,
+            )
 
     def update_classifications_with_probability_threshold(self):
 
