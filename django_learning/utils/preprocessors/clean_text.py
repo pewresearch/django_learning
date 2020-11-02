@@ -47,11 +47,11 @@ class Preprocessor(BasicPreprocessor):
                         or stopword_set in ["english", "months", "misc_boilerplate"]
                     ]
                     if self.cache:
-                        print(
-                            "Recomputed stopword set {}, saving to local cache".format(
-                                stopword_set
-                            )
-                        )
+                        # print(
+                        #     "Recomputed stopword set {}, saving to local cache".format(
+                        #         stopword_set
+                        #     )
+                        # )
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
         stopwords = list(set(stopwords))
