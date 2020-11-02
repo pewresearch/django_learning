@@ -23,132 +23,371 @@ class ClassificationTests(DjangoTestCase):
     def test_document_classification_model(self):
 
         set_up_test_sample("test_sample", 200)
-        model = get_test_model("test_model")
+        model = get_test_model("test")
         test_scores = model.get_test_prediction_results()
         fold_scores = model.get_cv_prediction_results()
 
         self.assertEqual(len(model.dataset), 200)
-        self.assertEqual(len(model.train_dataset), 150)
-        self.assertEqual(len(model.test_dataset), 50)
+        self.assertEqual(len(model.train_dataset), 160)
+        self.assertEqual(len(model.test_dataset), 40)
         self.assertEqual(len(model.cv_folds), 5)
-        for a, b in model.cv_folds:
-            self.assertGreaterEqual(len(a), 119)
-            self.assertLessEqual(len(a), 121)
-            self.assertGreaterEqual(len(b), 29)
-            self.assertLessEqual(len(b), 31)
-        self.assertEqual(list(set(test_scores["n"].values))[0], 50)
-        self.assertEqual(list(set(fold_scores["n"].values))[0], 30)
 
+        for a, b in model.cv_folds:
+            self.assertGreaterEqual(len(a), 127)
+            self.assertLessEqual(len(a), 129)
+            self.assertGreaterEqual(len(b), 31)
+            self.assertLessEqual(len(b), 33)
+        self.assertEqual(list(set(test_scores["n"].values))[0], 40)
+        self.assertEqual(list(set(fold_scores["n"].values))[0], 32)
+
+        pos_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="1")
+            .pk
+        )
+        neg_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="0")
+            .pk
+        )
         for label_id, metric, expected_val in [
-            (11, "precision", 1.0),
-            (11, "recall", 0.6),
-            (11, "n", 50),
-            (11, "matthews_corrcoef", 0.76),
-            (11, "cohens_kappa", 0.73),
-            (11, "accuracy", 0.96),
-            (12, "precision", 0.96),
-            (12, "recall", 1.0),
-            (12, "n", 50),
-            (12, "matthews_corrcoef", 0.76),
-            (12, "cohens_kappa", 0.73),
-            (12, "accuracy", 0.96),
+            (pos_label, "precision", 1.0),
+            (pos_label, "recall", 0.6),
+            (pos_label, "n", 40),
+            (pos_label, "matthews_corrcoef", 0.75),
+            (pos_label, "cohens_kappa", 0.73),
+            (pos_label, "accuracy", 0.95),
+            (neg_label, "precision", 0.95),
+            (neg_label, "recall", 1.0),
+            (neg_label, "n", 40),
+            (neg_label, "matthews_corrcoef", 0.75),
+            (neg_label, "cohens_kappa", 0.72),
+            (neg_label, "accuracy", 0.95),
         ]:
             val = test_scores.loc[
                 test_scores["outcome_column"] == "label_id__{}".format(label_id)
             ][metric].values[0]
+            print("{}: {}".format(metric, val))
             self.assertGreater(val, expected_val - 0.01)
             self.assertLess(val, expected_val + 0.01)
 
-        import pdb
-
-        pdb.set_trace()
         incorrect = model.get_incorrect_predictions()
-        self.assertGreaterEqual(len(incorrect), 7)
-        self.assertLessEqual(len(incorrect), 9)
+        self.assertGreaterEqual(len(incorrect), 4)
+        self.assertLessEqual(len(incorrect), 8)
         model.apply_model_to_documents(Document.objects.all())
         self.assertEqual(model.classifications.count(), 250)
-        self.assertGreaterEqual(model.classifications.filter(label_id=12).count(), 229)
-        self.assertLessEqual(model.classifications.filter(label_id=12).count(), 233)
-        self.assertGreaterEqual(model.classifications.filter(label_id=11).count(), 17)
-        self.assertLessEqual(model.classifications.filter(label_id=11).count(), 21)
-        model.set_probability_threshold(0.4)
+        neg_count = model.classifications.filter(label_id=neg_label).count()
+        pos_count = model.classifications.filter(label_id=pos_label).count()
+
+        self.assertTrue(228 <= neg_count <= 234)
+        self.assertTrue(16 <= pos_count <= 22)
+
+        model.set_probability_threshold(0.25)
         model.update_classifications_with_probability_threshold()
-        self.assertGreaterEqual(model.classifications.filter(label_id=12).count(), 221)
-        self.assertLessEqual(model.classifications.filter(label_id=12).count(), 225)
-        self.assertGreaterEqual(model.classifications.filter(label_id=11).count(), 25)
-        self.assertLessEqual(model.classifications.filter(label_id=11).count(), 29)
+        self.assertLessEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
 
-        import pdb
+        model.set_probability_threshold(0.99)
+        model.update_classifications_with_probability_threshold()
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertLessEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
 
-        pdb.set_trace()
-        model.set_probability_threshold(0.85)
         preds = model.produce_prediction_dataset(
             model.dataset[:10], ignore_probability_threshold=True
         )
         self.assertEqual(len(preds), 10)
         self.assertIn("label_id", preds.columns)
         self.assertIn("probability", preds.columns)
+
+        model.apply_model_to_frame(
+            save=True, document_filters=None, refresh=True, num_cores=1
+        )
+
+    def test_document_classification_model_with_balancing_variables(self):
+
+        set_up_test_sample("test_sample", 200)
+        model = get_test_model("test_with_balancing_variables")
+        test_scores = model.get_test_prediction_results()
+        fold_scores = model.get_cv_prediction_results()
+
+        self.assertGreater(model.dataset["balancing_weight"].nunique(), 1)
+        self.assertGreater(model.dataset["training_weight"].nunique(), 1)
+
+        self.assertEqual(len(model.dataset), 200)
+        self.assertEqual(len(model.train_dataset), 160)
+        self.assertEqual(len(model.test_dataset), 40)
+        self.assertEqual(len(model.cv_folds), 5)
+
+        for a, b in model.cv_folds:
+            self.assertGreaterEqual(len(a), 127)
+            self.assertLessEqual(len(a), 129)
+            self.assertGreaterEqual(len(b), 31)
+            self.assertLessEqual(len(b), 33)
+        self.assertEqual(list(set(test_scores["n"].values))[0], 40)
+        self.assertEqual(list(set(fold_scores["n"].values))[0], 32)
+
+        pos_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="1")
+            .pk
+        )
+        neg_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="0")
+            .pk
+        )
+        for label_id, metric, expected_val in [
+            (pos_label, "precision", 1.0),
+            (pos_label, "recall", 0.6),
+            (pos_label, "n", 40),
+            (pos_label, "matthews_corrcoef", 0.75),
+            (pos_label, "cohens_kappa", 0.73),
+            (pos_label, "accuracy", 0.95),
+            (neg_label, "precision", 0.95),
+            (neg_label, "recall", 1.0),
+            (neg_label, "n", 40),
+            (neg_label, "matthews_corrcoef", 0.75),
+            (neg_label, "cohens_kappa", 0.72),
+            (neg_label, "accuracy", 0.95),
+        ]:
+            val = test_scores.loc[
+                test_scores["outcome_column"] == "label_id__{}".format(label_id)
+            ][metric].values[0]
+            print("{}: {}".format(metric, val))
+            self.assertGreater(val, expected_val - 0.01)
+            self.assertLess(val, expected_val + 0.01)
+
+        incorrect = model.get_incorrect_predictions()
+        self.assertGreaterEqual(len(incorrect), 4)
+        self.assertLessEqual(len(incorrect), 8)
+        model.apply_model_to_documents(Document.objects.all())
+        self.assertEqual(model.classifications.count(), 250)
+        neg_count = model.classifications.filter(label_id=neg_label).count()
+        pos_count = model.classifications.filter(label_id=pos_label).count()
+
+        self.assertTrue(228 <= neg_count <= 234)
+        self.assertTrue(16 <= pos_count <= 22)
+
+        model.set_probability_threshold(0.25)
+        model.update_classifications_with_probability_threshold()
+        self.assertLessEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
+
+        model.set_probability_threshold(0.99)
+        model.update_classifications_with_probability_threshold()
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertLessEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
+
         preds = model.produce_prediction_dataset(
-            model.dataset[:10], ignore_probability_threshold=False
+            model.dataset[:10], ignore_probability_threshold=True
         )
         self.assertEqual(len(preds), 10)
         self.assertIn("label_id", preds.columns)
         self.assertIn("probability", preds.columns)
-        # model.apply_model_to_frame(save=True, document_filters=None, refresh=False, num_cores=2, chunk_size=1000)
 
-        #
-        #
+        model.apply_model_to_frame(
+            save=True, document_filters=None, refresh=True, num_cores=1
+        )
 
-        # predicted_df = dataset_extractors["model_prediction_dataset"](
-        #     dataset=df_to_predict,
-        #     learning_model=self,
-        #     cache_key=cache_key,
-        #     disable_probability_threshold_warning=disable_probability_threshold_warning,
-        # ).extract(refresh=refresh, only_load_existing=only_load_existing)
+    def test_document_classification_model_with_holdout(self):
 
-        # TODO: test the `model_prediction_dataset` dataset extractor
+        set_up_test_sample("test_sample", 160)
+        set_up_test_sample("test_sample_holdout", 40)
+        model = get_test_model("test_with_holdout")
+        test_scores = model.get_test_prediction_results()
 
-    # def test_document_classification_model_with_holdout(self):
-    #     set_up_test_sample("test_sample_holdout", 100)
-    #     frame = SamplingFrame.objects.get(name="all_documents")
-    #
-    #     ### Classifier with holdout
-    #     model = DocumentClassificationModel.objects.create(
-    #         name="test_model_with_holdout",
-    #         pipeline_name="test_with_holdout",
-    #         sampling_frame=frame,
-    #     )
-    #     model.extract_dataset(refresh=True)
-    #     model.load_model(refresh=True, num_cores=1)
-    #     model.describe_model()
-    #     model.get_test_prediction_results(refresh=True)
-    #     model.find_probability_threshold(save=True)
-    #     test_scores = model.get_test_prediction_results()
-    #
-    #     self.assertEqual(len(model.dataset), 1100)
-    #     self.assertEqual(len(model.train_dataset), 1000)
-    #     self.assertEqual(len(model.test_dataset), 100)
-    #     self.assertEqual(list(set(test_scores["n"].values))[0], 100)
-    #
-    #     for label_id, metric, expected_val in [
-    #         (11, "precision", 1.0),
-    #         (11, "recall", 0.82),
-    #         (11, "n", 100),
-    #         (11, "matthews_corrcoef", 0.89),
-    #         (11, "cohens_kappa", 0.89),
-    #         (11, "accuracy", 0.98),
-    #         (12, "precision", 0.98),
-    #         (12, "recall", 1.0),
-    #         (12, "n", 100),
-    #         (12, "matthews_corrcoef", 0.89),
-    #         (12, "cohens_kappa", 0.89),
-    #         (12, "accuracy", 0.98),
-    #     ]:
-    #         val = test_scores.loc[
-    #             test_scores["outcome_column"] == "label_id__{}".format(label_id)
-    #         ][metric].values[0]
-    #         # print("{}: {} ({} expected".format(metric, val, expected_val))
-    #         self.assertAlmostEqual(val, expected_val, 2)
+        self.assertEqual(len(model.dataset), 200)
+        self.assertEqual(len(model.train_dataset), 160)
+        self.assertEqual(len(model.test_dataset), 40)
+        self.assertEqual(list(set(test_scores["n"].values))[0], 40)
+
+        pos_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="1")
+            .pk
+        )
+        neg_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="0")
+            .pk
+        )
+        for label_id, metric, expected_val in [
+            (pos_label, "precision", 1.0),
+            (pos_label, "recall", 0.75),
+            (pos_label, "n", 40),
+            (pos_label, "matthews_corrcoef", 0.85),
+            (pos_label, "cohens_kappa", 0.84),
+            (pos_label, "accuracy", 0.975),
+            (neg_label, "precision", 0.97),
+            (neg_label, "recall", 1.0),
+            (neg_label, "n", 40),
+            (neg_label, "matthews_corrcoef", 0.85),
+            (neg_label, "cohens_kappa", 0.84),
+            (neg_label, "accuracy", 0.975),
+        ]:
+            val = test_scores.loc[
+                test_scores["outcome_column"] == "label_id__{}".format(label_id)
+            ][metric].values[0]
+            print("{}: {}".format(metric, val))
+            self.assertGreater(val, expected_val - 0.01)
+            self.assertLess(val, expected_val + 0.01)
+
+        incorrect = model.get_incorrect_predictions()
+        self.assertGreaterEqual(len(incorrect), 2)
+        self.assertLessEqual(len(incorrect), 6)
+        model.apply_model_to_documents(Document.objects.all())
+        self.assertEqual(model.classifications.count(), 250)
+        neg_count = model.classifications.filter(label_id=neg_label).count()
+        pos_count = model.classifications.filter(label_id=pos_label).count()
+
+        self.assertTrue(222 <= neg_count <= 228)
+        self.assertTrue(22 <= pos_count <= 28)
+
+        model.set_probability_threshold(0.25)
+        model.update_classifications_with_probability_threshold()
+        self.assertLessEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
+
+        model.set_probability_threshold(1.0)
+        model.update_classifications_with_probability_threshold()
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertLessEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
+
+        preds = model.produce_prediction_dataset(
+            model.dataset[:10], ignore_probability_threshold=True
+        )
+        self.assertEqual(len(preds), 10)
+        self.assertIn("label_id", preds.columns)
+        self.assertIn("probability", preds.columns)
+
+        model.apply_model_to_frame(
+            save=True, document_filters=None, refresh=True, num_cores=1
+        )
+
+    def test_document_classification_model_with_keyword_oversample(self):
+
+        set_up_test_sample("test_sample_keyword_oversample", 200)
+        model = get_test_model("test_with_keyword_oversample")
+        test_scores = model.get_test_prediction_results()
+        fold_scores = model.get_cv_prediction_results()
+
+        self.assertGreater(model.dataset["training_weight"].nunique(), 1)
+
+        self.assertEqual(len(model.dataset), 200)
+        self.assertEqual(len(model.train_dataset), 160)
+        self.assertEqual(len(model.test_dataset), 40)
+        self.assertEqual(len(model.cv_folds), 5)
+
+        for a, b in model.cv_folds:
+            self.assertGreaterEqual(len(a), 127)
+            self.assertLessEqual(len(a), 129)
+            self.assertGreaterEqual(len(b), 31)
+            self.assertLessEqual(len(b), 33)
+        self.assertEqual(list(set(test_scores["n"].values))[0], 40)
+        self.assertEqual(list(set(fold_scores["n"].values))[0], 32)
+
+        pos_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="1")
+            .pk
+        )
+        neg_label = (
+            Project.objects.get(name="test_project")
+            .questions.get(name="test_checkbox")
+            .labels.get(value="0")
+            .pk
+        )
+        for label_id, metric, expected_val in [
+            (pos_label, "precision", 1.0),
+            (pos_label, "recall", 1.0),
+            (pos_label, "n", 40),
+            (pos_label, "matthews_corrcoef", 1.0),
+            (pos_label, "cohens_kappa", 1.0),
+            (pos_label, "accuracy", 1.0),
+            (neg_label, "precision", 1.0),
+            (neg_label, "recall", 1.0),
+            (neg_label, "n", 40),
+            (neg_label, "matthews_corrcoef", 1.0),
+            (neg_label, "cohens_kappa", 1.0),
+            (neg_label, "accuracy", 1.0),
+        ]:
+            val = test_scores.loc[
+                test_scores["outcome_column"] == "label_id__{}".format(label_id)
+            ][metric].values[0]
+            print("{}: {}".format(metric, val))
+            self.assertGreater(val, expected_val - 0.01)
+            self.assertLess(val, expected_val + 0.01)
+
+        incorrect = model.get_incorrect_predictions()
+        self.assertGreaterEqual(len(incorrect), 2)
+        self.assertLessEqual(len(incorrect), 8)
+        model.apply_model_to_documents(Document.objects.all())
+        self.assertEqual(model.classifications.count(), 250)
+        neg_count = model.classifications.filter(label_id=neg_label).count()
+        pos_count = model.classifications.filter(label_id=pos_label).count()
+
+        self.assertTrue(224 <= neg_count <= 228)
+        self.assertTrue(22 <= pos_count <= 26)
+
+        model.set_probability_threshold(0.25)
+        model.update_classifications_with_probability_threshold()
+        self.assertLessEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
+
+        model.set_probability_threshold(0.99)
+        model.update_classifications_with_probability_threshold()
+        self.assertGreaterEqual(
+            model.classifications.filter(label_id=neg_label).count(), neg_count
+        )
+        self.assertLessEqual(
+            model.classifications.filter(label_id=pos_label).count(), pos_count
+        )
+
+        preds = model.produce_prediction_dataset(
+            model.dataset[:10], ignore_probability_threshold=True
+        )
+        self.assertEqual(len(preds), 10)
+        self.assertIn("label_id", preds.columns)
+        self.assertIn("probability", preds.columns)
+
+        model.apply_model_to_frame(
+            save=True, document_filters=None, refresh=True, num_cores=1
+        )
 
     def tearDown(self):
 

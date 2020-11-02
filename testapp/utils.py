@@ -155,13 +155,14 @@ def get_test_model(pipeline_name, run=True):
 
     frame = SamplingFrame.objects.get(name="all_documents")
     model = DocumentClassificationModel.objects.create(
-        name="test_model", pipeline_name=pipeline_name, sampling_frame=frame
+        name=pipeline_name, pipeline_name=pipeline_name, sampling_frame=frame
     )
     if run:
         model.extract_dataset(refresh=True)
         model.load_model(refresh=True, num_cores=1)
         model.describe_model()
-        model.get_cv_prediction_results(refresh=True)
+        if model.parameters["model"]["cv"] > 1:
+            model.get_cv_prediction_results(refresh=True)
         model.get_test_prediction_results(refresh=True)
         model.find_probability_threshold(save=True)
 
