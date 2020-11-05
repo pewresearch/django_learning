@@ -25,7 +25,9 @@ def get_pipeline():
     return {
         "dataset_extractor": {
             "name": "document_dataset",
-            "parameters": get_base_dataset_parameters("document_dataset"),
+            "parameters": get_base_dataset_parameters(
+                "document_dataset", sample_name="test_sample_keyword_oversample"
+            ),
             "outcome_column": "label_id",
         },
         "model": {
