@@ -62,7 +62,7 @@ def get_pipeline():
                 "tfidf_counts": {
                     "sublinear_tf": [False],
                     "max_df": [0.9],
-                    "min_df": [10],
+                    "min_df": [5],
                     "max_features": [None],
                     "ngram_range": [[1, 4]],
                     "use_idf": [True],
@@ -72,10 +72,11 @@ def get_pipeline():
                             (
                                 "clean_text",
                                 {
-                                    "process_method": ["lemmatize"],
+                                    "process_method": "lemmatize",
                                     "regex_filters": [],
                                     "stopword_sets": ["english", "test"],
                                     "stopword_whitelists": ["test"],
+                                    "refresh_stopwords": False,
                                 },
                             )
                         ]
@@ -84,7 +85,7 @@ def get_pipeline():
                 "tfidf_bool": {
                     "sublinear_tf": [False],
                     "max_df": [0.9],
-                    "min_df": [10],
+                    "min_df": [5],
                     "max_features": [None],
                     "ngram_range": [[1, 4]],
                     "use_idf": [False],
@@ -94,10 +95,11 @@ def get_pipeline():
                             (
                                 "clean_text",
                                 {
-                                    "process_method": ["lemmatize"],
+                                    "process_method": "lemmatize",
                                     "regex_filters": [],
                                     "stopword_sets": ["english", "test"],
                                     "stopword_whitelists": ["test"],
+                                    "refresh_stopwords": False,
                                 },
                             )
                         ]
