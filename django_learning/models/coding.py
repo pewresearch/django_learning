@@ -18,7 +18,7 @@ class HIT(LoggedExtendedModel):
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
 
-    finished = models.NullBooleanField(null=True)
+    finished = models.BooleanField(null=True)
 
     # AUTO-FILLED RELATIONS
     sample = models.ForeignKey(
