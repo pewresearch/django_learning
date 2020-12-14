@@ -130,22 +130,23 @@ class SamplingFrame(LoggedExtendedModel):
             vals = (
                 ["pk", "text", "date"]
                 + stratification_variables
-                + [a["field_lookup"] for a in additional_variables.values()]
+                + list(set([a["field_lookup"] for a in additional_variables.values()]))
             )
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))
 
             if len(sampling_searches) > 0:
                 regex_patterns = {
-                    search_name: regex_filters[search_name]().pattern
+                    search_name: regex_filters[search_name]()
                     for search_name in sampling_searches
                 }
-                frame["search_none"] = ~frame["text"].str.contains(
-                    r"|".join(regex_patterns.values())
-                )
+
                 for search_name, search_pattern in regex_patterns.items():
                     frame["search_{}".format(search_name)] = frame["text"].str.contains(
                         search_pattern
                     )
+                frame['flag_counts'] = frame[["search_{}".format(search_name) for search_name in regex_patterns.keys()]].astype(int).sum(axis=1)
+                frame["search_none"] = (frame['flag_counts'] == 0)
+                del frame['flag_counts']
 
             for name, additional in additional_variables.items():
                 frame[name] = frame[additional["field_lookup"]].map(
@@ -309,6 +310,8 @@ class Sample(LoggedExtendedModel):
                 frame = self.frame.get_sampling_flags(
                     sampling_search_subset=params.get("sampling_searches", None)
                 )
+                if stratify_by and stratify_by not in frame.columns:
+                    raise KeyError()
             except KeyError:
                 frame = self.frame.get_sampling_flags(
                     sampling_search_subset=params.get("sampling_searches", None),
@@ -355,20 +358,21 @@ class Sample(LoggedExtendedModel):
                             for search, p in params["sampling_searches"].items()
                         ]
                     )
-                    subset = frame[frame["search_none"] == 1]
-                    sample_size = min(
-                        [
-                            len(subset),
-                            int(math.ceil(float(size) * non_search_sample_size)),
-                        ]
-                    )
-                    sample_chunks.append(
-                        SampleExtractor(subset, "pk", seed=seed).extract(
-                            sample_size,
-                            sampling_strategy=params["sampling_strategy"],
-                            stratify_by=stratify_by,
+                    if non_search_sample_size > 0:
+                        subset = frame[frame["search_none"] == 1]
+                        sample_size = min(
+                            [
+                                len(subset),
+                                int(math.ceil(float(size) * non_search_sample_size)),
+                            ]
                         )
-                    )
+                        sample_chunks.append(
+                            SampleExtractor(subset, "pk", seed=seed).extract(
+                                sample_size,
+                                sampling_strategy=params["sampling_strategy"],
+                                stratify_by=stratify_by,
+                            )
+                        )
 
                     for search, p in params["sampling_searches"].items():
                         subset = frame[frame["search_{}".format(search)] == 1]
