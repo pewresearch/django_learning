@@ -443,7 +443,8 @@ class MTurk(object):
         self, sample, resync=False, approve=True, approve_probability=1.0
     ):
 
-        self._find_missing_hits(sample.hit_type.turk_id)
+        for hit_type_id in set(sample.hits.values_list("hit_type__turk_id", flat=True)):
+            self._find_missing_hits(hit_type_id)
 
         for qual_test in sample.project.qualification_tests.all().distinct():
             self.sync_qualification_test(qual_test)
