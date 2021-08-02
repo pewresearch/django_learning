@@ -1,0 +1,44 @@
+name: unit-tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/unit-tests.yaml
+      - Makefile
+      - django_learning/**
+      - requirements.txt
+      - setup.py
+      - tests/**
+
+jobs:
+  unit-tests:
+    name: unit-tests
+    runs-on: django_learning-runner
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install python dependencies
+        run: |
+          while read requirement; do mamba install "conda-forge::$requirement" || true; done < requirements.txt
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          make python_lint_errors
+          make github_lint_flake8
+
+      - name: Run unit tests
+        env:
+          TWITTER_API_KEY: '${{ secrets.TWITTER_API_KEY }}'
+          TWITTER_API_SECRET: '${{ secrets.TWITTER_API_SECRET }}'
+          TWITTER_API_ACCESS_TOKEN: '${{ secrets.TWITTER_API_ACCESS_TOKEN }}'
+          TWITTER_API_ACCESS_SECRET: '${{ secrets.TWITTER_API_ACCESS_SECRET }}'
+        run: |
+          make python_test
