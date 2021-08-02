@@ -5,7 +5,7 @@ on:
     paths:
       - .github/workflows/build-main.yaml
       - Makefile
-      - django-learning/**
+      - django_learning/**
       - requirements.txt
       - setup.py
       - tests/**
