@@ -9,7 +9,7 @@ spec:
   template:
     spec:
       repository: pewresearch/django_learning
-      image: 458280294434.dkr.ecr.us-east-1.amazonaws.com/labs-actions-runner@sha256:3690cf91109f11ee61226125a4fe8cf34fd9ec55715084134524db32c7d3528b
+      image: 458280294434.dkr.ecr.us-east-1.amazonaws.com/labs-actions-runner@sha256:f66332fda3c241985542e53a867cb888f21de04d71a8fab16b7784776666c594
       imagePullPolicy: Always
       serviceAccountName: labs-runner
       labels:
