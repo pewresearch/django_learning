@@ -73,7 +73,7 @@ class Extractor(BasicExtractor):
 
     def get_feature_names(self):
 
-        return ["{}_{}".format(self.params["feature_name_prefix"], x) for x in xrange(0, 1500)]
+        return ["{}_{}".format(self.params["feature_name_prefix"], x) for x in range(0, 1500)]
 
     def _get_w2v(self):
 
