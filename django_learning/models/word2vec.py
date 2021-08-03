@@ -1,17 +1,13 @@
-from __future__ import print_function
-import numpy, pandas, random, gensim
-
 from django.db import models
-
-from picklefield.fields import PickledObjectField
-from tqdm import tqdm
-
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils import get_document_types
-
-from pewtils import chunk_list
 from django_pewtils import get_model
+from gensim.models import Word2Vec
 from pewanalytics.text import TextCleaner, SentenceTokenizer
+from pewtils import chunk_list
+from picklefield.fields import PickledObjectField
+from tqdm import tqdm
+import numpy, pandas, random, gensim
 
 
 class Word2VecModel(LoggedExtendedModel):
