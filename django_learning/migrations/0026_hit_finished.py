@@ -10,6 +10,7 @@ def forwards(apps, schema_editor):
     for hit in HIT.objects.all():
         hit.save()
 
+
 def backwards(apps, schema_editor):
 
     pass
@@ -17,15 +18,11 @@ def backwards(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0025_auto_20190930_1957'),
-    ]
+    dependencies = [("django_learning", "0025_auto_20190930_1957")]
 
     operations = [
         migrations.AddField(
-            model_name='hit',
-            name='finished',
-            field=models.NullBooleanField(),
+            model_name="hit", name="finished", field=models.NullBooleanField()
         ),
         migrations.RunPython(forwards, backwards),
     ]

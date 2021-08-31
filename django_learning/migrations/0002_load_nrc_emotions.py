@@ -10,10 +10,12 @@ from pewtils.io import FileHandler
 from django.conf import settings
 from django_commander.commands import commands
 
+
 def forwards(apps, schema_editor):
 
     if not hasattr(settings, "SITE_NAME") or not settings.SITE_NAME == "testapp":
         commands["django_learning_nlp_reload_nrc_emotions"]().run()
+
 
 def backwards(apps, schema_editor):
 
@@ -23,10 +25,6 @@ def backwards(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0001_initial'),
-    ]
+    dependencies = [("django_learning", "0001_initial")]
 
-    operations = [
-        migrations.RunPython(forwards, backwards),
-    ]
+    operations = [migrations.RunPython(forwards, backwards)]

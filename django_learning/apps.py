@@ -13,6 +13,7 @@ class DjangoLearningConfig(AppConfig):
     def update_settings(self):
         from django.conf import settings
 
+        setattr(settings, "DJANGO_LEARNING_BASE_DIR", DJANGO_LEARNING_BASE_DIR)
         for setting, default in [
             ("AWS_ACCESS_KEY_ID", None),
             ("AWS_SECRET_ACCESS_KEY", None),
@@ -62,12 +63,9 @@ class DjangoLearningConfig(AppConfig):
             setattr(settings, setting, dirs)
 
         LOCAL_CACHE_PATH = os.path.join(settings.LOCAL_CACHE_ROOT, "django_learning")
-        setattr(settings, "LOCAL_CACHE_PATH", LOCAL_CACHE_PATH)
-        if settings.DJANGO_LEARNING_USE_S3:
-            S3_CACHE_PATH = os.path.join(settings.S3_CACHE_ROOT, "django_learning")
-        else:
-            S3_CACHE_PATH = settings.LOCAL_CACHE_PATH
-        setattr(settings, "S3_CACHE_PATH", S3_CACHE_PATH)
+        setattr(settings, "DJANGO_LEARNING_LOCAL_CACHE_PATH", LOCAL_CACHE_PATH)
+        S3_CACHE_PATH = os.path.join(settings.S3_CACHE_ROOT, "django_learning")
+        setattr(settings, "DJANGO_LEARNING_S3_CACHE_PATH", S3_CACHE_PATH)
 
         templates = settings.TEMPLATES
         new_templates = []

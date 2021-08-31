@@ -7,19 +7,15 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0017_auto_20171115_1012'),
-    ]
+    dependencies = [("django_learning", "0017_auto_20171115_1012")]
 
     operations = [
         migrations.AddField(
-            model_name='code',
-            name='notes',
-            field=models.TextField(null=True),
+            model_name="code", name="notes", field=models.TextField(null=True)
         ),
         migrations.AddField(
-            model_name='question',
-            name='show_notes',
+            model_name="question",
+            name="show_notes",
             field=models.BooleanField(default=False),
         ),
     ]

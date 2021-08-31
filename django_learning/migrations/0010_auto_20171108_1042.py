@@ -7,18 +7,13 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0009_assignment_turk_approved'),
-    ]
+    dependencies = [("django_learning", "0009_assignment_turk_approved")]
 
     operations = [
-        migrations.RemoveField(
-            model_name='classificationmodel',
-            name='num_cores',
-        ),
+        migrations.RemoveField(model_name="classificationmodel", name="num_cores"),
         migrations.AddField(
-            model_name='classificationmodel',
-            name='probability_threshold',
+            model_name="classificationmodel",
+            name="probability_threshold",
             field=models.FloatField(default=None, null=True),
         ),
     ]

@@ -7,14 +7,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0008_question_dependency'),
-    ]
+    dependencies = [("django_learning", "0008_question_dependency")]
 
     operations = [
         migrations.AddField(
-            model_name='assignment',
-            name='turk_approved',
+            model_name="assignment",
+            name="turk_approved",
             field=models.BooleanField(default=False),
-        ),
+        )
     ]

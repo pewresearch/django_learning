@@ -3,7 +3,6 @@ import re
 
 from pewtils import is_not_null, decode_text
 from pewanalytics.text import TextCleaner, SentenceTokenizer
-from pewanalytics.internal.stopwords import is_probable_stopword
 
 from django_learning.utils.stopword_sets import stopword_sets
 from django_learning.utils.stopword_whitelists import stopword_whitelists
@@ -13,8 +12,18 @@ from django_learning.utils.preprocessors import BasicPreprocessor
 
 
 class Preprocessor(BasicPreprocessor):
-
     def __init__(self, *args, **kwargs):
+        """
+
+        :param stopword_sets: Names of `django_learning` stopword lists
+        :param stopword_whitelists: Names of `django_learning` stopword whitelists (used to override stopword_sets)
+        :param regex_filters: Names of `django_learning` regex filters; sentences that don't match to *all* of the
+        provided filters will be removed
+        :param regex_replacers: Names of `django_learning` regex replacers to use
+        :param refresh_stopwords: Whether or not to refresh a custom list of stopwords from the cache (default is False)
+        :param kwargs: All other keyword arguments are passed along to a `pewanalytics.text.TextCleaner` object
+
+        """
 
         self.name = "clean_text"
         super(Preprocessor, self).__init__(*args, **kwargs)
@@ -25,22 +34,24 @@ class Preprocessor(BasicPreprocessor):
                 whitelist.extend(stopword_whitelists[stopword_whitelist]())
         stopwords = []
         if "stopword_sets" in self.params.keys():
-            for stopword_set in self.params['stopword_sets']:
+            for stopword_set in self.params["stopword_sets"]:
                 slist = None
                 if self.cache and not self.params.get("refresh_stopwords", False):
                     slist = self.cache.read(stopword_set)
                 if not slist:
                     slist = stopword_sets[stopword_set]()
-                    slist = [decode_text(s) for s in slist if len(s) > 2 or stopword_set in ["english", "months", "misc_boilerplate"]]
-                    if stopword_set not in ["english", "months", "misc_boilerplate"]:
-                        final_slist = []
-                        for s in slist:
-                            s = s.lower()
-                            if len(s) > 3 or is_probable_stopword(s) or self.params.get("override_stopword_check", False):
-                                final_slist.append(s)
-                        slist = final_slist
+                    slist = [
+                        decode_text(s)
+                        for s in slist
+                        if len(s) > 2
+                        or stopword_set in ["english", "months", "misc_boilerplate"]
+                    ]
                     if self.cache:
-                        print("Recomputed stopword set {}, saving to local cache".format(stopword_set))
+                        # print(
+                        #     "Recomputed stopword set {}, saving to local cache".format(
+                        #         stopword_set
+                        #     )
+                        # )
                         self.cache.write(stopword_set, slist)
                 stopwords.extend(slist)
         stopwords = list(set(stopwords))
@@ -52,15 +63,27 @@ class Preprocessor(BasicPreprocessor):
         for r in self.params.get("regex_replacers", []):
             replacers.extend(regex_replacers[r]())
         kwargs = {"stopwords": stopwords, "strip_html": True, "replacers": replacers}
-        kwargs.update({k: v for k, v in self.params.items() if k not in ["regex_replacers", "stopword_sets", "regex_filters",
-                                                                         "cache_identifier", "stopword_whitelists", "refresh_stopwords",
-                                                                         "override_stopword_check"]})
+        kwargs.update(
+            {
+                k: v
+                for k, v in self.params.items()
+                if k
+                not in [
+                    "regex_replacers",
+                    "stopword_sets",
+                    "regex_filters",
+                    "cache_identifier",
+                    "stopword_whitelists",
+                    "refresh_stopwords",
+                ]
+            }
+        )
         self.cleaner = TextCleaner(**kwargs)
         self.tokenizer = SentenceTokenizer()
 
         self.regex_filters = []
         if "regex_filters" in self.params.keys():
-            for regex_filter in self.params['regex_filters']:
+            for regex_filter in self.params["regex_filters"]:
                 self.regex_filters.append(regex_filters[regex_filter]())
 
         self.url_regex = re.compile(

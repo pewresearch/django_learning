@@ -2,12 +2,14 @@
   "instructions": "Instructions",
   "qualification_tests": ["test_qualification"],
   "admins": [
-    "pvankessel"
+    "coder1"
   ],
   "coders": [
     {
-      "name": "pvankessel",
-      "is_admin": true
+      "name": "coder1"
+    },
+    {
+      "name": "coder2"
     }
   ],
   "questions": [

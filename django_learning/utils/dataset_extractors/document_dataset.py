@@ -1,21 +1,27 @@
-from django_learning.utils.dataset_extractors.document_coder_dataset import Extractor as DocumentCoderDatasetExtractor
+from django_learning.utils.dataset_extractors.document_coder_dataset import (
+    Extractor as DocumentCoderDatasetExtractor,
+)
 
 
 class Extractor(DocumentCoderDatasetExtractor):
-
     def __init__(self, **kwargs):
 
         super(Extractor, self).__init__(**kwargs)
 
-        self.coder_aggregation_function = kwargs.get("coder_aggregation_function", "mean")
+        self.coder_aggregation_function = kwargs.get(
+            "coder_aggregation_function", "mean"
+        )
 
         self.convert_to_discrete = kwargs.get("convert_to_discrete", False)
         self.threshold = kwargs.get("threshold", None)
         self.base_class_id = kwargs.get("base_class_id", None)
         if self.base_class_id and self.valid_label_ids:
-            try: self.labels.get(pk=self.base_class_id)
+            try:
+                self.labels.get(pk=self.base_class_id)
             except:
-                raise Exception("If you specify a base_class_id, it needs to belong to one of the selected questions")
+                raise Exception(
+                    "If you specify a base_class_id, it needs to belong to one of the selected questions"
+                )
 
         self.index_levels = ["document_id"]
 
@@ -25,6 +31,12 @@ class Extractor(DocumentCoderDatasetExtractor):
 
         if self.coder_aggregation_function == "mean":
             dataset = dataset.groupby("document_id").mean().reset_index()
+        elif self.coder_aggregation_function == "median":
+            dataset = dataset.groupby("document_id").median().reset_index()
+        elif self.coder_aggregation_function == "max":
+            dataset = dataset.groupby("document_id").max().reset_index()
+        elif self.coder_aggregation_function == "min":
+            dataset = dataset.groupby("document_id").min().reset_index()
         else:
             raise Exception("Specify another aggregation function, fool!")
         for col in ["coder_is_mturk", "coder_id"]:
@@ -36,9 +48,21 @@ class Extractor(DocumentCoderDatasetExtractor):
             def get_max(x):
 
                 if self.base_class_id:
-                    max_col, max_val = sorted([(col, x[col]) for col in self.outcome_columns if col != "label_{}".format(self.base_class_id)], key=lambda x: x[1], reverse=True)[0]
+                    max_col, max_val = sorted(
+                        [
+                            (col, x[col])
+                            for col in self.outcome_columns
+                            if col != "label_{}".format(self.base_class_id)
+                        ],
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )[0]
                 else:
-                    max_col, max_val = sorted([(col, x[col]) for col in self.outcome_columns], key=lambda x: x[1], reverse=True)[0]
+                    max_col, max_val = sorted(
+                        [(col, x[col]) for col in self.outcome_columns],
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )[0]
                 if not self.threshold or max_val >= self.threshold:
                     return max_col.split("_")[-1]
                 else:
