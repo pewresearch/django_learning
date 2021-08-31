@@ -22,7 +22,7 @@ with open("requirements.txt") as reqs:
 
 setup(
     name = 'django_learning',
-    version = '0.1.2.dev0',
+    version = '0.1.2',
     description = 'Complete Django framework for manual and automated document classification, machine learning, and more',
     long_description = README, #'http://labs.pewresearch.tech/docs/libs/django_learning',
     url = 'https://github.com/pewresearch/django_learning',
