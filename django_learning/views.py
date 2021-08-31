@@ -18,7 +18,7 @@ from django_commander.utils import run_command_task
 
 from django_learning.exceptions import RequiredResponseException
 from django_learning.models import *
-from django_learning.utils.coding import *
+from django_learning.utils.filters import *
 from django_learning.utils.projects import projects as project_configs
 from django_learning.utils.sampling_frames import (
     sampling_frames as sampling_frame_configs,
@@ -775,16 +775,17 @@ def adjudicate_question(request, project_name, sample_name, question_name):
 
 @login_required
 def view_topic_models(request):
-    topic_models = TopicModel.objects.defer("model", "vectorizer").all()
-    return render(request, "django_learning/topic_models.html", {
-        "topic_models": topic_models
-    })
+
+    topic_models = TopicModel.objects.all()
+    return render(
+        request, "django_learning/topic_models.html", {"topic_models": topic_models}
+    )
 
 
 @login_required
 def edit_topic_model(request, model_id):
 
-    topic_model = TopicModel.objects.defer("model", "vectorizer").get(pk=model_id)
+    topic_model = TopicModel.objects.get(pk=model_id)
 
     if request.method == "POST":
         for topic in topic_model.topics.order_by("num"):

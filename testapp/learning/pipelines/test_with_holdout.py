@@ -7,6 +7,8 @@ from sklearn.impute import SimpleImputer
 
 from django_pewtils import get_model
 
+from testapp.utils import get_base_dataset_parameters
+
 
 def get_pipeline():
 
@@ -23,36 +25,14 @@ def get_pipeline():
     return {
         "dataset_extractor": {
             "name": "document_dataset",
-            "parameters": {
-                "project_name": "test_project",
-                "sandbox": True,
-                "sample_names": ["test_sample"],
-                "question_names": ["test_checkbox"],
-                "document_filters": [],
-                "coder_filters": [("exclude_mturk", [], {})],
-                "base_class_id": base_class_id,
-                "threshold": 0.4,
-                "convert_to_discrete": True,
-                "balancing_variables": [],
-                "ignore_stratification_weights": False,
-            },
+            "parameters": get_base_dataset_parameters("document_dataset"),
             "outcome_column": "label_id",
         },
         "test_dataset_extractor": {
             "name": "document_dataset",
-            "parameters": {
-                "project_name": "test_project",
-                "sandbox": True,
-                "sample_names": ["test_sample_holdout"],
-                "question_names": ["test_checkbox"],
-                "document_filters": [],
-                "coder_filters": [("exclude_mturk", [], {})],
-                "base_class_id": base_class_id,
-                "threshold": 0.4,
-                "convert_to_discrete": True,
-                "balancing_variables": [],
-                "ignore_stratification_weights": False,
-            },
+            "parameters": get_base_dataset_parameters(
+                "document_dataset", sample_name="test_sample_holdout"
+            ),
             "outcome_column": "label_id",
         },
         "model": {
@@ -82,7 +62,7 @@ def get_pipeline():
                 "tfidf_counts": {
                     "sublinear_tf": [False],
                     "max_df": [0.9],
-                    "min_df": [10],
+                    "min_df": [5],
                     "max_features": [None],
                     "ngram_range": [[1, 4]],
                     "use_idf": [True],
@@ -92,10 +72,11 @@ def get_pipeline():
                             (
                                 "clean_text",
                                 {
-                                    "process_method": ["lemmatize"],
+                                    "process_method": "lemmatize",
                                     "regex_filters": [],
                                     "stopword_sets": ["english", "test"],
                                     "stopword_whitelists": ["test"],
+                                    "refresh_stopwords": False,
                                 },
                             )
                         ]
@@ -104,7 +85,7 @@ def get_pipeline():
                 "tfidf_bool": {
                     "sublinear_tf": [False],
                     "max_df": [0.9],
-                    "min_df": [10],
+                    "min_df": [5],
                     "max_features": [None],
                     "ngram_range": [[1, 4]],
                     "use_idf": [False],
@@ -114,10 +95,11 @@ def get_pipeline():
                             (
                                 "clean_text",
                                 {
-                                    "process_method": ["lemmatize"],
+                                    "process_method": "lemmatize",
                                     "regex_filters": [],
                                     "stopword_sets": ["english", "test"],
                                     "stopword_whitelists": ["test"],
+                                    "refresh_stopwords": False,
                                 },
                             )
                         ]

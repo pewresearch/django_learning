@@ -160,7 +160,7 @@ class DocumentManager(QueryModelManager):
         w2v_model = None
 
         cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "word2vec"),
+            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "word2vec"),
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             bucket=settings.S3_BUCKET,
             aws_access=settings.AWS_ACCESS_KEY_ID,
@@ -236,7 +236,7 @@ class DocumentManager(QueryModelManager):
         d2v_model = None
 
         cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "doc2vec"),
+            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "doc2vec"),
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             bucket=settings.S3_BUCKET,
             aws_access=settings.AWS_ACCESS_KEY_ID,

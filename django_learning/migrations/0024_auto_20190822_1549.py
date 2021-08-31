@@ -8,18 +8,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('django_learning', '0023_classificationmodel_test_dataset_cache_hash'),
+        ("django_learning", "0023_classificationmodel_test_dataset_cache_hash")
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='project',
-            name='sandbox',
+            model_name="project",
+            name="sandbox",
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='qualificationtest',
-            name='sandbox',
+            model_name="qualificationtest",
+            name="sandbox",
             field=models.BooleanField(default=False),
         ),
     ]

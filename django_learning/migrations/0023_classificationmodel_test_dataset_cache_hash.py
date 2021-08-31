@@ -7,14 +7,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('django_learning', '0022_auto_20190417_1539'),
-    ]
+    dependencies = [("django_learning", "0022_auto_20190417_1539")]
 
     operations = [
         migrations.AddField(
-            model_name='classificationmodel',
-            name='test_dataset_cache_hash',
+            model_name="classificationmodel",
+            name="test_dataset_cache_hash",
             field=models.CharField(max_length=256, null=True),
-        ),
+        )
     ]

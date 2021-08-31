@@ -80,7 +80,7 @@ class ClassificationModel(LearningModel):
 
             # total_weight = sum(class_weights.values())
             # class_weights = {k: float(v) / float(total_weight) for k, v in class_weights.items()}
-            print("Class weights: {}".format(class_weights))
+            # print("Class weights: {}".format(class_weights))
             self.dataset["training_weight"] = self.dataset.apply(
                 lambda x: x["training_weight"]
                 * class_weights[x[self.dataset_extractor.outcome_column]],
@@ -122,15 +122,19 @@ class ClassificationModel(LearningModel):
                 if coefs:
                     if len(class_labels) == 2:
                         top_features[0] = sorted(zip(coefs[0], feature_names))[:n]
-                        top_features[1] = sorted(zip(coefs[0], feature_names))[: -(n + 1) : -1]
+                        top_features[1] = sorted(zip(coefs[0], feature_names))[
+                            : -(n + 1) : -1
+                        ]
                     else:
                         for i, class_label in enumerate(class_labels):
-                            top_features[class_label] = sorted(zip(coefs[i], feature_names))[
-                                -n:
-                            ]
+                            top_features[class_label] = sorted(
+                                zip(coefs[i], feature_names)
+                            )[-n:]
         except KeyError:
             pass
-        if len(top_features.keys()) == 0 and hasattr(steps["model"], "feature_importances_"):
+        if len(top_features.keys()) == 0 and hasattr(
+            steps["model"], "feature_importances_"
+        ):
             top_features["n/a"] = sorted(
                 zip(steps["model"].feature_importances_, feature_names)
             )[: -(n + 1) : -1]
@@ -157,9 +161,11 @@ class ClassificationModel(LearningModel):
         else:
             return None
 
-    def print_test_prediction_report(self):
+    def print_test_prediction_report(self, refresh=False, only_load_existing=True):
 
-        results = self.get_test_prediction_results()
+        results = self.get_test_prediction_results(
+            refresh=refresh, only_load_existing=only_load_existing
+        )
 
         report = classification_report(
             self.test_dataset[self.dataset_extractor.outcome_column],
@@ -222,25 +228,32 @@ class ClassificationModel(LearningModel):
         self.predict_dataset = None
         if is_not_null(self.dataset):
             self.predict_dataset = self.produce_prediction_dataset(
-                self.dataset,
-                cache_key="predict_all",
-                refresh=refresh,
-                only_load_existing=only_load_existing,
+                self.dataset, refresh=refresh, only_load_existing=only_load_existing
             )
         merged = self.dataset.merge(
-            self.predict_dataset[["document_id", "label_id"]],
+            self.predict_dataset[
+                ["document_id", self.dataset_extractor.outcome_column]
+            ],
             how="left",
             on="document_id",
             suffixes=("_test", "_predict"),
         )
-        incorrect = merged[merged["label_id_test"] != merged["label_id_predict"]]
+        incorrect = merged[
+            merged["{}_test".format(self.dataset_extractor.outcome_column)]
+            != merged["{}_predict".format(self.dataset_extractor.outcome_column)]
+        ]
         if correct_label_id:
-            incorrect = incorrect[incorrect["label_id_test"] == correct_label_id]
+            incorrect = incorrect[
+                incorrect["{}_test".format(self.dataset_extractor.outcome_column)]
+                == correct_label_id
+            ]
 
         return incorrect
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
+    def get_cv_prediction_results(
+        self, refresh=False, only_load_existing=False, return_averages=True
+    ):
 
         print("Computing cross-fold predictions")
         _final_model = self.model
@@ -309,13 +322,14 @@ class ClassificationModel(LearningModel):
             return None
         else:
             fold_score_df = pandas.concat(all_fold_scores)
-            fold_score_df = pandas.concat(
-                [
-                    all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-                    fold_score_df.groupby(fold_score_df.index).mean(),
-                ],
-                axis=1,
-            )
+            if return_averages:
+                fold_score_df = pandas.concat(
+                    [
+                        all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                        fold_score_df.groupby(fold_score_df.index).mean(),
+                    ],
+                    axis=1,
+                )
             return fold_score_df
 
     def find_probability_threshold(self, metric="precision_recall_min", save=False):
@@ -349,6 +363,8 @@ class ClassificationModel(LearningModel):
                 only_load_existing=True,
                 ignore_probability_threshold=True,
             )
+            if "probability" not in predict_dataset.columns:
+                raise Exception("This model does not produce probabilities")
             test_threshold_scores = None
             if is_not_null(predict_dataset):
                 test_threshold_scores = get_probability_threshold_score_df(
@@ -373,10 +389,10 @@ class ClassificationModel(LearningModel):
                 # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
                 fold_train_dataset = dataset.loc[
                     pandas.Series(dataset.index).iloc[fold_train_index].values
-                ]  # self.dataset.loc[fold_train_index]
+                ]  # self.dataset.ix[fold_train_index]
                 fold_test_dataset = dataset.loc[
                     pandas.Series(dataset.index).iloc[fold_test_index].values
-                ]  # self.dataset.loc[fold_test_index]
+                ]  # self.dataset.ix[fold_test_index]
 
                 fold_predict_dataset = self.produce_prediction_dataset(
                     fold_test_dataset,
@@ -664,14 +680,26 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
                 list(self.classifications.values_list("document_id", flat=True))
             )
             doc_ids = doc_ids.difference(existing_doc_ids)
-        self.apply_model_to_documents_multiprocessed(
-            list(doc_ids),
-            save=save,
-            document_filters=document_filters,
-            refresh=True,
-            num_cores=num_cores,
-            chunk_size=chunk_size,
-        )
+        if num_cores > 1:
+            self.apply_model_to_documents_multiprocessed(
+                get_model("Document", app_name="django_learning").objects.filter(
+                    pk__in=doc_ids
+                ),
+                save=save,
+                document_filters=document_filters,
+                refresh=True,
+                num_cores=num_cores,
+                chunk_size=chunk_size,
+            )
+        else:
+            self.apply_model_to_documents(
+                get_model("Document", app_name="django_learning").objects.filter(
+                    pk__in=doc_ids
+                ),
+                save=save,
+                document_filters=document_filters,
+                refresh=True,
+            )
 
     def update_classifications_with_probability_threshold(self):
 

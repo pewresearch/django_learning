@@ -94,7 +94,9 @@ class SamplingFrame(LoggedExtendedModel):
     def get_sampling_flags(self, refresh=False, sampling_search_subset=None):
 
         cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "sampling_frame_flags"),
+            os.path.join(
+                settings.DJANGO_LEARNING_S3_CACHE_PATH, "sampling_frame_flags"
+            ),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,
@@ -126,24 +128,25 @@ class SamplingFrame(LoggedExtendedModel):
             # print("Recomputing frame sampling flags")
 
             vals = (
-                ["pk", "text"]
+                ["pk", "text", "date"]
                 + stratification_variables
-                + [a["field_lookup"] for a in additional_variables.values()]
+                + list(set([a["field_lookup"] for a in additional_variables.values()]))
             )
             frame = pandas.DataFrame.from_records(self.documents.values(*vals))
 
             if len(sampling_searches) > 0:
                 regex_patterns = {
-                    search_name: regex_filters[search_name]().pattern
+                    search_name: regex_filters[search_name]()
                     for search_name in sampling_searches
                 }
-                frame["search_none"] = ~frame["text"].str.contains(
-                    r"|".join(regex_patterns.values())
-                )
+
                 for search_name, search_pattern in regex_patterns.items():
                     frame["search_{}".format(search_name)] = frame["text"].str.contains(
                         search_pattern
                     )
+                frame['flag_counts'] = frame[["search_{}".format(search_name) for search_name in regex_patterns.keys()]].astype(int).sum(axis=1)
+                frame["search_none"] = (frame['flag_counts'] == 0)
+                del frame['flag_counts']
 
             for name, additional in additional_variables.items():
                 frame[name] = frame[additional["field_lookup"]].map(
@@ -181,12 +184,6 @@ class Sample(LoggedExtendedModel):
         "django_learning.Project", related_name="samples", on_delete=models.CASCADE
     )
 
-    hit_type = models.ForeignKey(
-        "django_learning.HITType",
-        related_name="samples",
-        on_delete=models.SET_NULL,
-        null=True,
-    )
     frame = models.ForeignKey(
         "django_learning.SamplingFrame",
         related_name="samples",
@@ -220,13 +217,12 @@ class Sample(LoggedExtendedModel):
     def __str__(self):
 
         if not self.parent:
-            return "{}: sample '{}', {} documents using '{}' from {}, HITType {}".format(
+            return "{}: sample '{}', {} documents using '{}' from {}".format(
                 self.project,
                 self.name,
                 self.documents.count(),
                 self.sampling_method,
                 self.frame,
-                self.hit_type,
             )
         else:
             return "Subsample '{}' from {}, {} documents".format(
@@ -314,6 +310,8 @@ class Sample(LoggedExtendedModel):
                 frame = self.frame.get_sampling_flags(
                     sampling_search_subset=params.get("sampling_searches", None)
                 )
+                if stratify_by and stratify_by not in frame.columns:
+                    raise KeyError()
             except KeyError:
                 frame = self.frame.get_sampling_flags(
                     sampling_search_subset=params.get("sampling_searches", None),
@@ -344,12 +342,11 @@ class Sample(LoggedExtendedModel):
                 if not use_keyword_searches:
 
                     sample_chunks.append(
-                        SampleExtractor(
+                        SampleExtractor(frame, "pk", seed=seed).extract(
+                            min([len(frame), int(size)]),
                             sampling_strategy=params["sampling_strategy"],
-                            id_col="pk",
                             stratify_by=stratify_by,
-                            seed=seed,
-                        ).extract(frame, sample_size=int(size))
+                        )
                     )
 
                 else:
@@ -361,30 +358,32 @@ class Sample(LoggedExtendedModel):
                             for search, p in params["sampling_searches"].items()
                         ]
                     )
-                    sample_chunks.append(
-                        SampleExtractor(
-                            sampling_strategy=params["sampling_strategy"],
-                            id_col="pk",
-                            stratify_by=stratify_by,
-                            seed=seed,
-                        ).extract(
-                            frame[frame["search_none"] == 1],
-                            sample_size=int(
-                                math.ceil(float(size) * non_search_sample_size)
-                            ),
+                    if non_search_sample_size > 0:
+                        subset = frame[frame["search_none"] == 1]
+                        sample_size = min(
+                            [
+                                len(subset),
+                                int(math.ceil(float(size) * non_search_sample_size)),
+                            ]
                         )
-                    )
+                        sample_chunks.append(
+                            SampleExtractor(subset, "pk", seed=seed).extract(
+                                sample_size,
+                                sampling_strategy=params["sampling_strategy"],
+                                stratify_by=stratify_by,
+                            )
+                        )
 
                     for search, p in params["sampling_searches"].items():
+                        subset = frame[frame["search_{}".format(search)] == 1]
+                        sample_size = min(
+                            [len(subset), int(math.ceil(size * p["proportion"]))]
+                        )
                         sample_chunks.append(
-                            SampleExtractor(
+                            SampleExtractor(subset, "pk", seed=seed).extract(
+                                sample_size,
                                 sampling_strategy=params["sampling_strategy"],
-                                id_col="pk",
                                 stratify_by=stratify_by,
-                                seed=seed,
-                            ).extract(
-                                frame[frame["search_{}".format(search)] == 1],
-                                sample_size=int(math.ceil(size * p["proportion"])),
                             )
                         )
 

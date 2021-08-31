@@ -9,7 +9,7 @@ def scorer(y_true, y_pred, sample_weight=None):
 
     labels = list(set(np.unique(y_true)).union(set(np.unique(y_pred))))
     metrics = []
-    for value in set(y_true.values):
+    for value in set(y_true):
         metrics.append(
             precision_score(
                 y_true,

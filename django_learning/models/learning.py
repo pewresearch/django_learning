@@ -9,7 +9,7 @@ from collections import OrderedDict
 from tempfile import mkdtemp
 from shutil import rmtree
 
-from sklearn.model_selection import KFold, train_test_split, GridSearchCV
+from sklearn.model_selection import StratifiedKFold, train_test_split, GridSearchCV
 from sklearn.metrics import (
     f1_score,
     precision_score,
@@ -88,7 +88,7 @@ class LearningModel(LoggedExtendedModel):
 
         self.cache = CacheHandler(
             os.path.join(
-                settings.S3_CACHE_PATH,
+                settings.DJANGO_LEARNING_S3_CACHE_PATH,
                 "learning_models/{}".format(self.cache_identifier),
             ),
             hash=False,
@@ -98,7 +98,7 @@ class LearningModel(LoggedExtendedModel):
             bucket=settings.S3_BUCKET,
         )
         self.dataset_cache = CacheHandler(
-            os.path.join(settings.S3_CACHE_PATH, "datasets"),
+            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "datasets"),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             aws_access=settings.AWS_ACCESS_KEY_ID,
@@ -107,7 +107,7 @@ class LearningModel(LoggedExtendedModel):
         )
         self.temp_cache = CacheHandler(
             os.path.join(
-                settings.LOCAL_CACHE_PATH,
+                settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
                 "feature_extractors/{}".format(self.cache_identifier),
             ),
             hash=False,
@@ -415,7 +415,7 @@ class LearningModel(LoggedExtendedModel):
             sklearn_cache = mkdtemp(
                 prefix="sklearn",
                 dir=os.path.join(
-                    settings.LOCAL_CACHE_PATH,
+                    settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
                     "feature_extractors/{}".format(self.cache_identifier),
                 ),
             )
@@ -489,12 +489,18 @@ class LearningModel(LoggedExtendedModel):
             )
             return scores
 
-    def print_test_prediction_report(self):
+    def print_test_prediction_report(self, refresh=False, only_load_existing=True):
 
-        print(self.get_test_prediction_results())
+        print(
+            self.get_test_prediction_results(
+                refresh=refresh, only_load_existing=only_load_existing
+            )
+        )
 
     @require_model
-    def get_cv_prediction_results(self, refresh=False, only_load_existing=False):
+    def get_cv_prediction_results(
+        self, refresh=False, only_load_existing=False, return_averages=True
+    ):
 
         print("Computing cross-fold predictions")
         _final_model = self.model
@@ -505,7 +511,7 @@ class LearningModel(LoggedExtendedModel):
         if refresh or not self.cv_folds:
             self.cv_folds = [
                 f
-                for f in KFold(
+                for f in StratifiedKFold(
                     len(dataset.index),
                     n_folds=self.parameters["model"].get("cv", 5),
                     shuffle=True,
@@ -556,18 +562,28 @@ class LearningModel(LoggedExtendedModel):
             return None
         else:
             fold_score_df = pandas.concat(all_fold_scores)
-            fold_score_df = pandas.concat(
-                [
-                    all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-                    fold_score_df.groupby(fold_score_df.index).mean(),
-                ],
-                axis=1,
-            )
+            if return_averages:
+                fold_score_df = pandas.concat(
+                    [
+                        all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                        fold_score_df.groupby(fold_score_df.index).mean(),
+                    ],
+                    axis=1,
+                )
+
             return fold_score_df
 
-    def print_cv_prediction_report(self):
+    def print_cv_prediction_report(
+        self, refresh=False, only_load_existing=True, return_averages=True
+    ):
 
-        print(self.get_cv_prediction_results())
+        print(
+            self.get_cv_prediction_results(
+                refresh=refresh,
+                only_load_existing=only_load_existing,
+                return_averages=return_averages,
+            )
+        )
 
     def _get_scoring_function(self, func_name, binary_base_code=None):
 
@@ -703,8 +719,10 @@ class LearningModel(LoggedExtendedModel):
             keep_cols = []
 
         predictions = self.model.predict(data)
+        has_probabilities = False
         try:
             probabilities = self.model.predict_proba(data)
+            has_probabilities = True
         except AttributeError:
             probabilities = [None] * len(data)
 
@@ -717,7 +735,11 @@ class LearningModel(LoggedExtendedModel):
                 label[col] = data.loc[index, col]
             labels.append(label)
 
-        return pandas.DataFrame(labels, index=data.index)
+        labels = pandas.DataFrame(labels, index=data.index)
+        if not has_probabilities:
+            del labels["probability"]
+
+        return labels
 
     @require_model
     def produce_prediction_dataset(

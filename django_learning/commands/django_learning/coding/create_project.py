@@ -17,7 +17,12 @@ class Command(BasicCommand):
 
     def run(self):
 
-        project = Project.objects.create_or_update({"name": self.parameters["project_name"], "sandbox": self.options["sandbox"]})
+        project = Project.objects.create_or_update(
+            {
+                "name": self.parameters["project_name"],
+                "sandbox": self.options["sandbox"],
+            }
+        )
         project.save()
         print("Created/updated project '{}'".format(project))
 

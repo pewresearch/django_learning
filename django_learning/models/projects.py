@@ -8,14 +8,12 @@ from pewtils import is_not_null
 from django_pewtils import get_model
 
 from django_commander.models import LoggedExtendedModel
-
 from django_learning.managers import QuestionManager
 from django_learning.exceptions import RequiredResponseException
 from django_learning.utils import projects
-from django_learning.utils import project_hit_types
+from django_learning.utils import dataset_extractors
 from django_learning.utils import project_qualification_tests
 from django_learning.utils import project_qualification_scorers
-from django_learning.utils import dataset_extractors
 
 try:
     from importlib import reload
@@ -87,8 +85,6 @@ class Project(LoggedExtendedModel):
         admin_names = [c for c in config.get("admins", [])]
         coder_names = list(admin_names)
         for c in config.get("coders", []):
-            if c["is_admin"] and c["name"] not in admin_names:
-                admin_names.append(c["name"])
             coder_names.append(c["name"])
 
         coders = []
@@ -100,6 +96,7 @@ class Project(LoggedExtendedModel):
                 user = User.objects.create_user(
                     c, "{}@pewresearch.org".format(c), "pass"
                 )
+                # TODO: build in better user management
             coder = get_model("Coder").objects.create_or_update(
                 {"name": c}, {"is_mturk": False, "user": user}
             )
@@ -335,7 +332,6 @@ class Example(LoggedExtendedModel):
 
 
 class QualificationTest(LoggedExtendedModel):
-
     name = models.CharField(max_length=50)
     coders = models.ManyToManyField(
         "django_learning.Coder",
@@ -405,7 +401,6 @@ class QualificationTest(LoggedExtendedModel):
 
 
 class QualificationAssignment(LoggedExtendedModel):
-
     test = models.ForeignKey(
         "django_learning.QualificationTest",
         related_name="assignments",
@@ -421,54 +416,3 @@ class QualificationAssignment(LoggedExtendedModel):
     time_finished = models.DateTimeField(null=True)
     turk_id = models.CharField(max_length=250, null=True)
     turk_status = models.CharField(max_length=40, null=True)
-
-
-class HITType(LoggedExtendedModel):
-
-    project = models.ForeignKey(
-        "django_learning.Project", related_name="hit_types", on_delete=models.CASCADE
-    )
-    name = models.CharField(max_length=250)
-
-    title = models.TextField(null=True)
-    description = models.TextField(null=True)
-    keywords = ArrayField(models.TextField(), default=list)
-    price = models.FloatField(null=True)
-    approval_wait_hours = models.IntegerField(null=True)
-    duration_minutes = models.IntegerField(null=True)
-    lifetime_days = models.IntegerField(null=True)
-    min_approve_pct = models.FloatField(null=True)
-    min_approve_cnt = models.IntegerField(null=True)
-
-    turk_id = models.CharField(max_length=250, unique=True, null=True)
-
-    class Meta:
-        unique_together = ("project", "name")
-
-    def __str__(self):
-        return "{}: {}".format(self.project, self.name)
-
-    def save(self, *args, **kwargs):
-
-        if self.name not in project_hit_types.project_hit_types.keys():
-            raise Exception(
-                "HIT Type '{}' is not defined in any of the known folders".format(
-                    self.name
-                )
-            )
-
-        config = project_hit_types.project_hit_types[self.name]
-        for attr in [
-            "title",
-            "description",
-            "price",
-            "approval_wait_hours",
-            "duration_minutes",
-            "lifetime_days",
-            "min_approve_pct",
-            "min_approve_cnt",
-        ]:
-            val = config.get(attr, None)
-            setattr(self, attr, val)
-
-        super(HITType, self).save(*args, **kwargs)

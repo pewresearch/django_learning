@@ -2,19 +2,20 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 from django_commander.commands import BasicCommand
-from django_learning.models import Project, Sample
+from django_learning.models import Project, Sample, HITType
 from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
 
-    parameter_names = ["project_name", "sample_name"]
+    parameter_names = ["project_name", "sample_name", "hit_type_name"]
     dependencies = []
 
     @staticmethod
     def add_arguments(parser):
         parser.add_argument("project_name", type=str)
         parser.add_argument("sample_name", type=str)
+        parser.add_argument("hit_type_name", type=str)
         parser.add_argument("--num_coders", default=1, type=int)
         parser.add_argument("--template_name", default=None, type=str)
         parser.add_argument("--sandbox", default=False, action="store_true")
@@ -33,12 +34,17 @@ class Command(BasicCommand):
             name=self.parameters["sample_name"], project=project
         )
 
+        hit_type = HITType.objects.create_or_update(
+            {"project": project, "name": self.parameters["hit_type_name"]}
+        )
+
         mturk = MTurk(sandbox=self.options["sandbox"])
-        if not sample.hit_type.turk_id or self.options["force_hit_type_reset"]:
-            mturk.sync_hit_type(sample.hit_type)
+        if not hit_type.turk_id or self.options["force_hit_type_reset"]:
+            mturk.sync_hit_type(hit_type)
 
         mturk.create_sample_hits(
             sample,
+            hit_type,
             num_coders=self.options["num_coders"],
             template_name=self.options["template_name"],
         )
