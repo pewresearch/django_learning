@@ -150,7 +150,9 @@ def update_frame_and_expand_samples(frame_name):
 
     # TODO: this doesn't properly support all sampling methods like stratify_guaranteed and stratify_even
 
-    frame_obj = get_model("SamplingFrame", app_name="django_learning").objects.get(name=frame_name)
+    frame_obj = get_model("SamplingFrame", app_name="django_learning").objects.get(
+        name=frame_name
+    )
     old_frame = frame_obj.get_sampling_flags()
     frame_obj.extract_documents(refresh=True)
     new_frame = frame_obj.get_sampling_flags(refresh=True)
@@ -165,8 +167,8 @@ def update_frame_and_expand_samples(frame_name):
 
             weight_vars = []
             if (
-                    "sampling_searches" in params.keys()
-                    and len(params["sampling_searches"].keys()) > 0
+                "sampling_searches" in params.keys()
+                and len(params["sampling_searches"].keys()) > 0
             ):
                 weight_vars.append("search_none")
                 weight_vars.extend(
@@ -182,54 +184,79 @@ def update_frame_and_expand_samples(frame_name):
             )
 
             if params.get("stratify_by", None):
-                dummies = pd.get_dummies(new_frame[params.get("stratify_by")], prefix=params.get("stratify_by", None))
+                dummies = pd.get_dummies(
+                    new_frame[params.get("stratify_by")],
+                    prefix=params.get("stratify_by", None),
+                )
                 weight_vars.extend(dummies.columns)
                 new_frame = new_frame.join(dummies)
 
-            old_frame['count'] = 1
-            new_frame['count'] = 1
+            old_frame["count"] = 1
+            new_frame["count"] = 1
             existing_doc_ids = s.documents.values_list("pk", flat=True)
-            sample = new_frame[new_frame['pk'].isin(existing_doc_ids)]
+            sample = new_frame[new_frame["pk"].isin(existing_doc_ids)]
 
-            EXPANSION_PCT = ((len(new_frame) - len(old_frame)) / len(old_frame))
+            EXPANSION_PCT = (len(new_frame) - len(old_frame)) / len(old_frame)
             NEW_SAMPLE_SIZE = round(EXPANSION_PCT * len(sample))
             print(
-                "Sampling frame expanded by {}, adding {} new cases to sample of {}".format(EXPANSION_PCT, NEW_SAMPLE_SIZE,
-                                                                                            len(sample)))
+                "Sampling frame expanded by {}, adding {} new cases to sample of {}".format(
+                    EXPANSION_PCT, NEW_SAMPLE_SIZE, len(sample)
+                )
+            )
 
             if len(weight_vars) > 0:
 
-                frame_counts = new_frame.groupby(weight_vars)['count'].sum()
-                frame_pct = frame_counts / new_frame['count'].sum()
-                sample_counts = sample.groupby(weight_vars)['count'].sum()
-                sample_pct = sample_counts / sample['count'].sum()
-                pcts = pd.concat([frame_pct, frame_counts, sample_pct, sample_counts], axis=1).fillna(0.0)
-                pcts.columns = ["frame_pct", "frame_count", "sample_pct", "sample_count"]
-                pcts['num_to_add'] = ((pcts['frame_pct'] * (NEW_SAMPLE_SIZE + len(sample))).round()) - pcts['sample_count']
-                pcts['num_to_add'] = pcts['num_to_add'].map(lambda x: max([0.0, x]))
+                frame_counts = new_frame.groupby(weight_vars)["count"].sum()
+                frame_pct = frame_counts / new_frame["count"].sum()
+                sample_counts = sample.groupby(weight_vars)["count"].sum()
+                sample_pct = sample_counts / sample["count"].sum()
+                pcts = pd.concat(
+                    [frame_pct, frame_counts, sample_pct, sample_counts], axis=1
+                ).fillna(0.0)
+                pcts.columns = [
+                    "frame_pct",
+                    "frame_count",
+                    "sample_pct",
+                    "sample_count",
+                ]
+                pcts["num_to_add"] = (
+                    (pcts["frame_pct"] * (NEW_SAMPLE_SIZE + len(sample))).round()
+                ) - pcts["sample_count"]
+                pcts["num_to_add"] = pcts["num_to_add"].map(lambda x: max([0.0, x]))
                 for strata, rows in new_frame.groupby(weight_vars):
-                    sample = pd.concat([
-                        sample,
-                        rows[~rows['pk'].isin(existing_doc_ids)].sample(int(pcts.loc[strata]['num_to_add']))
-                    ])
+                    sample = pd.concat(
+                        [
+                            sample,
+                            rows[~rows["pk"].isin(existing_doc_ids)].sample(
+                                int(pcts.loc[strata]["num_to_add"])
+                            ),
+                        ]
+                    )
 
             else:
-                sample = pd.concat([
-                    sample,
-                    new_frame[~new_frame['pk'].isin(existing_doc_ids)].sample(int(NEW_SAMPLE_SIZE))
-                ])
+                sample = pd.concat(
+                    [
+                        sample,
+                        new_frame[~new_frame["pk"].isin(existing_doc_ids)].sample(
+                            int(NEW_SAMPLE_SIZE)
+                        ),
+                    ]
+                )
 
-            sample['weight'] = list(
+            sample["weight"] = list(
                 compute_sample_weights_from_frame(new_frame, sample, weight_vars)
             )
 
             for index, row in tqdm(sample.iterrows(), desc="Updating sample documents"):
-                get_model("SampleUnit", app_name="django_learning").objects.create_or_update(
+                get_model(
+                    "SampleUnit", app_name="django_learning"
+                ).objects.create_or_update(
                     {"document_id": row["pk"], "sample": s},
                     {"weight": row["weight"]},
                     return_object=False,
                     save_nulls=False,
                 )
+
 
 #         frame_counts = new_frame.groupby(weight_vars)['count'].sum()
 #         frame_pct = frame_counts / new_frame['count'].sum()

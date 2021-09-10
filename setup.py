@@ -3,7 +3,7 @@ import os
 from setuptools import setup, find_packages
 
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md'), "rb") as readme:
+with open(os.path.join(os.path.dirname(__file__), "README.md"), "rb") as readme:
     README = str(readme.read())
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
@@ -21,16 +21,16 @@ with open("requirements.txt") as reqs:
     ]
 
 setup(
-    name = 'django_learning',
-    version = '0.1.4.dev0',
-    description = 'Complete Django framework for manual and automated document classification, machine learning, and more',
-    long_description = README, #'http://labs.pewresearch.tech/docs/libs/django_learning',
-    url = 'https://github.com/pewresearch/django_learning',
-    author = 'Pew Research Center',
-    author_email = 'admin@pewresearch.tech',
-    install_requires = install_requires,
-    dependency_links = dependency_links,
-    packages = find_packages(exclude = ['contrib', 'docs', 'tests']),
+    name="django_learning",
+    version="0.1.4.dev0",
+    description="Complete Django framework for manual and automated document classification, machine learning, and more",
+    long_description=README,  # 'http://labs.pewresearch.tech/docs/libs/django_learning',
+    url="https://github.com/pewresearch/django_learning",
+    author="Pew Research Center",
+    author_email="admin@pewresearch.tech",
+    install_requires=install_requires,
+    dependency_links=dependency_links,
+    packages=find_packages(exclude=["contrib", "docs", "tests"]),
     include_package_data=True,
     classifiers=[
         "Environment :: Web Environment",

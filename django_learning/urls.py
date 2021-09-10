@@ -60,7 +60,6 @@ urlpatterns = [
         views.view_sample,
         name="view_sample",
     ),
-
     re_path(
         r"^project/(?P<project_name>[\w\_\-]+)", views.view_project, name="view_project"
     ),
