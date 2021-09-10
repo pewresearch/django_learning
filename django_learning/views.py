@@ -1,9 +1,11 @@
 from builtins import str
 import random, datetime, os
+import pandas as pd
 
 from io import StringIO
 
 from django.shortcuts import render, redirect
+from django.http import HttpResponse
 from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate
@@ -320,6 +322,34 @@ def view_sample(request, project_name, sample_name):
             # "mturk_coder_completion": mturk_coder_completion
         },
     )
+
+
+@login_required
+def download_sample(request, project_name, sample_name):
+
+    project = Project.objects.get(name=project_name)
+    sample = project.samples.get(name=sample_name)
+
+    dfs = []
+    for question in project.questions.all():
+        # Extract the codes for each question
+        extractor = dataset_extractors["document_coder_label_dataset"](
+            project_name=project.name,
+            sample_names=[sample_name],
+            question_names=[question.name],
+            coder_filters=[],
+            exclude_consensus_ignore=False,
+        )
+        df = extractor.extract(refresh=True)
+        dfs.append(df[['coder_name', 'document_id', 'label_value']].rename(columns={"label_value": question.name}))
+    # Smoosh it all together so there's a column for each code
+    df = pd.concat([df.set_index(['coder_name', 'document_id']) for df in dfs], axis=1).reset_index()
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename={}.csv'.format(sample_name)
+    df.to_csv(path_or_buf=response, encoding="utf8", index=False)
+
+    return response
 
 
 @login_required
