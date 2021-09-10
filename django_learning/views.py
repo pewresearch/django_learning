@@ -16,7 +16,7 @@ from django.http import StreamingHttpResponse
 from django.conf import settings
 from django.utils import timezone
 
-from django_commander.utils import run_command_task
+from django_commander.utils import run_command_async
 
 from django_learning.exceptions import RequiredResponseException
 from django_learning.models import *
@@ -107,7 +107,7 @@ def view_project(request, project_name):
 @login_required
 def create_project(request, project_name):
 
-    run_command_task.delay("create_project", {"project_name": project_name})
+    run_command_async("create_project", **{"project_name": project_name})
 
     return home(request)
 
@@ -201,9 +201,9 @@ def view_sampling_frame(request, sampling_frame_name):
 @login_required
 def extract_sampling_frame(request, sampling_frame_name):
 
-    run_command_task.delay(
+    run_command_async(
         "extract_sampling_frame",
-        {"sampling_frame_name": sampling_frame_name, "refresh": True},
+        **{"sampling_frame_name": sampling_frame_name, "refresh": True}
     )
 
     return view_sampling_frame(request, sampling_frame_name)
@@ -215,9 +215,9 @@ def extract_sample(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_task.delay(
+        run_command_async(
             "extract_sample",
-            {
+            **{
                 "project_name": project_name,
                 "hit_type_name": request.POST.get("hit_type_name"),
                 "sample_name": request.POST.get("sample_name"),
@@ -227,7 +227,7 @@ def extract_sample(request, project_name):
                 "allow_overlap_with_existing_project_samples": bool(
                     request.POST.get("allow_overlap_with_existing_project_samples")
                 ),
-            },
+            }
         )
 
     return view_project(request, project_name)
@@ -358,13 +358,13 @@ def create_sample_hits_experts(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_task.delay(
+        run_command_async(
             "create_sample_hits_experts",
-            {
+            **{
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
-            },
+            }
         )
 
     return view_sample(request, project_name, request.POST.get("sample_name"))
@@ -376,14 +376,14 @@ def create_sample_hits_mturk(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_task.delay(
+        run_command_async(
             "create_sample_hits_mturk",
-            {
+            **{
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
                 "sandbox": bool(request.POST.get("sandbox")),
-            },
+            }
         )
 
     return view_sample(request, project_name, request.POST.get("sample_name"))
