@@ -341,12 +341,18 @@ def download_sample(request, project_name, sample_name):
             exclude_consensus_ignore=False,
         )
         df = extractor.extract(refresh=True)
-        dfs.append(df[['coder_name', 'document_id', 'label_value']].rename(columns={"label_value": question.name}))
+        dfs.append(
+            df[["coder_name", "document_id", "label_value"]].rename(
+                columns={"label_value": question.name}
+            )
+        )
     # Smoosh it all together so there's a column for each code
-    df = pd.concat([df.set_index(['coder_name', 'document_id']) for df in dfs], axis=1).reset_index()
+    df = pd.concat(
+        [df.set_index(["coder_name", "document_id"]) for df in dfs], axis=1
+    ).reset_index()
 
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename={}.csv'.format(sample_name)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename={}.csv".format(sample_name)
     df.to_csv(path_or_buf=response, encoding="utf8", index=False)
 
     return response
