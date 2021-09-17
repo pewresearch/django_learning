@@ -344,6 +344,12 @@ def download_sample(request, project_name, sample_name):
         dfs.append(df[['coder_name', 'document_id', 'label_value']].rename(columns={"label_value": question.name}))
     # Smoosh it all together so there's a column for each code
     df = pd.concat([df.set_index(['coder_name', 'document_id']) for df in dfs], axis=1).reset_index()
+    notes = pd.DataFrame.from_records(
+        Assignment.objects.filter(sample__name=sample_name).values(
+            "coder__name", "hit__sample_unit__document_id", "uncodeable", "notes"
+        )
+    ).rename(columns={"coder__name": "coder_name", "hit__sample_unit__document_id": "document_id"})
+    df = df.merge(notes, how="left", on=("coder_name", "document_id"))
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename={}.csv'.format(sample_name)
