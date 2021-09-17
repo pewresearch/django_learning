@@ -26,7 +26,7 @@ from django_learning.models import (
     HIT,
     Coder,
     Question,
-    Assignnment,
+    Assignment,
     Code,
     Document,
     QualificationTest,
