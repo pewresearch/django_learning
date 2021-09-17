@@ -19,8 +19,21 @@ from django.utils import timezone
 from django_commander.utils import run_command_async
 
 from django_learning.exceptions import RequiredResponseException
-from django_learning.models import *
-from django_learning.utils.filters import *
+from django_learning.models import (
+    Project,
+    SamplingFrame,
+    Sample,
+    HIT,
+    Coder,
+    Question,
+    Assignnment,
+    Code,
+    Document,
+    QualificationTest,
+    QualificationAssignment,
+)
+
+from django_learning.utils.filters import filter_hits, filter_assignments, filter_coders
 from django_learning.utils.projects import projects as project_configs
 from django_learning.utils.sampling_frames import (
     sampling_frames as sampling_frame_configs,
@@ -31,6 +44,7 @@ from django_learning.utils.sampling_methods import (
 from django_learning.utils.project_hit_types import (
     project_hit_types as project_hit_type_configs,
 )
+from django_learning.utils.dataset_extractors import dataset_extractors
 
 from pewtils import is_not_null
 from django_pewtils import get_model
@@ -341,9 +355,15 @@ def download_sample(request, project_name, sample_name):
             exclude_consensus_ignore=False,
         )
         df = extractor.extract(refresh=True)
-        dfs.append(df[['coder_name', 'document_id', 'label_value']].rename(columns={"label_value": question.name}))
+        dfs.append(
+            df[["coder_name", "document_id", "label_value"]].rename(
+                columns={"label_value": question.name}
+            )
+        )
     # Smoosh it all together so there's a column for each code
-    df = pd.concat([df.set_index(['coder_name', 'document_id']) for df in dfs], axis=1).reset_index()
+    df = pd.concat(
+        [df.set_index(["coder_name", "document_id"]) for df in dfs], axis=1
+    ).reset_index()
     notes = pd.DataFrame.from_records(
         Assignment.objects.filter(sample__name=sample_name).values(
             "coder__name", "hit__sample_unit__document_id", "uncodeable", "notes"
@@ -351,8 +371,8 @@ def download_sample(request, project_name, sample_name):
     ).rename(columns={"coder__name": "coder_name", "hit__sample_unit__document_id": "document_id"})
     df = df.merge(notes, how="left", on=("coder_name", "document_id"))
 
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename={}.csv'.format(sample_name)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename={}.csv".format(sample_name)
     df.to_csv(path_or_buf=response, encoding="utf8", index=False)
 
     return response
