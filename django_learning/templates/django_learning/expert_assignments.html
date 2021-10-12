@@ -26,7 +26,7 @@
                                 <td>{{ a.time_finished }}</td>
                                 <td>{{ a.coder.name }}</td>
                                 <td>
-                                    <a class="btn btn-primary" href="{% url 'django_learning:code_specific_assignment' sample.project.name sample.name a.pk %}?form_post_path={{ request.path }}{% if state %}%3Fstate%3D{{ state }}{% endif %}{% if coder_id %}{% if not state %}%3F{% else %}%26{% endif %}coder_id%3D{{ coder_id }}{% endif %}">View</a>
+                                    <a class="btn btn-primary" href="{% url 'django_learning:code_specific_assignment' sample.project.name sample.name a.pk %}?form_post_path={{ request.path }}{% if state %}%3Fstate%3D{{ state }}{% endif %}{% if coder_id %}{% if not state %}%3F{% else %}%26{% endif %}coder_id%3D{{ coder_id }}{% endif %}{% if uncodeable %}{% if not state and not coder_id %}%3F{% else %}%26{% endif %}uncodeable%3D{{ uncodeable }}{% endif %}">View</a>
                                 </td>
                             </tr>
                         {% endfor %}
