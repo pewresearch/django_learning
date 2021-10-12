@@ -269,6 +269,16 @@ def view_sample(request, project_name, sample_name):
         ),
         experts_only=True,
     )
+    uncodeable = filter_hits(
+        assignments=filter_assignments(
+            sample=sample,
+            experts_only=True,
+            coder=request.user.coder,
+            completed_only=True,
+            uncodeable=True,
+        ),
+        experts_only=True,
+    )
     total_turk_hits = filter_hits(sample=sample, turk_only=True)
     completed_turk_hits = filter_hits(sample=sample, finished_only=True, turk_only=True)
     total_turk_assignments = sum(list([h.num_coders for h in total_turk_hits.all()]))
@@ -300,11 +310,22 @@ def view_sample(request, project_name, sample_name):
                     ),
                     experts_only=True,
                 )
+                coder_completed_expert_hits_uncodeable = filter_hits(
+                    assignments=filter_assignments(
+                        sample=sample,
+                        experts_only=True,
+                        coder=coder,
+                        completed_only=True,
+                        uncodeable=True
+                    ),
+                    experts_only=True,
+                )
                 expert_coder_completion.append(
                     {
                         "coder": coder,
                         "completed_expert_hits": coder_completed_expert_hits,
                         "available_expert_hits": coder_available_expert_hits,
+                        "uncodeable": coder_completed_expert_hits_uncodeable
                     }
                 )
 
@@ -333,6 +354,7 @@ def view_sample(request, project_name, sample_name):
             "total_turk_assignments": total_turk_assignments,
             "completed_turk_assignments": completed_turk_assignments,
             "expert_coder_completion": expert_coder_completion,
+            "uncodeable": uncodeable
             # "mturk_coder_completion": mturk_coder_completion
         },
     )
