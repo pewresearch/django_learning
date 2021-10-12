@@ -488,6 +488,7 @@ def view_expert_assignments(request, project_name, sample_name):
         request.user.coder._clear_abandoned_sample_assignments(sample)
 
         coder_id = request.GET.get("coder_id", None)
+        uncodeable = request.GET.get("uncodeable", False)
         state = request.GET.get("state", None)
         queue_ordering = request.GET.getlist("order_queue_by", ["time_finished"])
 
@@ -507,6 +508,7 @@ def view_expert_assignments(request, project_name, sample_name):
             filter_coders=filter_coders,
             completed_only=completed_only,
             incomplete_only=incomplete_only,
+            uncodeable=uncodeable
         ).distinct()
         assignments = assignments.order_by(*queue_ordering)
 
@@ -518,6 +520,7 @@ def view_expert_assignments(request, project_name, sample_name):
                 "sample": sample,
                 "coder_id": coder_id,
                 "state": state,
+                "uncodeable": uncodeable
             },
         )
 
