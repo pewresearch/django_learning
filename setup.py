@@ -22,12 +22,12 @@ with open("requirements.txt") as reqs:
 
 setup(
     name="django_learning",
-    version="0.1.4.dev0",
+    version="0.1.5.dev0",
     description="Complete Django framework for manual and automated document classification, machine learning, and more",
     long_description=README,  # 'http://labs.pewresearch.tech/docs/libs/django_learning',
     url="https://github.com/pewresearch/django_learning",
     author="Pew Research Center",
-    author_email="admin@pewresearch.tech",
+    author_email="info@pewresearch.org",
     install_requires=install_requires,
     dependency_links=dependency_links,
     packages=find_packages(exclude=["contrib", "docs", "tests"]),
