@@ -256,7 +256,7 @@ class ClassificationModel(LearningModel):
     ):
 
         print("Computing cross-fold predictions")
-        _final_model = self.model
+        _final_model = copy.deepcopy(self.model)
         if hasattr(self.model, "best_estimator_"):
             _final_model_best_estimator = self.model.best_estimator_
         else:
