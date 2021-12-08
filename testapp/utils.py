@@ -77,56 +77,91 @@ def set_up_test_sample(sample_name, size):
     df = Document.objects.filter(samples__name=sample_name).dataframe(
         "document_text", refresh=True
     )
-    df["is_good"] = df["text"].str.contains(r"good|great|excellent").astype(int)
+
     df = df.sort_values("pk")
+
+    question = "test_checkbox"
     random_seed = 42
-
-    for question in ["test_checkbox", "test_radio"]:
-        coder1_docs = df[df["is_good"] == 1].sample(frac=0.8, random_state=random_seed)
-        coder2_docs = df[df["is_good"] == 1].sample(
-            frac=0.8, random_state=random_seed + 1
+    df["is_good"] = df["text"].str.contains(r"good|great|excellent").astype(int)
+    coder1_docs = df[df["is_good"] == 1].sample(frac=0.8, random_state=random_seed)
+    coder2_docs = df[df["is_good"] == 1].sample(frac=0.8, random_state=random_seed + 1)
+    df["coder1"] = df["pk"].map(lambda x: 1 if x in coder1_docs["pk"].values else 0)
+    df["coder2"] = df["pk"].map(lambda x: 1 if x in coder2_docs["pk"].values else 0)
+    label1 = Label.objects.filter(question__name=question).get(value="1")
+    label0 = Label.objects.filter(question__name=question).get(value="0")
+    for index, row in df.iterrows():
+        su = SampleUnit.objects.filter(sample__name=sample_name).get(
+            document_id=row["pk"]
         )
-        df["coder1"] = df["pk"].map(lambda x: 1 if x in coder1_docs["pk"].values else 0)
-        df["coder2"] = df["pk"].map(lambda x: 1 if x in coder2_docs["pk"].values else 0)
-        label1 = Label.objects.filter(question__name=question).get(value="1")
-        label0 = Label.objects.filter(question__name=question).get(value="0")
-        for index, row in df.iterrows():
-            su = SampleUnit.objects.filter(sample__name=sample_name).get(
-                document_id=row["pk"]
+        hit = HIT.objects.get(sample_unit=su)
+        for coder, coder_name in [(coder1, "coder1"), (coder2, "coder2")]:
+            assignment, _ = Assignment.objects.get_or_create(hit=hit, coder=coder)
+            Code.objects.create(
+                label=label1 if row[coder_name] else label0, assignment=assignment
             )
-            hit = HIT.objects.get(sample_unit=su)
-            for coder, coder_name in [(coder1, "coder1"), (coder2, "coder2")]:
-                assignment, _ = Assignment.objects.get_or_create(hit=hit, coder=coder)
-                Code.objects.create(
-                    label=label1 if row[coder_name] else label0, assignment=assignment
-                )
-                assignment.time_finished = datetime.datetime.now()
-                assignment.save()
-                hit.save()
-        random_seed += 42
+            assignment.time_finished = datetime.datetime.now()
+            assignment.save()
+            hit.save()
+
+    question = "test_radio"
+    random_seed += 42
+    df["genre"] = "other"
+    df.loc[df["text"].str.contains(r"comedy|funny|laugh"), "genre"] = "comedy"
+    df.loc[df["text"].str.contains(r"action|suspense|adventur"), "genre"] = "action"
+    df.loc[
+        df[df["genre"] == "comedy"].sample(frac=0.05, random_state=random_seed).index,
+        "genre",
+    ] = "other"
+    df.loc[
+        df[df["genre"] == "action"]
+        .sample(frac=0.05, random_state=random_seed + 1)
+        .index,
+        "genre",
+    ] = "other"
+    for index, row in df.iterrows():
+        su = SampleUnit.objects.filter(sample__name=sample_name).get(
+            document_id=row["pk"]
+        )
+        hit = HIT.objects.get(sample_unit=su)
+        assignment, _ = Assignment.objects.get_or_create(hit=hit, coder=coder1)
+        Code.objects.create(
+            label=Label.objects.filter(question__name=question).get(value=row["genre"]),
+            assignment=assignment,
+        )
+        assignment.time_finished = datetime.datetime.now()
+        assignment.save()
+        hit.save()
 
 
-def get_base_dataset_parameters(extractor_name, sample_name="test_sample", params=None):
+def get_base_dataset_parameters(
+    extractor_name,
+    sample_name="test_sample",
+    question_name="test_checkbox",
+    params=None,
+):
 
     base_params = {
         "project_name": "test_project",
         "sandbox": True,
         "sample_names": [sample_name],
-        "question_names": ["test_checkbox"],
+        "question_names": [question_name],
         "document_filters": [],
         "coder_filters": [],
         "balancing_variables": [],
         "ignore_stratification_weights": False,
     }
     if extractor_name == "document_dataset":
-        base_class_id = (
-            get_model("Question", app_name="django_learning")
-            .objects.filter(project__name="test_project")
-            .get(name="test_checkbox")
-            .labels.get(value="0")
-            .pk
-        )
-        base_params["base_class_id"] = base_class_id
+        try:
+            base_class_id = (
+                get_model("Question", app_name="django_learning")
+                .objects.filter(project__name="test_project")
+                .get(name=question_name)
+                .labels.get(value="0")
+                .pk
+            )
+            base_params["base_class_id"] = base_class_id
+        except Label.DoesNotExist:
+            pass
         base_params["threshold"] = 0.4
         base_params["convert_to_discrete"] = True
 
@@ -138,12 +173,20 @@ def get_base_dataset_parameters(extractor_name, sample_name="test_sample", param
     return params
 
 
-def extract_dataset(extractor_name, sample_name="test_sample", params=None):
+def extract_dataset(
+    extractor_name,
+    sample_name="test_sample",
+    question_name="test_checkbox",
+    params=None,
+):
 
     from django_learning.utils.dataset_extractors import dataset_extractors
 
     params = get_base_dataset_parameters(
-        extractor_name, sample_name=sample_name, params=params
+        extractor_name,
+        sample_name=sample_name,
+        question_name=question_name,
+        params=params,
     )
     extractor = dataset_extractors[extractor_name](**params)
     df = extractor.extract(refresh=True)
