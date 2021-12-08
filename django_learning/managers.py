@@ -163,8 +163,6 @@ class DocumentManager(QueryModelManager):
             os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "word2vec"),
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             bucket=settings.S3_BUCKET,
-            aws_access=settings.AWS_ACCESS_KEY_ID,
-            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
         )
         if not refresh:
 
