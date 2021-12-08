@@ -51,15 +51,23 @@ class Extractor(DocumentCoderDatasetExtractor):
             def get_max(x):
 
                 if self.base_class_id:
-                    max_col, max_val = sorted(
-                        [
-                            (col, x[col])
-                            for col in self.outcome_columns
-                            if col != "label_{}".format(self.base_class_id)
-                        ],
-                        key=lambda x: x[1],
-                        reverse=True,
-                    )[0]
+                    try:
+                        max_col, max_val = sorted(
+                            [
+                                (col, x[col])
+                                for col in self.outcome_columns
+                                if col != "label_{}".format(self.base_class_id)
+                            ],
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[0]
+                    except IndexError:
+                        # In some cases, you may have filtered down to a dataset where only the base class is left
+                        max_col, max_val = sorted(
+                            [(col, x[col]) for col in self.outcome_columns],
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[0]
                 else:
                     max_col, max_val = sorted(
                         [(col, x[col]) for col in self.outcome_columns],
