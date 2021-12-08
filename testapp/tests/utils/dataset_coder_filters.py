@@ -28,7 +28,6 @@ class DatasetCoderFiltersTests(DjangoTestCase):
             "exclude_experts",
             "exclude_mturk",
             "filter_by_coder_names",
-            # "filter_by_coder_variance",
             "filter_by_min_coder_doc_count",
             "require_all_coders",
             "require_min_coder_count",

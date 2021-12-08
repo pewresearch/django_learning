@@ -29,7 +29,6 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
             "django_lookup_filter",
             "filter_by_date",
             "filter_by_document_ids",
-            # "filter_by_existing_code",
             "filter_by_other_model_dataset",
             "filter_by_other_model_prediction",
         ]:
