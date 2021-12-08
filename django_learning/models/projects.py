@@ -84,8 +84,7 @@ class Project(LoggedExtendedModel):
 
         admin_names = [c for c in config.get("admins", [])]
         coder_names = list(admin_names)
-        for c in config.get("coders", []):
-            coder_names.append(c["name"])
+        coder_names.extend(config.get("coders", []))
 
         coders = []
         admins = []
