@@ -142,9 +142,18 @@ class SamplingFrame(LoggedExtendedModel):
                     frame["search_{}".format(search_name)] = frame["text"].str.contains(
                         search_pattern
                     )
-                frame['flag_counts'] = frame[["search_{}".format(search_name) for search_name in regex_patterns.keys()]].astype(int).sum(axis=1)
-                frame["search_none"] = (frame['flag_counts'] == 0)
-                del frame['flag_counts']
+                frame["flag_counts"] = (
+                    frame[
+                        [
+                            "search_{}".format(search_name)
+                            for search_name in regex_patterns.keys()
+                        ]
+                    ]
+                    .astype(int)
+                    .sum(axis=1)
+                )
+                frame["search_none"] = frame["flag_counts"] == 0
+                del frame["flag_counts"]
 
             for name, additional in additional_variables.items():
                 frame[name] = frame[additional["field_lookup"]].map(
