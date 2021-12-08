@@ -96,7 +96,12 @@ class LearningModel(LoggedExtendedModel):
             bucket=settings.S3_BUCKET,
         )
         self.dataset_cache = CacheHandler(
-            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "datasets"),
+            os.path.join(
+                settings.DJANGO_LEARNING_S3_CACHE_PATH
+                if settings.DJANGO_LEARNING_USE_S3
+                else settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
+                "datasets",
+            ),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
             bucket=settings.S3_BUCKET,
