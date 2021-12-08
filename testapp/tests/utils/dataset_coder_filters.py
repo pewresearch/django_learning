@@ -30,6 +30,8 @@ class DatasetCoderFiltersTests(DjangoTestCase):
             "filter_by_coder_names",
             # "filter_by_coder_variance",
             "filter_by_min_coder_doc_count",
+            "require_all_coders",
+            "require_min_coder_count",
         ]:
             self.assertIn(val, dataset_coder_filters.keys())
             self.assertIsNotNone(dataset_coder_filters[val])
@@ -88,6 +90,21 @@ class DatasetCoderFiltersTests(DjangoTestCase):
         self.assertEqual(len(df), 20)
         self.assertEqual(df["coder_name"].nunique(), 1)
         self.assertEqual(df["coder_name"].values[0], "coder2")
+
+        # Test require_all_coders
+        Assignment.objects.filter(coder__name="coder1").sample(5).delete()
+        df = extract_dataset(
+            "document_coder_label_dataset",
+            params={"coder_filters": [("require_all_coders", [], {})]},
+        )
+        self.assertEqual(len(df), 10)
+
+        # Test require_min_coder_count
+        df = extract_dataset(
+            "document_coder_label_dataset",
+            params={"coder_filters": [("require_min_coder_count", [2], {})]},
+        )
+        self.assertEqual(len(df), 10)
 
     def tearDown(self):
 
