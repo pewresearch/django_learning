@@ -5,12 +5,8 @@
     "coder1"
   ],
   "coders": [
-    {
-      "name": "coder1"
-    },
-    {
-      "name": "coder2"
-    }
+    "coder1",
+    "coder2"
   ],
   "questions": [
     {
