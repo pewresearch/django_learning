@@ -32,8 +32,6 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
             # "filter_by_existing_code",
             "filter_by_other_model_dataset",
             "filter_by_other_model_prediction",
-            "require_all_coders",
-            "require_min_coder_count",
         ]:
             self.assertIn(val, dataset_document_filters.keys())
             self.assertIsNotNone(dataset_document_filters[val])
