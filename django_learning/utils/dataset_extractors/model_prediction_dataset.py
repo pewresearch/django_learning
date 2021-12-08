@@ -42,7 +42,7 @@ class Extractor(DatasetExtractor):
     def _get_dataset(self, **kwargs):
 
         if is_null(self.learning_model.model):
-            self.learning_model.load_model()
+            self.learning_model.load_model(only_load_existing=True)
         dataset = self.dataset
         predictions = self.learning_model.apply_model(
             dataset,
