@@ -504,7 +504,7 @@ class LearningModel(LoggedExtendedModel):
     ):
 
         print("Computing cross-fold predictions")
-        _final_model = self.model
+        _final_model = copy.deepcopy(self.model)
         _final_model_best_estimator = self.model.best_estimator_
         dataset = copy.copy(self.train_dataset)
 
