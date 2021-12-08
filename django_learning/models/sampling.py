@@ -99,8 +99,6 @@ class SamplingFrame(LoggedExtendedModel):
             ),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
-            aws_access=settings.AWS_ACCESS_KEY_ID,
-            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
             bucket=settings.S3_BUCKET,
         )
 
