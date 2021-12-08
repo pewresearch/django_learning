@@ -29,6 +29,9 @@ class Extractor(DocumentCoderDatasetExtractor):
 
         dataset = super(Extractor, self)._additional_steps(dataset, **kwargs)
 
+        if len(dataset) == 0:
+            return dataset
+
         if self.coder_aggregation_function == "mean":
             dataset = dataset.groupby("document_id").mean().reset_index()
         elif self.coder_aggregation_function == "median":
