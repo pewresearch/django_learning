@@ -14,14 +14,6 @@ def get_pipeline():
 
     from django_learning.utils.feature_extractors import feature_extractors
 
-    base_class_id = (
-        get_model("Question", app_name="django_learning")
-        .objects.filter(project__name="test_project")
-        .get(name="test_checkbox")
-        .labels.get(value="0")
-        .pk
-    )
-
     return {
         "dataset_extractor": {
             "name": "document_dataset",
