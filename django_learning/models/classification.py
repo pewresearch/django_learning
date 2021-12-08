@@ -352,137 +352,144 @@ class ClassificationModel(LearningModel):
         if pos_code:
             pos_code = str(pos_code)
 
-        if save:
-            self.probability_threshold = None
-        if is_not_null(self.cv_folds):
-
-            predict_dataset = self.produce_prediction_dataset(
-                self.test_dataset,
-                cache_key="predict_test",
-                refresh=False,
-                only_load_existing=True,
-                ignore_probability_threshold=True,
+        if not pos_code or not base_code:
+            print(
+                "Probability thresholding currently only works with binary classifications"
             )
-            if "probability" not in predict_dataset.columns:
-                raise Exception("This model does not produce probabilities")
-            test_threshold_scores = None
-            if is_not_null(predict_dataset):
-                test_threshold_scores = get_probability_threshold_score_df(
-                    predict_dataset,
+            return None
+        else:
+
+            if save:
+                self.probability_threshold = None
+            if is_not_null(self.cv_folds):
+
+                predict_dataset = self.produce_prediction_dataset(
                     self.test_dataset,
-                    outcome_column=self.dataset_extractor.outcome_column,
-                    weight_column="sampling_weight"
-                    if "sampling_weight" in predict_dataset.columns
-                    and self._check_for_valid_weights(
-                        predict_dataset["sampling_weight"]
-                    )
-                    else None,
-                    base_code=base_code,
-                    pos_code=pos_code,
-                )
-
-            dataset = copy.copy(self.train_dataset)
-
-            all_fold_scores = []
-            for i, folds in enumerate(self.cv_folds):
-                fold_train_index, fold_test_index = folds
-                # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
-                fold_train_dataset = dataset.loc[
-                    pandas.Series(dataset.index).iloc[fold_train_index].values
-                ]  # self.dataset.ix[fold_train_index]
-                fold_test_dataset = dataset.loc[
-                    pandas.Series(dataset.index).iloc[fold_test_index].values
-                ]  # self.dataset.ix[fold_test_index]
-
-                fold_predict_dataset = self.produce_prediction_dataset(
-                    fold_test_dataset,
-                    cache_key="predict_fold_{}".format(i),
+                    cache_key="predict_test",
                     refresh=False,
                     only_load_existing=True,
                     ignore_probability_threshold=True,
                 )
-                # threshold = None
-                if is_not_null(fold_predict_dataset):
-                    fold_threshold_scores = get_probability_threshold_score_df(
-                        fold_predict_dataset,
-                        fold_test_dataset,
+                if "probability" not in predict_dataset.columns:
+                    raise Exception("This model does not produce probabilities")
+                test_threshold_scores = None
+                if is_not_null(predict_dataset):
+                    test_threshold_scores = get_probability_threshold_score_df(
+                        predict_dataset,
+                        self.test_dataset,
                         outcome_column=self.dataset_extractor.outcome_column,
                         weight_column="sampling_weight"
-                        if "sampling_weight" in fold_predict_dataset.columns
+                        if "sampling_weight" in predict_dataset.columns
                         and self._check_for_valid_weights(
-                            fold_predict_dataset["sampling_weight"]
+                            predict_dataset["sampling_weight"]
                         )
                         else None,
                         base_code=base_code,
                         pos_code=pos_code,
                     )
-                    if is_not_null(test_threshold_scores):
-                        fold_threshold_scores[metric] = [
-                            min(list(x))
-                            for x in zip(
-                                test_threshold_scores[metric],
-                                fold_threshold_scores[metric],
+
+                dataset = copy.copy(self.train_dataset)
+
+                all_fold_scores = []
+                for i, folds in enumerate(self.cv_folds):
+                    fold_train_index, fold_test_index = folds
+                    # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
+                    fold_train_dataset = dataset.loc[
+                        pandas.Series(dataset.index).iloc[fold_train_index].values
+                    ]  # self.dataset.ix[fold_train_index]
+                    fold_test_dataset = dataset.loc[
+                        pandas.Series(dataset.index).iloc[fold_test_index].values
+                    ]  # self.dataset.ix[fold_test_index]
+
+                    fold_predict_dataset = self.produce_prediction_dataset(
+                        fold_test_dataset,
+                        cache_key="predict_fold_{}".format(i),
+                        refresh=False,
+                        only_load_existing=True,
+                        ignore_probability_threshold=True,
+                    )
+                    # threshold = None
+                    if is_not_null(fold_predict_dataset):
+                        fold_threshold_scores = get_probability_threshold_score_df(
+                            fold_predict_dataset,
+                            fold_test_dataset,
+                            outcome_column=self.dataset_extractor.outcome_column,
+                            weight_column="sampling_weight"
+                            if "sampling_weight" in fold_predict_dataset.columns
+                            and self._check_for_valid_weights(
+                                fold_predict_dataset["sampling_weight"]
                             )
-                        ]
-                    all_fold_scores.append(fold_threshold_scores)
+                            else None,
+                            base_code=base_code,
+                            pos_code=pos_code,
+                        )
+                        if is_not_null(test_threshold_scores):
+                            fold_threshold_scores[metric] = [
+                                min(list(x))
+                                for x in zip(
+                                    test_threshold_scores[metric],
+                                    fold_threshold_scores[metric],
+                                )
+                            ]
+                        all_fold_scores.append(fold_threshold_scores)
 
-                #     # if is_not_null(test_threshold_scores):
-                #     #     fold_threshold_scores[metric] = [min(list(x)) for x in zip(test_threshold_scores[metric], fold_threshold_scores[metric])]
-                #     threshold = get_probability_threshold_from_score_df(
-                #         fold_threshold_scores,
-                #         metric=metric
-                #     )
-                #     fold_predict_dataset = apply_probability_threshold(
-                #         fold_predict_dataset,
-                #         threshold,
-                #         outcome_column=self.dataset_extractor.outcome_column,
-                #         base_code=base_code,
-                #         pos_code=pos_code
-                #     )
-                #
-                # if is_not_null(fold_predict_dataset):
-                #     fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
-                #     fold_scores['probability_threshold'] = threshold
+                    #     # if is_not_null(test_threshold_scores):
+                    #     #     fold_threshold_scores[metric] = [min(list(x)) for x in zip(test_threshold_scores[metric], fold_threshold_scores[metric])]
+                    #     threshold = get_probability_threshold_from_score_df(
+                    #         fold_threshold_scores,
+                    #         metric=metric
+                    #     )
+                    #     fold_predict_dataset = apply_probability_threshold(
+                    #         fold_predict_dataset,
+                    #         threshold,
+                    #         outcome_column=self.dataset_extractor.outcome_column,
+                    #         base_code=base_code,
+                    #         pos_code=pos_code
+                    #     )
+                    #
+                    # if is_not_null(fold_predict_dataset):
+                    #     fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
+                    #     fold_scores['probability_threshold'] = threshold
+                    # else:
+                    #     fold_scores = None
+                    # all_fold_scores.append(fold_scores)
+
+                if any([is_null(f) for f in all_fold_scores]):
+                    print(
+                        "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+                    )
+                    if save:
+                        self.set_probability_threshold(None)
+                    return None
+                else:
+                    fold_score_df = pandas.concat(all_fold_scores).fillna(0.0)
+                    threshold = (
+                        fold_score_df.groupby(["threshold", "outcome_column"])
+                        .mean()[metric]
+                        .sort_values(ascending=False)
+                        .index[0][0]
+                    )
+                    if save:
+                        self.set_probability_threshold(threshold)
+                    return threshold
+
+                # if any([is_null(f) for f in all_fold_scores]):
+                #     print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+                #     return None
                 # else:
-                #     fold_scores = None
-                # all_fold_scores.append(fold_scores)
-
-            if any([is_null(f) for f in all_fold_scores]):
-                print(
-                    "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
-                )
+                #     fold_score_df = pandas.concat(all_fold_scores)
+                #     fold_score_df = pandas.concat([
+                #         all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                #         fold_score_df.groupby(fold_score_df.index).mean()
+                #     ], axis=1)
+                #     threshold = fold_score_df['probability_threshold'].mean()
+                #     if save:
+                #         self.set_probability_threshold(threshold)
+                #     return threshold
+            else:
                 if save:
                     self.set_probability_threshold(None)
                 return None
-            else:
-                fold_score_df = pandas.concat(all_fold_scores).fillna(0.0)
-                threshold = (
-                    fold_score_df.groupby(["threshold", "outcome_column"])
-                    .mean()[metric]
-                    .sort_values(ascending=False)
-                    .index[0][0]
-                )
-                if save:
-                    self.set_probability_threshold(threshold)
-                return threshold
-
-            # if any([is_null(f) for f in all_fold_scores]):
-            #     print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
-            #     return None
-            # else:
-            #     fold_score_df = pandas.concat(all_fold_scores)
-            #     fold_score_df = pandas.concat([
-            #         all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-            #         fold_score_df.groupby(fold_score_df.index).mean()
-            #     ], axis=1)
-            #     threshold = fold_score_df['probability_threshold'].mean()
-            #     if save:
-            #         self.set_probability_threshold(threshold)
-            #     return threshold
-        else:
-            if save:
-                self.set_probability_threshold(None)
-            return None
 
     def set_probability_threshold(self, threshold):
 
@@ -803,40 +810,3 @@ class Classification(LoggedExtendedModel):
         return "<Classification label={0}, document={1}>".format(
             self.label, self.document
         )
-
-
-# ah, okay, so originally you had spec-ed out the model below
-# but... DocumentClassificationModels are the only thing that's every going to make
-# Classifications... on Documents... so... no need for a generic foreign key, right?
-# class Classification(LoggedExtendedModel):
-#
-#     document = models.ForeignKey("django_learning.Document", related_name="classifications")
-#     label = models.ForeignKey("django_learning.Label", related_name="classifications")
-#
-#     # classifier = models.ForeignKey("django_learning.Classifier", related_name="classifications")
-#     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-#     object_id = models.PositiveIntegerField()
-#     model = GenericForeignKey('content_type', 'object_id')
-#
-#     probability = models.FloatField(null=True, help_text="The probability of the assigned label, if applicable")
-#
-#     # def validate_unique(self, *args, **kwargs):
-#     #        super(Classification, self).validate_unique(*args, **kwargs)
-#     #        if not self.id:
-#     #            if not self.label.question.multiple:
-#     #                if self.model.objects\
-#     #                        .filter(label__question=self.label.question)\
-#     #                        .filter(document=self.document)\
-#     #                        .exists():
-#     #                    raise ValidationError(
-#     #                        {
-#     #                            NON_FIELD_ERRORS: [
-#     #                                'Classification with the same variable already exists'
-#     #                            ],
-#     #                        }
-#     #                    )
-#
-#     def __repr__(self):
-#         return "<Classification label={0}, document={2}>".format(
-#             self.label, self.document
-#         )
