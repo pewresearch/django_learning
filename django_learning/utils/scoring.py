@@ -300,17 +300,18 @@ def apply_probability_threshold(
             )
             print("Pass a pos_code if you wish to override it")
 
-        predicted_df["probability"] = predicted_df.apply(
-            lambda x: x["probability"]
-            if x[outcome_column] != base_code
-            else 1.0 - x["probability"],
-            axis=1,
-        )
         if pos_code:
-            predicted_df[outcome_column] = predicted_df.apply(
-                lambda x: pos_code if x["probability"] >= threshold else base_code,
+            predicted_df["pos_probability"] = predicted_df.apply(
+                lambda x: x["probability"]
+                if x[outcome_column] != base_code
+                else 1.0 - x["probability"],
                 axis=1,
             )
+            predicted_df[outcome_column] = predicted_df.apply(
+                lambda x: pos_code if x["pos_probability"] >= threshold else base_code,
+                axis=1,
+            )
+            del predicted_df["pos_probability"]
         else:
             predicted_df[outcome_column] = base_code
 
