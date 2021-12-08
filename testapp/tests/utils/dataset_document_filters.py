@@ -37,12 +37,13 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
 
     def test_dataset_document_filters(self):
 
-        set_up_test_sample("test_sample", 20)
+        set_up_test_sample("test_sample", 200)
 
         # Test django_lookup_filter
         df = extract_dataset(
-            "document_coder_label_dataset",
+            "document_dataset",
             params={
+                "outcome_column": "label_id",
                 "document_filters": [
                     (
                         "django_lookup_filter",
@@ -62,7 +63,7 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
                             "exclude": False,
                         },
                     ),
-                ]
+                ],
             },
         )
         self.assertEqual(len(df[df["text"].str.contains("[Dd]isney")]), len(df))
@@ -70,8 +71,9 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
 
         # Test filter_by_date
         df = extract_dataset(
-            "document_coder_label_dataset",
+            "document_dataset",
             params={
+                "outcome_column": "label_id",
                 "document_filters": [
                     (
                         "filter_by_date",
@@ -81,18 +83,19 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
                             "max_date": datetime.date(2000, 4, 1),
                         },
                     )
-                ]
+                ],
             },
         )
-        self.assertEqual(len(df), 22)
+        self.assertEqual(len(df), 49)
         self.assertGreaterEqual(df["date"].min().date(), datetime.date(2000, 2, 1))
         self.assertLessEqual(df["date"].max().date(), datetime.date(2000, 4, 1))
 
         # Test filter_by_document_ids
         df = extract_dataset(
-            "document_coder_label_dataset",
+            "document_dataset",
             params={
-                "document_filters": [("filter_by_document_ids", [[1, 2, 3, 4, 5]], {})]
+                "outcome_column": "label_id",
+                "document_filters": [("filter_by_document_ids", [[1, 2, 3, 4, 5]], {})],
             },
         )
         self.assertEqual(
@@ -100,10 +103,37 @@ class DatasetDocumentFiltersTests(DjangoTestCase):
             len(set(df["document_id"].values)),
         )
 
-        # TODO: test filter_by_other_model_dataset
-        # TODO: test filter_by_other_model_prediction
-        # TODO: test_require_all_coders
-        # TODO: test_require_min_coder_count
+        # Test filter_by_other_model_dataset
+        model = get_test_model("test")
+        good_docs = model.dataset[model.dataset["label_id"] == "10"][
+            "document_id"
+        ].values
+        df = extract_dataset(
+            "document_dataset",
+            params={
+                "outcome_column": "label_id",
+                "document_filters": [
+                    ("filter_by_other_model_dataset", ["test", "10"], {})
+                ],
+            },
+        )
+        self.assertEqual(set(df["document_id"]), set(good_docs))
+
+        # Test filter_by_other_model_prediction
+        model.apply_model_to_frame(save=True, refresh=True, num_cores=1)
+        df = extract_dataset(
+            "document_dataset",
+            params={
+                "outcome_column": "label_id",
+                "document_filters": [
+                    ("filter_by_other_model_prediction", ["test", "10"], {})
+                ],
+            },
+        )
+        good_docs = model.classifications.filter(label_id="10").values_list(
+            "document_id", flat=True
+        )
+        self.assertEqual(len(set(df["document_id"]).difference(set(good_docs))), 0)
 
     def tearDown(self):
 
