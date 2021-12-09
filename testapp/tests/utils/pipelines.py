@@ -24,7 +24,13 @@ class PipelinesTests(DjangoTestCase):
     def test_loading(self):
         from django_learning.utils.pipelines import pipelines
 
-        for val in ["test", "test_with_holdout"]:
+        for val in [
+            "test",
+            "test_with_holdout",
+            "test_multiclass",
+            "test_with_balancing_variables",
+            "test_with_keyword_oversample",
+        ]:
             self.assertIn(val, pipelines.keys())
             self.assertIsNotNone(pipelines[val])
 

@@ -53,6 +53,13 @@ class DatasetExtractorsTests(DjangoTestCase):
         self.assertEqual(df["document_id"].nunique(), 100)
         self.assertEqual(df["coder_id"].nunique(), 2)
 
+        df = extract_dataset(
+            "document_coder_label_dataset",
+            params={"question_names": ["test_checkbox", "test_radio"]},
+        )
+        for val in ["00101", "00001", "10001", "10010", "00110", "00010", "01001"]:
+            self.assertIn(val, df["label_id"].unique())
+
     def test_document_coder_dataset_extractor(self):
 
         label_pos = Label.objects.filter(question__name="test_checkbox").get(value="1")
@@ -90,6 +97,24 @@ class DatasetExtractorsTests(DjangoTestCase):
             0.0,
             2,
         )
+
+        df = extract_dataset(
+            "document_coder_dataset",
+            params={
+                "standardize_coders": False,
+                "question_names": ["test_checkbox", "test_radio"],
+            },
+        )
+        for col in [
+            "label_00001",
+            "label_00010",
+            "label_00101",
+            "label_00110",
+            "label_01001",
+            "label_10001",
+            "label_10010",
+        ]:
+            self.assertIn(col, df.columns)
 
     def test_document_dataset_extractor(self):
 
@@ -132,40 +157,140 @@ class DatasetExtractorsTests(DjangoTestCase):
                 },
                 (88, 4, 8, 8, 4, 88),
             ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": False,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                [76, 9, 7, 3, 2, 2, 1],
+            ),
+            (
+                {
+                    "coder_aggregation_function": "max",
+                    "convert_to_discrete": False,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                [76, 9, 7, 3, 2, 2, 1],
+            ),
+            (
+                {
+                    "coder_aggregation_function": "min",
+                    "convert_to_discrete": False,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                [100],
+            ),
+            (
+                {
+                    "coder_aggregation_function": "median",
+                    "convert_to_discrete": False,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                [76, 9, 7, 3, 2, 2, 1],
+            ),
         ]:
             df = extract_dataset("document_dataset", params=update_params)
-            # if len(extractor.outcome_columns) == 2:
-            # if "label_{}".format(label_pos.pk) not in df.columns:
-            # print(
-            #     "{}, {}, {}, {}, {}, {}".format(
-            #         len(df[df["label_{}".format(label_pos.pk)] == 0.0]),
-            #         len(df[df["label_{}".format(label_pos.pk)] == 0.5]),
-            #         len(df[df["label_{}".format(label_pos.pk)] == 1.0]),
-            #         len(df[df["label_{}".format(label_neg.pk)] == 0.0]),
-            #         len(df[df["label_{}".format(label_neg.pk)] == 0.5]),
-            #         len(df[df["label_{}".format(label_neg.pk)] == 1.0]),
-            #     )
-            # )
-            self.assertEqual(
-                len(df[df["label_{}".format(label_pos.pk)] == 0.0]), values[0]
-            )
-            self.assertEqual(
-                len(df[df["label_{}".format(label_pos.pk)] == 0.5]), values[1]
-            )
-            self.assertEqual(
-                len(df[df["label_{}".format(label_pos.pk)] == 1.0]), values[2]
-            )
-            self.assertEqual(
-                len(df[df["label_{}".format(label_neg.pk)] == 0.0]), values[3]
-            )
-            self.assertEqual(
-                len(df[df["label_{}".format(label_neg.pk)] == 0.5]), values[4]
-            )
-            self.assertEqual(
-                len(df[df["label_{}".format(label_neg.pk)] == 1.0]), values[5]
-            )
+            if len(update_params["question_names"]) == 1:
+                # print(
+                #     "{}, {}, {}, {}, {}, {}".format(
+                #         len(df[df["label_{}".format(label_pos.pk)] == 0.0]),
+                #         len(df[df["label_{}".format(label_pos.pk)] == 0.5]),
+                #         len(df[df["label_{}".format(label_pos.pk)] == 1.0]),
+                #         len(df[df["label_{}".format(label_neg.pk)] == 0.0]),
+                #         len(df[df["label_{}".format(label_neg.pk)] == 0.5]),
+                #         len(df[df["label_{}".format(label_neg.pk)] == 1.0]),
+                #     )
+                # )
+                self.assertEqual(
+                    len(df[df["label_{}".format(label_pos.pk)] == 0.0]), values[0]
+                )
+                self.assertEqual(
+                    len(df[df["label_{}".format(label_pos.pk)] == 0.5]), values[1]
+                )
+                self.assertEqual(
+                    len(df[df["label_{}".format(label_pos.pk)] == 1.0]), values[2]
+                )
+                self.assertEqual(
+                    len(df[df["label_{}".format(label_neg.pk)] == 0.0]), values[3]
+                )
+                self.assertEqual(
+                    len(df[df["label_{}".format(label_neg.pk)] == 0.5]), values[4]
+                )
+                self.assertEqual(
+                    len(df[df["label_{}".format(label_neg.pk)] == 1.0]), values[5]
+                )
+
+            else:
+                # print(
+                #     df[[l for l in df.columns if l.startswith("label_")]]
+                #     .value_counts()
+                #     .values
+                # )
+                self.assertEqual(
+                    list(
+                        df[[l for l in df.columns if l.startswith("label_")]]
+                        .value_counts()
+                        .values
+                    ),
+                    values,
+                )
 
         for update_params, values in [
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": None,
+                    "base_class_id": label_neg.pk,
+                    "question_names": ["test_checkbox"],
+                },
+                {str(label_neg.pk): 88, str(label_pos.pk): 12},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": 1.0,
+                    "base_class_id": label_neg.pk,
+                    "question_names": ["test_checkbox"],
+                },
+                {str(label_neg.pk): 92, str(label_pos.pk): 8},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": 0.0,
+                    "base_class_id": label_neg.pk,
+                    "question_names": ["test_checkbox"],
+                },
+                {str(label_neg.pk): 88, str(label_pos.pk): 12},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": 0.5,
+                    "base_class_id": label_neg.pk,
+                    "question_names": ["test_checkbox"],
+                },
+                {str(label_neg.pk): 88, str(label_pos.pk): 12},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": None,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox"],
+                },
+                {str(label_neg.pk): 88, str(label_pos.pk): 12},
+            ),
             (
                 {
                     "coder_aggregation_function": "mean",
@@ -174,7 +299,7 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                {str(label_neg.pk): 88, str(label_pos.pk): 8, "None": 4},
+                {str(label_neg.pk): 88, str(label_pos.pk): 8},
             ),
             (
                 {
@@ -191,26 +316,53 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "coder_aggregation_function": "mean",
                     "convert_to_discrete": True,
                     "threshold": 0.5,
-                    "base_class_id": label_pos.pk,
+                    "base_class_id": None,
                     "question_names": ["test_checkbox"],
                 },
-                {str(label_neg.pk): 92, str(label_pos.pk): 8},
+                {str(label_neg.pk): 88, str(label_pos.pk): 12},
             ),
             (
                 {
                     "coder_aggregation_function": "mean",
                     "convert_to_discrete": True,
-                    "threshold": 0.4,
+                    "threshold": None,
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                {"0101": 89, "1001": 3, "0110": 2, "1010": 6},
-                # TODO: investigate how the above function is working
-                # for multiple codes, does it concatenate first and then collapse with the threshold?
-                # or does it collapse each item separately with the threshold and then concatenate?
-                # and what happens if there's a tie and you don't have a base class specified?
+                {"00001": 90, "00010": 10},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": 1.0,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                {},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": 0.0,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                {"00001": 90, "00010": 10},
+            ),
+            (
+                {
+                    "coder_aggregation_function": "mean",
+                    "convert_to_discrete": True,
+                    "threshold": 0.5,
+                    "base_class_id": None,
+                    "question_names": ["test_checkbox", "test_radio"],
+                },
+                {"00001": 90, "00010": 10},
             ),
         ]:
+
             df = extract_dataset("document_dataset", params=update_params)
             vals = df["label_id"].value_counts().to_dict()
             self.assertEqual(vals, values)
@@ -226,8 +378,21 @@ class DatasetExtractorsTests(DjangoTestCase):
         self.assertIn("date", df.columns)
 
     def test_model_prediction_dataset(self):
-        # See: tests/models/classification.py
-        pass
+
+        model = get_test_model("test")
+
+        df = dataset_extractors["raw_document_dataset"](
+            document_ids=[], sampling_frame_name="all_documents", document_filters=[]
+        ).extract()
+        model = DocumentClassificationModel.objects.get(name="test")
+
+        df = dataset_extractors["model_prediction_dataset"](
+            dataset=df, learning_model=model, disable_probability_threshold_warning=True
+        ).extract()
+
+        self.assertEqual(
+            sorted(list(dict(df["label_id"].value_counts()).values())), [31, 119]
+        )
 
     def tearDown(self):
 
