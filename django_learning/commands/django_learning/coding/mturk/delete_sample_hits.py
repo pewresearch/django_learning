@@ -8,6 +8,14 @@ from django_learning.utils.mturk import MTurk
 
 class Command(BasicCommand):
 
+    """
+    Deletes all of the Mechanical Turk HITs associated with the given sample. Uses the project's sandbox flag to
+    determine which API to use. It's best to double-check what that's set to before using this command.
+
+    :param project_name: Name of an existing project
+    :param sample_name: Name of an exissting sample
+    """
+
     parameter_names = ["project_name", "sample_name"]
     dependencies = []
 

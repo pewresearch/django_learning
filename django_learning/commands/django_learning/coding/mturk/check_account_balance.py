@@ -6,6 +6,9 @@ from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
+    """
+    Prints the account balance of the live Mechanical Turk account
+    """
 
     parameter_names = []
     dependencies = []

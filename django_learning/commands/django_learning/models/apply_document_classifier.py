@@ -10,6 +10,15 @@ from pewtils.io import FileHandler
 
 class Command(BasicCommand):
 
+    """
+    Applies a classification model to the sampling frame it belongs to, creating Classification objects in the database.
+
+    :param name: Name of an existing DocumentClassificationModel
+    :param num_cores: (default is 1) number of cores to use
+    :param chunk_size: (default is 100000) number of documents to pass to each multiprocessing thread
+    :param refresh: (default is False) if True, existing classifications in the database will be recomputed
+    """
+
     parameter_names = ["name"]
     dependencies = []
     test_parameters = {}

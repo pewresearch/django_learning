@@ -8,6 +8,28 @@ import time
 
 class Command(BasicCommand):
 
+    """
+    Sync with the Mechanical Turk API and download completed HITs. Can optionally approve HITs while looping over
+    the completed ones, and can do so slowly over time to make it seem like we're reviewing (to encourage Turkers
+    to continue doing a good job).
+
+    :param project_name: Name of an existing project
+    :param sample_name: Name of a sample with Mechanical Turk HITs
+    :param loop: (default is False) if True, runs indefinitely in a loop to continuously pull completed HITs
+    :param time_sleep: (default is 30) how long to sleep between each loop (in seconds)
+    :param resync: (default is False) if True, will re-download data for HITs that have already been fully completed
+        and synced
+    :param approve: (default is False) if True, will approve complete HITs and pay the workers
+    :param approve_probability: (default is 1.0) if ``approve=True``, specifies the probability that any given HIT
+        will be approved during each loop
+    :param update_blocks: (default is False) if True, will update worker blocks; anyone who's been paid the maximum
+        compensation amount in the current calendar year (``max_comp``) will be blocked from doing more HITs. This
+        really ticks Turkers off, and it's much better to revoke their qualifications instead. Not recommended unless
+        you want a bunch of angry Turkers.
+    :param max_comp: (default is 500) maximum amount we want to pay a specific Turker in a given year
+    :param notify_blocks: (default is False) if True, send Turkers a notification when we block them
+    """
+
     parameter_names = ["project_name", "sample_name"]
     dependencies = []
 

@@ -7,6 +7,13 @@ from django_learning.utils.mturk import MTurk
 
 class Command(BasicCommand):
 
+    """
+    Irreversably switches a project from sandbox mode (``mturk_sandbox=True``) to live mode (``mturk_sandbox=False``).
+    Once this is done, you're ready to start deploying HITs to the live Mechanical Turk API.
+
+    :param project_name: Name of an existing project that's currently in sandbox mode
+    """
+
     parameter_names = ["project_name"]
     dependencies = []
 

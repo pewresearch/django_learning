@@ -6,6 +6,15 @@ from django_learning.models import DocumentClassificationModel, Sample, Sampling
 
 
 class Command(BasicCommand):
+    """
+    Creates and trains a DocumentClassificationModel based off of a pipeline file.
+
+    :param name: Name of the DocumentClassificationModel (either an existing one, or the name to give a new one)
+    :param pipeline_name: Name of the pipeline to use (must correspond to a pipeline file)
+    :param refresh_dataset: (default is False) if True, existing models will refresh their dataset and retrain the model
+    :param refresh_model: (default is False) if True, existing models will retrain the model
+    :param num_cores: (default is 2) number of cores to use during training
+    """
 
     parameter_names = ["name", "pipeline_name"]
     dependencies = []

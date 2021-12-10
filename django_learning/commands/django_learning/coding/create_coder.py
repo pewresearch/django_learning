@@ -8,6 +8,13 @@ from django_learning.models import Project
 
 class Command(BasicCommand):
 
+    """
+    Create a coder in the database. Defaults to password 'pass' (Django Learning is assuming that it's deployed in
+    a safe environment, and user accounts are purely for tracking coding data.)
+
+    :param coder_name: Username for the coder to be created
+    """
+
     parameter_names = ["coder_name"]
     dependencies = []
 
@@ -17,13 +24,6 @@ class Command(BasicCommand):
         return parser
 
     def run(self):
-
-        # TODO:
-        # so, project setup:
-        # run create_coder, to create pvankessel and gstocking, with default passwords
-        # in the project JSON config, just change it so that you specify the names of the admins
-        # then add a tab in the project view where project admins can go through a list of expert and/or turk coders
-        # and set them, using a dropdown, as either a project admin, an active coder, or inactive coder
 
         try:
             user = User.objects.get(username=self.parameters["coder_name"])

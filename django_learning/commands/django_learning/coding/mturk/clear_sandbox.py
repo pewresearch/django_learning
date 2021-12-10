@@ -6,6 +6,9 @@ from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
+    """
+    Clears out the Mechanical Turk sandbox in the API
+    """
 
     parameter_names = []
     dependencies = []

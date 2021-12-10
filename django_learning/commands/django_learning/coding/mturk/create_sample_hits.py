@@ -7,6 +7,17 @@ from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
+    """
+    Create and launch Mechanical Turk HITs for an existing project and sample
+
+    :param project_name: Name of an existing project
+    :param sample_name: Name of an existing sample
+    :param hit_type_name: Name of an existing HIT type to assign to the newly created HITs
+    :param num_coders: (default is 1) number of coders to complete each HIT
+    :param template_name: (optional) the name of a custom project_hit_template
+    :param force_hit_type_reset: (default is False) if True, the HIT type will be reset via the MTurk API, which
+        may be necessary - sometimes the API screws up, but this fixes it up
+    """
 
     parameter_names = ["project_name", "sample_name", "hit_type_name"]
     dependencies = []
@@ -54,6 +65,3 @@ class Command(BasicCommand):
     def cleanup(self):
 
         pass
-
-
-# 3BH55VSCCHFXPE5TC7MLIA9DJDUBJ6 hit type
