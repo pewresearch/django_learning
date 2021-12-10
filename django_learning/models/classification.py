@@ -31,11 +31,32 @@ from django_pewtils import get_model
 
 class ClassificationModel(LearningModel):
 
-    probability_threshold = models.FloatField(default=None, null=True)
+    """
+    A generic classification model that doesn't interact with the database. Can be trained on any arbitrary
+    dataset extractor. Extends ``django_learning.models.learning.LearningModel`` with classification-specific
+    functionality.
+    """
+
+    probability_threshold = models.FloatField(
+        default=None,
+        null=True,
+        help_text="Optional probability threshold for binary classifiers",
+    )
 
     # classifications = GenericRelation(Classification, related_query_name="classification_model")
 
     def _train_model(self, pipeline_steps, params, num_cores=1, **kwargs):
+
+        """
+        Wrapper around ``LearningModel._train_model`` that removes any exiting probability threshold
+        when the model is retrained.
+
+        :param pipeline_steps: Pipeline steps
+        :param params: Pipeline parameters
+        :param num_cores: (default is 1) number of cores to use during training
+        :param kwargs: Additional kwargs to be passed to ``LearningModel``.
+        :return:
+        """
 
         results = super(ClassificationModel, self)._train_model(
             pipeline_steps, params, num_cores=num_cores, **kwargs
@@ -48,6 +69,14 @@ class ClassificationModel(LearningModel):
         return results
 
     def extract_dataset(self, refresh=False, **kwargs):
+        """
+        Wrapper around ``LearningModel.extract_dataset`` that adds support for ``use_class_weights`` to
+        mix class-balancing weights into the training weights.
+
+        :param refresh: (default is False) whether or not to refresh the dataset if it's already cached
+        :param kwargs: Additional kwargs to be passed to ``LearningModel``
+        :return:
+        """
 
         super(ClassificationModel, self).extract_dataset(refresh=refresh, **kwargs)
 
@@ -97,6 +126,12 @@ class ClassificationModel(LearningModel):
 
     @require_model
     def show_top_features(self, n=10):
+        """
+        Shows the top features for the trained classification model.
+
+        :param n: (default is 10) number of top features to show
+        :return:
+        """
 
         if hasattr(self.model, "best_estimator_"):
             model = self.model.best_estimator_
@@ -149,11 +184,21 @@ class ClassificationModel(LearningModel):
 
     @require_model
     def describe_model(self):
+        """
+        Adds ``show_top_features`` to the base ``LearningModel.describe_model()`` function.
+        :return:
+        """
 
         super(ClassificationModel, self).describe_model()
         self.show_top_features()
 
     def _get_positive_code(self):
+        """
+        For binary classifiers, this function auto-detects the positive class by assuming that the most common
+        class is the base class.
+
+        :return: Auto-detected positive class (the least common of the two)
+        """
 
         codes = self.dataset[self.dataset_extractor.outcome_column].unique()
         if len(codes) == 2:
@@ -162,6 +207,14 @@ class ClassificationModel(LearningModel):
             return None
 
     def print_test_prediction_report(self, refresh=False, only_load_existing=True):
+        """
+        Prints a classification report in addition to the test prediction scores.
+
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :return:
+        """
 
         results = self.get_test_prediction_results(
             refresh=refresh, only_load_existing=only_load_existing
@@ -206,6 +259,14 @@ class ClassificationModel(LearningModel):
 
     @require_model
     def get_test_prediction_results(self, refresh=False, only_load_existing=False):
+        """
+        Returns test prediction scores.
+
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :return:
+        """
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
@@ -224,6 +285,15 @@ class ClassificationModel(LearningModel):
     def get_incorrect_predictions(
         self, correct_label_id=None, refresh=False, only_load_existing=False
     ):
+        """
+        Returns a subset of the test dataset where the classifier made incorrect predictions.
+
+        :param correct_label_id: (optional) filter to a specific label_id that the classifier got wrong
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :return:
+        """
 
         self.predict_dataset = None
         if is_not_null(self.dataset):
@@ -254,6 +324,16 @@ class ClassificationModel(LearningModel):
     def get_cv_prediction_results(
         self, refresh=False, only_load_existing=False, return_averages=True
     ):
+        """
+        Returns CV prediction scores.
+
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :param return_averages: (default is True) if False, returns a full vertically-concatenated dataframe of
+            all fold scores, otherwise returns averages across all folds
+        :return:
+        """
 
         print("Computing cross-fold predictions")
         _final_model = copy.deepcopy(self.model)
@@ -335,12 +415,13 @@ class ClassificationModel(LearningModel):
     def find_probability_threshold(self, metric="precision_recall_min", save=False):
 
         """
-        :param metric:
-        :param save:
-        :return:
+        Iterates over possible thresholds (0-1) and finds the one that maximizes the minimum of the specified metric
+        between the test and CV fold prediction datasets.
 
-        Iterates over thresholds and finds the one that maximizes the minimum of the specified metric
-        between the test and CV fold prediction datasets
+        :param metric: (default is "precision_recall_min") the scoring function to use to optimize the threshold
+        :param save: (default is False) if True, saves the probability threshold to the database so that future
+            predictions will use it
+        :return: The optimal probability threshold for maximizing the specified metric in both the test dataset and CV folds
         """
 
         print("Scanning CV folds for optimal probability threshold")
@@ -493,6 +574,14 @@ class ClassificationModel(LearningModel):
 
     def set_probability_threshold(self, threshold):
 
+        """
+        Set the probability threshold to the specified value. Saves to the database and will use the threshold for
+        future predictions.
+
+        :param threshold: The threshold to set
+        :return:
+        """
+
         self.probability_threshold = threshold
         self.save()
 
@@ -503,6 +592,17 @@ class ClassificationModel(LearningModel):
         clear_temp_cache=True,
         disable_probability_threshold_warning=False,
     ):
+        """
+        Extends the base ``LearningModel.apply_model`` function to add a warning if the probability threshold is set.
+        (This is a base-level function that is used all over the place, so it doesn't apply the threshold - you should
+        use ``produce_prediction_dataset`` instead.)
+
+        :param data: Dataframe to make predictions on
+        :param keep_cols: (default is None) truncate the dataframe to specific columns when passing it to the model
+        :param clear_temp_cache: (default is True) if False, the temporary cache will be preserved
+        :param disable_probability_threshold_warning: (default is False) if True, overrides the warning
+        :return:
+        """
 
         results = super(ClassificationModel, self).apply_model(
             data, keep_cols=keep_cols, clear_temp_cache=clear_temp_cache
@@ -529,6 +629,20 @@ class ClassificationModel(LearningModel):
         only_load_existing=False,
         ignore_probability_threshold=False,
     ):
+        """
+        Produce a prediction dataset. Extends ``LearningModel.produce_prediction_dataset`` to apply the probability
+        threshold, if one has been set.
+
+        :param df_to_predict: Dataframe to make predictions on
+        :param cache_key: (optional) a unique key for the dataset to be used in caching
+        :param refresh: (default is False) if True, the predictions will be refreshed even if the dataset's cache key
+            already corresponds to existing predictions in the cache
+        :param only_load_existing: (default is False) if True, only load existing prediction from the cache that
+            correspond to the specificed ``cache_key``; do not compute anything if there's nothing in the cache
+        :param ignore_probability_threshold: (default is False) if True, don't apply the probability threshold
+            (the default threshold of .5 will be used)
+        :return: The dataset with predictions added in by the classifier
+        """
 
         base_code = self._get_largest_code()
         if base_code:
@@ -566,7 +680,20 @@ class ClassificationModel(LearningModel):
 
 
 class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
+    """
+    Inherits from ``ClassificationModel`` and provides additional functionality for training classifiers on
+    dataset extractors that pull from the database. If you're training a model on a sample of Django Learning
+    Documents, this is what you want to use.
+    """
+
     def extract_dataset(self, refresh=False, **kwargs):
+        """
+        Extends ``ClassificationModel.extract_dataset`` to add suppoort for mixing in balancing variables.
+
+        :param refresh: (default is False) if True, the dataset will be refreshed even if it is already cached
+        :param kwargs: Additional kwargs passed to ``ClassificationModel.extract_dataset``
+        :return:
+        """
 
         super(DocumentClassificationModel, self).extract_dataset(
             refresh=refresh, **kwargs
@@ -580,6 +707,12 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         self.document_types = self.dataset["document_type"].unique()
 
     def _get_all_document_types(self):
+        """
+        Auto-detects all of the possible Django Learning Document types based off of the models they have
+        one-to-one relationships with in your app.
+
+        :return: List of model names that have Document associations
+        """
 
         return [
             f.name
@@ -592,6 +725,17 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
     def apply_model_to_documents(
         self, documents, save=True, document_filters=None, refresh=False
     ):
+        """
+        Applies the model to an arbitrary query set of Documents.
+
+        :param documents: A query set of Documents
+        :param save: (default is True) if False, a dataframe of predictions is returned and nothing will be saved to
+            the database, otherwise new Classification objects will be created
+        :param document_filters: (optional) a list of document filters to apply to the documents in the query set
+        :param refresh: (default is False) if True, new predictions will be computed even if this set of documents
+            has already been predicted and cached by the model
+        :return:
+        """
 
         extractor = dataset_extractors["raw_document_dataset"](
             document_ids=list(documents.values_list("pk", flat=True)),
@@ -645,6 +789,20 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         num_cores=2,
         chunk_size=1000,
     ):
+        """
+        A multi-processed version of ``apply_model_to_documents`` that uses multiprocessing to create predictions
+        in batches.
+
+        :param document_ids: List of document IDs to process
+        :param save: (default is True) if False, you'll get a prediction dataframe back, otherwise the results will
+            be saved in the database as new Classification objects
+        :param document_filters: (optional) a list of document filters to apply to the documents in the list
+        :param refresh: (default is False) if True, new predictions will be computed even if this set of documents
+            has already been predicted and cached by the model
+        :param num_cores: (default is 2) number of cores to use
+        :param chunk_size: (default is 1000) number of documents to be included in each multiprocessing batch
+        :return:
+        """
 
         print("Processing {} documents".format(len(document_ids)))
 
@@ -680,6 +838,19 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         num_cores=2,
         chunk_size=1000,
     ):
+        """
+        Wrapper around ``apply_model_to_documents`` and ``apply_model_to_documents_multiprocessed`` that applies the
+        model to all of the documents in the sampling frame associated with the classification model.
+
+        :param save: (default is True) if False, you'll get a prediction dataframe back, otherwise the results will
+            be saved in the database as new Classification objects
+        :param document_filters: (optional) a list of document filters to apply to the documents in the list
+        :param refresh: (default is False) if True, new predictions will be computed even if this set of documents
+            has already been predicted and cached by the model
+        :param num_cores: (default is 2) number of cores to use; if you pass 1, multiprocessing will be disabled
+        :param chunk_size: (default is 1000) number of documents to be included in each multiprocessing batch
+        :return:
+        """
 
         doc_ids = set(list(self.sampling_frame.documents.values_list("pk", flat=True)))
         if not refresh:
@@ -709,6 +880,11 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
             )
 
     def update_classifications_with_probability_threshold(self):
+        """
+        Updates existing Classification objects using the model's probability threshold, which has presumably
+        been changed since the model was last applied.
+        :return:
+        """
 
         base_code = self._get_largest_code()
         pos_code = self._get_positive_code()
@@ -767,22 +943,28 @@ def _process_document_chunk(model_id, chunk, i, save, document_filters, refresh)
 
 
 class Classification(LoggedExtendedModel):
+    """
+    Equivalent to ``Code``, but gets applied by ``DocumentClassificationModel``s instead of ``Coder``s.
+    """
 
     document = models.ForeignKey(
         "django_learning.Document",
         on_delete=models.CASCADE,
         related_name="classifications",
+        help_text="The document that's been classified",
     )
     label = models.ForeignKey(
         "django_learning.Label",
         on_delete=models.CASCADE,
         related_name="classifications",
+        help_text="The label applied by the classification model",
     )
 
     classification_model = models.ForeignKey(
         "django_learning.DocumentClassificationModel",
         related_name="classifications",
         on_delete=models.CASCADE,
+        help_text="The classification model that made the prediction",
     )
 
     probability = models.FloatField(
