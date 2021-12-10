@@ -6,6 +6,12 @@ from django_learning.models import Project
 
 class Command(BasicCommand):
 
+    """
+    Create a project based off of a JSON config file. Existing projects will be updated.
+
+    :param project_name: Name of the project to create (must have a corresponding JSON file)
+    """
+
     parameter_names = ["project_name"]
     dependencies = []
 

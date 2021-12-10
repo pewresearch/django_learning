@@ -8,6 +8,14 @@ from django_learning.utils.mturk import MTurk
 
 class Command(BasicCommand):
 
+    """
+    Expires any currently active Mechanical Turk HITs for a given sample. Uses the project's ``mturk_sandbox`` flag
+    to determine whether or not to use the sandbox.
+
+    :param project_name: Name of an existing project
+    :param sample_name: Name of an existing sample
+    """
+
     parameter_names = ["project_name", "sample_name"]
     dependencies = []
 

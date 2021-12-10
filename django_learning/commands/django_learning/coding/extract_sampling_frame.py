@@ -6,6 +6,15 @@ from django_learning.models import SamplingFrame
 
 class Command(BasicCommand):
 
+    """
+    Extracts a sampling frame based off of a configuration file of the same name.
+
+    :param sampling_frame_name: Name of the sampling frame, corresponding to a sampling frame config file
+    :param refresh: (default is False) if True, the sampling frame will be re-synced according to the latest config
+        file and database state; outdated documents may be removed if they no longer fit the config criteria, and new
+        documents may be added for the opposite reason
+    """
+
     parameter_names = ["sampling_frame_name"]
     dependencies = []
 

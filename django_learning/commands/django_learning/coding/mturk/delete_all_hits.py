@@ -6,6 +6,11 @@ from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
+    """
+    Delete all current Mechanical Turk HITs via the API. WARNING: this is a dangerous command.
+
+    :param sandbox: (default is False) if True, uses the Mechanical Turk sandbox API
+    """
 
     parameter_names = []
     dependencies = []
