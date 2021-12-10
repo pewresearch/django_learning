@@ -32,6 +32,7 @@ class CommandTests(DjangoTestCase):
             "django_learning_coding_mturk_expire_sample_hits",
             "django_learning_coding_mturk_check_account_balance",
             "django_learning_coding_mturk_clear_sandbox",
+            "django_learning_coding_mturk_exit_sandbox",
             "django_learning_coding_mturk_sync_sample_hits",
             # "django_learning_nlp_extract_entities",
             "django_learning_nlp_reload_liwc",

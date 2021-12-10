@@ -15,14 +15,11 @@ class Command(BasicCommand):
         parser.add_argument("hit_type_name", type=str)
         parser.add_argument("--num_coders", default=1, type=int)
         parser.add_argument("--template_name", default=None, type=str)
-        parser.add_argument("--sandbox", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         sample = Sample.objects.get(
             name=self.parameters["sample_name"], project=project

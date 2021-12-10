@@ -15,20 +15,17 @@ class Command(BasicCommand):
     def add_arguments(parser):
         parser.add_argument("project_name", type=str)
         parser.add_argument("sample_name", type=str)
-        parser.add_argument("--sandbox", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         sample = Sample.objects.get(
             name=self.parameters["sample_name"], project=project
         )
 
-        mturk = MTurk(sandbox=self.options["sandbox"])
+        mturk = MTurk(sandbox=project.mturk_sandbox)
         mturk.delete_sample_hits(sample)
 
     def cleanup(self):

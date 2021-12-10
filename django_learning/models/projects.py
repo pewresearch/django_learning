@@ -36,20 +36,45 @@ class Project(LoggedExtendedModel):
     qualification_tests = models.ManyToManyField(
         "django_learning.QualificationTest", related_name="projects"
     )
-    sandbox = models.BooleanField(default=False)
+    mturk_sandbox = models.BooleanField(default=True)
     # classification_models = GenericRelation("django_learning.ClassificationModel")
     # regression_models = GenericRelation("django_learning.RegressionModel")
 
+    def __init__(self, *args, **kwargs):
+
+        super(Project, self).__init__(*args, **kwargs)
+        self.__init_mturk_sandbox = self.mturk_sandbox
+
     def __str__(self):
-        if self.sandbox:
-            return "{} (SANDBOX)".format(self.name)
+        if self.mturk_sandbox:
+            return "{} (MTURK SANDBOX)".format(self.name)
         else:
             return self.name
 
-    class Meta:
-        unique_together = ("name", "sandbox")
-
     def save(self, *args, **kwargs):
+
+        if (
+            self.mturk_sandbox == True
+            and self.__init_mturk_sandbox == False
+            and self.hits.filter(turk=True).count() > 0
+        ):
+            raise Exception(
+                "This project already has live MTurk HITs, you can't switch it back to sandbox mode!"
+            )
+        elif self.mturk_sandbox == False and self.__init_mturk_sandbox == True:
+            test_hits = project.hits.filter(turk=True)
+            print(
+                "About to delete {} sandbox HITs and switch to live mode: continue?".format(
+                    test_hits.count()
+                )
+            )
+            import pdb
+
+            pdb.set_trace()
+            test_hits.delete()
+            from django_commander.commands import commands
+
+            commands["django_learning_mturk_clear_sandbox"]()
 
         if self.name not in projects.projects.keys():
             reload(projects)
@@ -74,7 +99,7 @@ class Project(LoggedExtendedModel):
         for qual_test in config.get("qualification_tests", []):
             qual_tests.append(
                 QualificationTest.objects.create_or_update(
-                    {"name": qual_test, "sandbox": self.sandbox}
+                    {"name": qual_test, "mturk_sandbox": self.mturk_sandbox}
                 )
             )
         self.qualification_tests.set(qual_tests)
@@ -131,8 +156,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
-            sandbox=self.sandbox,
-            **kwargs
+            **kwargs,
         )
         return e.extract(refresh=kwargs.get("refresh", False))
 
@@ -142,7 +166,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
-            sandbox=self.sandbox ** kwargs,
+            **kwargs,
         )
         return e.extract(refresh=kwargs.get("refresh", False))
 
@@ -152,8 +176,7 @@ class Project(LoggedExtendedModel):
             project_name=self.name,
             sample_names=sample_names,
             question_names=question_names,
-            sandbox=self.sandbox,
-            **kwargs
+            **kwargs,
         )
         return e.extract(refresh=kwargs.get("refresh", False))
 
@@ -346,16 +369,16 @@ class QualificationTest(LoggedExtendedModel):
     approval_wait_hours = models.IntegerField(null=True)
     duration_minutes = models.IntegerField(null=True)
     lifetime_days = models.IntegerField(null=True)
-    sandbox = models.BooleanField(default=False)
+    mturk_sandbox = models.BooleanField(default=False)
 
     def __str__(self):
         if self.sandbox:
-            return "{} (SANDBOX)".format(self.name)
+            return "{} (MTURK SANDBOX)".format(self.name)
         else:
             return self.name
 
     class Meta:
-        unique_together = ("name", "sandbox")
+        unique_together = ("name", "mturk_sandbox")
 
     def save(self, *args, **kwargs):
 
