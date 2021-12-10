@@ -207,3 +207,22 @@ def get_test_model(pipeline_name, run=True):
         model.find_probability_threshold(save=True)
 
     return model
+
+
+def create_qualification_test():
+
+    test, _ = QualificationTest.objects.get_or_create(name="test_qualification")
+
+    for coder_name in ["coder1", "coder2"]:
+        coder, _ = Coder.objects.get_or_create(name=coder_name)
+        assignment = QualificationAssignment.objects.create_or_update(
+            {"test": test, "coder": coder}
+        )
+        assignment.time_finished = datetime.datetime.now()
+        assignment.save()
+        question = test.questions.get(name="q1")
+        if coder_name == "coder1":
+            label_id = question.labels.get(value="1").pk
+        else:
+            label_id = question.labels.get(value="0").pk
+        question.update_assignment_response(assignment, label_id)
