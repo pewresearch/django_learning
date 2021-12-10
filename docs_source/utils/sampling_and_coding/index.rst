@@ -5,7 +5,6 @@ Sampling and coding utilities
 
     projects
     project_hit_types
-    project_qualification_tests
-    project_qualification_scorers
+    project_qualification_tests_and_scorers
     sampling_frames
     sampling_methods
