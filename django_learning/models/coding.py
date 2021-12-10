@@ -9,23 +9,61 @@ from django_learning.utils import project_hit_types
 
 
 class HITType(LoggedExtendedModel):
+    """
+    Project HIT types specify a type of task to be completed. They primarily contain Mechanical Turk parameters
+    specifying how much a task should cost, and other things like how long HITs should remain active until they expire.
+    ``HITType`` objects in the database correspond to JSON config files.
+    """
 
     project = models.ForeignKey(
-        "django_learning.Project", related_name="hit_types", on_delete=models.CASCADE
+        "django_learning.Project",
+        related_name="hit_types",
+        on_delete=models.CASCADE,
+        help_text="Name of the project the HIT type belongs to",
     )
-    name = models.CharField(max_length=50)
+    name = models.CharField(
+        max_length=50, help_text="Name of the HIT type (config file name)"
+    )
 
-    title = models.TextField(null=True)
-    description = models.TextField(null=True)
-    keywords = ArrayField(models.TextField(), default=list)
-    price = models.FloatField(null=True)
-    approval_wait_hours = models.IntegerField(null=True)
-    duration_minutes = models.IntegerField(null=True)
-    lifetime_days = models.IntegerField(null=True)
-    min_approve_pct = models.FloatField(null=True)
-    min_approve_cnt = models.IntegerField(null=True)
+    title = models.TextField(
+        null=True, help_text="Short name to be given to the task to be performed"
+    )
+    description = models.TextField(null=True, help_text="More verbose description")
+    keywords = ArrayField(
+        models.TextField(),
+        default=list,
+        help_text="Search terms that Turkers can use to find the task",
+    )
+    price = models.FloatField(
+        null=True, help_text="Price per HIT to be paid, in dollars"
+    )
+    approval_wait_hours = models.IntegerField(
+        null=True,
+        help_text="How many hours to wait before auto-approving completed tasks",
+    )
+    duration_minutes = models.IntegerField(
+        null=True,
+        help_text="Maximum number of minutes Turkers have to complete a single task",
+    )
+    lifetime_days = models.IntegerField(
+        null=True,
+        help_text="Maximum number of days uncompleted HITs will remain available after creation",
+    )
+    min_approve_pct = models.FloatField(
+        null=True,
+        help_text="Minimum approval percentage for workers to qualify for the HITs",
+    )
+    min_approve_cnt = models.IntegerField(
+        null=True,
+        help_text="Minimum number of good HITs workers must have done to qualify",
+    )
 
-    turk_id = models.CharField(max_length=250, unique=True, null=True)
+    turk_id = models.CharField(
+        max_length=250,
+        unique=True,
+        null=True,
+        help_text="Unique Mechanical Turk ID, if it's been created via the API",
+    )
 
     class Meta:
         unique_together = ("project", "name")
@@ -34,6 +72,13 @@ class HITType(LoggedExtendedModel):
         return "{}: {}".format(self.project, self.name)
 
     def save(self, *args, **kwargs):
+        """
+        Syncs the HIT type with its config file
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
 
         if self.name not in project_hit_types.project_hit_types.keys():
             raise Exception(
@@ -61,6 +106,9 @@ class HITType(LoggedExtendedModel):
 
 
 class HIT(LoggedExtendedModel):
+    """
+
+    """
 
     sample_unit = models.ForeignKey(
         "django_learning.SampleUnit", related_name="hits", on_delete=models.CASCADE
