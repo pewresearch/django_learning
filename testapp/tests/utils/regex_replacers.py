@@ -26,6 +26,9 @@ class RegexReplacersTests(DjangoTestCase):
         for val in ["test"]:
             self.assertIn(val, regex_replacers.keys())
             self.assertIsNotNone(regex_replacers[val]())
+        import pdb
+
+        pdb.set_trace()
 
     def tearDown(self):
 
