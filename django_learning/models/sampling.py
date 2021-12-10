@@ -116,9 +116,9 @@ class SamplingFrame(LoggedExtendedModel):
             stratify_by = params.get("stratify_by", None)
             if stratify_by and stratify_by not in stratification_variables:
                 stratification_variables.append(stratify_by)
-            for search_name in params.get("sampling_searches", {}).keys():
-                if search_name not in sampling_searches:
-                    sampling_searches.append(search_name)
+            for search in params.get("sampling_searches", []):
+                if search["regex_filter"] not in sampling_searches:
+                    sampling_searches.append(search["regex_filter"])
             additional_variables.update(params.get("additional_weights", {}))
 
         if is_null(frame) or refresh:
@@ -321,7 +321,9 @@ class Sample(LoggedExtendedModel):
                     raise KeyError()
             except KeyError:
                 frame = self.frame.get_sampling_flags(
-                    sampling_search_subset=params.get("sampling_searches", None),
+                    sampling_search_subset=[
+                        s["regex_filter"] for s in params.get("sampling_searches", [])
+                    ],
                     refresh=True,
                 )
             frame = frame[frame["pk"].isin(list(docs.values_list("pk", flat=True)))]
@@ -330,13 +332,13 @@ class Sample(LoggedExtendedModel):
             use_keyword_searches = False
             if (
                 "sampling_searches" in params.keys()
-                and len(params["sampling_searches"].keys()) > 0
+                and len(params["sampling_searches"]) > 0
             ):
                 weight_vars.append("search_none")
                 weight_vars.extend(
                     [
-                        "search_{}".format(name)
-                        for name in params["sampling_searches"].keys()
+                        "search_{}".format(search["regex_filter"])
+                        for search in params["sampling_searches"]
                     ]
                 )
                 use_keyword_searches = True
@@ -360,10 +362,7 @@ class Sample(LoggedExtendedModel):
 
                     sample_chunks = []
                     non_search_sample_size = 1.0 - sum(
-                        [
-                            p["proportion"]
-                            for search, p in params["sampling_searches"].items()
-                        ]
+                        [search["proportion"] for search in params["sampling_searches"]]
                     )
                     if non_search_sample_size > 0:
                         subset = frame[frame["search_none"] == 1]
@@ -381,10 +380,12 @@ class Sample(LoggedExtendedModel):
                             )
                         )
 
-                    for search, p in params["sampling_searches"].items():
-                        subset = frame[frame["search_{}".format(search)] == 1]
+                    for search in params["sampling_searches"]:
+                        subset = frame[
+                            frame["search_{}".format(search["regex_filter"])] == 1
+                        ]
                         sample_size = min(
-                            [len(subset), int(math.ceil(size * p["proportion"]))]
+                            [len(subset), int(math.ceil(size * search["proportion"]))]
                         )
                         sample_chunks.append(
                             SampleExtractor(subset, "pk", seed=seed).extract(
