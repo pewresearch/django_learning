@@ -43,28 +43,25 @@ class MTurkTests(DjangoTestCase):
             sampling_frame_name="all_documents"
         ).run()
         commands["django_learning_coding_create_project"](
-            project_name="test_project", sandbox=True
+            project_name="test_project"
         ).run()
         commands["django_learning_coding_extract_sample"](
             project_name="test_project",
             sample_name="test_sample",
             sampling_frame_name="all_documents",
             size=10,
-            sandbox=True,
         ).run()
         commands["django_learning_coding_create_sample_hits"](
             project_name="test_project",
             sample_name="test_sample",
             hit_type_name="test_hit_type",
             num_coders=1,
-            sandbox=True,
         ).run()
         commands["django_learning_coding_mturk_create_sample_hits"](
             project_name="test_project",
             sample_name="test_sample",
             hit_type_name="test_hit_type",
             num_coders=1,
-            sandbox=True,
         ).run()
         self.assertTrue(HIT.objects.count() == 20)
         self.assertTrue(HIT.objects.filter(turk=True).count() == 10)
@@ -99,7 +96,6 @@ class MTurkTests(DjangoTestCase):
         commands["django_learning_coding_mturk_sync_sample_hits"](
             project_name="test_project",
             sample_name="test_sample",
-            sandbox=True,
             approve=True,
             approve_probability=1.0,
             update_blocks=True,
@@ -120,7 +116,6 @@ class MTurkTests(DjangoTestCase):
         commands["django_learning_coding_mturk_sync_sample_hits"](
             project_name="test_project",
             sample_name="test_sample",
-            sandbox=True,
             approve=True,
             approve_probability=1.0,
             update_blocks=True,
@@ -133,13 +128,13 @@ class MTurkTests(DjangoTestCase):
         )
 
         commands["django_learning_coding_mturk_expire_sample_hits"](
-            project_name="test_project", sample_name="test_sample", sandbox=True
+            project_name="test_project", sample_name="test_sample"
         ).run()
         self.assertTrue(HIT.objects.filter(turk_id__isnull=False).count() == 10)
         commands["django_learning_coding_mturk_delete_sample_hits"](
-            project_name="test_project", sample_name="test_sample", sandbox=True
+            project_name="test_project", sample_name="test_sample"
         ).run()
-        Project.objects.get(name="test_project", sandbox=True).delete()
+        Project.objects.get(name="test_project").delete()
         self.assertTrue(HIT.objects.count() == 0)
         self.assertTrue(Assignment.objects.count() == 0)
         self.assertTrue(

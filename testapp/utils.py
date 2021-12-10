@@ -36,7 +36,7 @@ def set_up_test_project(limit=None):
             sampling_frame_name="all_documents"
         ).run()
         commands["django_learning_coding_create_project"](
-            project_name="test_project", sandbox=True
+            project_name="test_project"
         ).run()
 
 
@@ -57,7 +57,6 @@ def set_up_test_sample(sample_name, size):
         sampling_frame_name="all_documents",
         sampling_method=method,
         size=size,
-        sandbox=True,
         seed=42,
     ).run()
     commands["django_learning_coding_create_sample_hits"](
@@ -65,7 +64,6 @@ def set_up_test_sample(sample_name, size):
         sample_name=sample_name,
         hit_type_name="test_hit_type",
         num_coders=2,
-        sandbox=True,
     ).run()
 
     coder1 = Coder.objects.create_or_update({"name": "coder1"})
@@ -142,7 +140,6 @@ def get_base_dataset_parameters(
 
     base_params = {
         "project_name": "test_project",
-        "sandbox": True,
         "sample_names": [sample_name],
         "question_names": [question_name],
         "document_filters": [],

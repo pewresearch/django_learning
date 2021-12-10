@@ -18,7 +18,6 @@ class Command(BasicCommand):
         parser.add_argument("hit_type_name", type=str)
         parser.add_argument("--num_coders", default=1, type=int)
         parser.add_argument("--template_name", default=None, type=str)
-        parser.add_argument("--sandbox", default=False, action="store_true")
         parser.add_argument(
             "--force_hit_type_reset", default=False, action="store_true"
         )
@@ -26,9 +25,7 @@ class Command(BasicCommand):
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         sample = Sample.objects.get(
             name=self.parameters["sample_name"], project=project
@@ -38,7 +35,7 @@ class Command(BasicCommand):
             {"project": project, "name": self.parameters["hit_type_name"]}
         )
 
-        mturk = MTurk(sandbox=self.options["sandbox"])
+        mturk = MTurk(sandbox=project.mturk_sandbox)
         if not hit_type.turk_id or self.options["force_hit_type_reset"]:
             mturk.sync_hit_type(hit_type)
 

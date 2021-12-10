@@ -28,14 +28,11 @@ class Command(BasicCommand):
         parser.add_argument("--seed", default=None, type=int)
         parser.add_argument("--force_rerun", default=False, action="store_true")
         parser.add_argument("--skip_weighting", default=False, action="store_true")
-        parser.add_argument("--sandbox", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         frame, created = SamplingFrame.objects.get_or_create(
             name=self.options["sampling_frame_name"]

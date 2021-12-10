@@ -352,7 +352,6 @@ def create_sample_hits_mturk(request, project_name):
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
-                "sandbox": bool(request.POST.get("sandbox")),
             },
         )
 
