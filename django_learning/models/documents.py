@@ -178,12 +178,16 @@ class Document(LoggedExtendedModel, QueryModel):
                         delete = True
                         if not ignore_warnings:
                             print(
-                                "Warning: text for document {} was modified, clearing out {}".format(
+                                "Warning: text for document {} was modified, continuing will clear out {}".format(
                                     self.pk, m2m
                                 )
                             )
-                            # setattr(self, m2m, [])
-                            # getattr(self, m2m).clear()
+                            print(
+                                "Quit, or set delete=False and continue to skip this from happening"
+                            )
+                            print(
+                                "To allow text modifications to happen without triggering this warning, pass allow_modified_text=True to the Document save function"
+                            )
                             import pdb
 
                             pdb.set_trace()
