@@ -7,7 +7,6 @@ from django_learning.models.ngram_sets import *
 from django_learning.models.projects import *
 from django_learning.models.sampling import *
 from django_learning.models.topics import *
-from django_learning.models.word2vec import *
 from django_learning.models.classification import *
 from django_learning.models.regression import *
 
