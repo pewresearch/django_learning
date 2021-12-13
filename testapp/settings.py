@@ -17,7 +17,6 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
     "django_commander",
-    "django_queries",
     "django_learning",
     "testapp",
 ]
