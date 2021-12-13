@@ -50,9 +50,6 @@ class DjangoLearningConfig(AppConfig):
             ("DJANGO_LEARNING_REGEX_FILTERS", "utils/regex_filters"),
             ("DJANGO_LEARNING_STOPWORD_SETS", "utils/stopword_sets"),
             ("DJANGO_COMMANDER_COMMAND_FOLDERS", "commands"),
-            ("DJANGO_QUERIES_QUERY_FOLDERS", "queries/dataframes"),
-            ("DJANGO_QUERIES_QUERY_FOLDERS", "queries/records"),
-            ("DJANGO_QUERIES_QUERY_FOLDERS", "queries/networks"),
         ]:
             if hasattr(settings, setting):
                 dirs = getattr(settings, setting)
@@ -85,7 +82,7 @@ class DjangoLearningConfig(AppConfig):
             new_templates.append(template)
         setattr(settings, "TEMPLATES", new_templates)
 
-        for dependency in ["django_queries", "django_commander"]:
+        for dependency in ["django_commander"]:
             if dependency not in settings.INSTALLED_APPS:
                 raise ImproperlyConfigured(
                     "{} must be in installed apps.".format(dependency)

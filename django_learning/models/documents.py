@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from django_commander.models import LoggedExtendedModel
 from django_learning.managers import DocumentManager
-from django_queries.models import QueryModel
 from django.apps import apps
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -14,7 +13,15 @@ from pewtils import get_hash
 import re
 
 
-class Document(LoggedExtendedModel, QueryModel):
+class Document(LoggedExtendedModel):
+
+    """
+    Documents are at the core of Django Learning - these are the pieces of text that you want to code. They also
+    link all of the other models in Django Learning with the models in your own Django app. To do this, you simply
+    need to create a ``OneToOneRelation`` with ``django_learning.models.Document`` with a model in your own app.
+    For example, if you have a model for Facebook posts, you can create a Document for each post and populate the
+    ``text`` field with the text of each post.
+    """
 
     text = models.TextField(help_text="The text content of the document")
     original_text = models.TextField(null=True)
