@@ -33,7 +33,7 @@
                                   </div>
                                   <div class="modal-body">
                                     <p>
-                                        Update active and inactive coders
+                                        Update coders
                                     </p>
                                   </div>
                                   <div class="modal-footer">
@@ -50,11 +50,10 @@
                                     <td>
                                         <div class="form-group">
                                             <select class="form-control" name="{{ coder.pk }}" id="{{ coder.pk }}">
-                                                {% if coder.status != 'active' and coder.status != 'inactive' %}
+                                                {% if coder.status != 'assigned' %}
                                                     <option value="---" selected>---</option>
                                                 {% endif %}
-                                                <option value="active" {% if coder.status == 'active' %}selected{%endif%}>Active</option>
-                                                <option value="inactive" {% if coder.status == 'inactive' %}selected{%endif%}>Inactive</option>
+                                                <option value="assigned" {% if coder.status == 'assigned' %}selected{%endif%}>Assigned</option>
                                             </select>
                                         </div>
                                     </td>
@@ -66,8 +65,7 @@
                                     <div class="form-group">
                                         <select class="form-control" name="new" id="new">
                                             <option value="---" selected>---</option>
-                                            <option value="active">Active</option>
-                                            <option value="inactive">Inactive</option>
+                                            <option value="assigned">Assigned</option>
                                         </select>
                                     </div>
                                 </td>
