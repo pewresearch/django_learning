@@ -122,8 +122,7 @@ def edit_project_coders(request, project_name, mode):
 
         if request.method == "POST":
 
-            active_coders = []
-            inactive_coders = []
+            coders = []
             new_name = request.POST.get("new_name")
             if new_name:
                 try:
@@ -135,36 +134,23 @@ def edit_project_coders(request, project_name, mode):
                 coder = get_model("Coder").objects.create_or_update(
                     {"name": new_name}, {"is_mturk": False, "user": user}
                 )
-                status = request.POST.get("new")
-                if status == "active":
-                    active_coders.append(coder.pk)
-                else:
-                    inactive_coders.append(coder.pk)
+                coders.append(coder.pk)
 
             for coder_id, status in request.POST.items():
                 if not coder_id.startswith("new") and not coder_id.startswith("csrf"):
                     coder = Coder.objects.get(pk=coder_id)
-                    if status == "active":
-                        active_coders.append(coder.pk)
-                    else:
-                        inactive_coders.append(coder.pk)
+                    coders.append(coder.pk)
 
-            project.coders.set(Coder.objects.filter(pk__in=active_coders))
-            project.inactive_coders.set(Coder.objects.filter(pk__in=inactive_coders))
+            project.coders.set(Coder.objects.filter(pk__in=coders))
             project.save()
 
         coders = []
         for coder in project.coders.filter(is_mturk=True if mode == "mturk" else False):
-            coders.append({"name": str(coder), "pk": coder.pk, "status": "active"})
-        for coder in project.inactive_coders.filter(
-            is_mturk=True if mode == "mturk" else False
-        ):
-            coders.append({"name": str(coder), "pk": coder.pk, "status": "inactive"})
+            coders.append({"name": str(coder), "pk": coder.pk, "status": "assigned"})
         nonproject_coders = (
             get_model("Coder")
             .objects.filter(is_mturk=True if mode == "mturk" else False)
             .exclude(pk__in=project.coders.all())
-            .exclude(pk__in=project.inactive_coders.all())
         )
         for coder in nonproject_coders:
             coders.append({"name": str(coder), "pk": coder.pk, "status": "---"})

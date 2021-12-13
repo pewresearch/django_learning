@@ -24,21 +24,35 @@ except ImportError:
 
 class Project(LoggedExtendedModel):
 
-    name = models.CharField(max_length=250)
-    coders = models.ManyToManyField("django_learning.Coder", related_name="projects")
+    """
+
+    name = models.CharField(
+        max_length=250,
+        help_text="Name of the project (corresponds to a project config JSON file",
+    )
+    coders = models.ManyToManyField(
+        "django_learning.Coder",
+        related_name="projects",
+        help_text="Coders on the project",
+    )
     admins = models.ManyToManyField(
-        "django_learning.Coder", related_name="admin_projects"
+        "django_learning.Coder",
+        related_name="admin_projects",
+        help_text="Coders with admin privileges on the project",
     )
-    inactive_coders = models.ManyToManyField(
-        "django_learning.Coder", related_name="inactive_projects"
+    instructions = models.TextField(
+        null=True,
+        help_text="Instructions to be displayed at the top of the coding interface",
     )
-    instructions = models.TextField(null=True)
     qualification_tests = models.ManyToManyField(
-        "django_learning.QualificationTest", related_name="projects"
+        "django_learning.QualificationTest",
+        related_name="projects",
+        help_text="Qualification tests that coders must take to qualify for the coding project",
     )
-    mturk_sandbox = models.BooleanField(default=True)
-    # classification_models = GenericRelation("django_learning.ClassificationModel")
-    # regression_models = GenericRelation("django_learning.RegressionModel")
+    mturk_sandbox = models.BooleanField(
+        default=True,
+        help_text="(default is True) whether or not the project is in sandbox mode (for the purposes of interacting with Mechanical Turk)",
+    )
 
     def __init__(self, *args, **kwargs):
 
