@@ -118,11 +118,6 @@
                 <div class="panel panel-default">
                     <div class="panel-body" style="overflow: scroll; height: 450px;">
                         <p>{{ hit.sample_unit.document.text|safe|linebreaks }}</p>
-                        <!--
-                        {% if hit.sample_unit.document.external_link and hit.sample_unit.document.external_link != 'nan' %}
-                            <iframe src="{{ hit.document.sample_unit.external_link }}" width="500" height="600" style="border:none;overflow:scroll" scrolling="yes" frameborder="0" allowTransparency="true"></iframe>
-                        {% endif %}
-                        -->
                     </div>
                 </div>
                 <fieldset class="form-group">
