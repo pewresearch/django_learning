@@ -23,6 +23,8 @@ except ImportError:
 
 
 class Project(LoggedExtendedModel):
+    """
+    Projects represent codebooks - sets of questions that you want to use to code a set of documents.
 
     """
 
@@ -66,6 +68,12 @@ class Project(LoggedExtendedModel):
             return self.name
 
     def save(self, *args, **kwargs):
+        """
+        Extends the ``save`` function to sync the project with its JSON config with the same name
+        :param args:
+        :param kwargs:
+        :return:
+        """
 
         if (
             self.mturk_sandbox == True
@@ -146,14 +154,27 @@ class Project(LoggedExtendedModel):
         self.admins.set(get_model("Coder").objects.filter(pk__in=admins))
 
     def expert_coders(self):
+        """
+        Returns in-house coders assigned to the project
+        :return:
+        """
 
         return self.coders.filter(is_mturk=False)
 
     def mturk_coders(self):
+        """
+        Returns Mechanical Turk coders assigned to the project
+        :return:
+        """
 
         return self.coders.filter(is_mturk=True)
 
     def is_qualified(self, coder):
+        """
+        Given a coder, returns whether or not they qualify based on the qualification tests associated with the project
+        :param coder: a Coder instance
+        :return:
+        """
 
         return all(
             [
