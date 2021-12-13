@@ -183,38 +183,6 @@ class Project(LoggedExtendedModel):
             ]
         )
 
-    def extract_document_coder_label_dataset(
-        self, sample_names, question_names, code_filters=None, **kwargs
-    ):
-
-        e = dataset_extractors.dataset_extractors["document_coder_label_dataset"](
-            project_name=self.name,
-            sample_names=sample_names,
-            question_names=question_names,
-            **kwargs,
-        )
-        return e.extract(refresh=kwargs.get("refresh", False))
-
-    def extract_document_coder_dataset(self, sample_names, question_names, **kwargs):
-
-        e = dataset_extractors.dataset_extractors["document_coder_dataset"](
-            project_name=self.name,
-            sample_names=sample_names,
-            question_names=question_names,
-            **kwargs,
-        )
-        return e.extract(refresh=kwargs.get("refresh", False))
-
-    def extract_document_dataset(self, sample_names, question_names, **kwargs):
-
-        e = dataset_extractors.dataset_extractors["document_dataset"](
-            project_name=self.name,
-            sample_names=sample_names,
-            question_names=question_names,
-            **kwargs,
-        )
-        return e.extract(refresh=kwargs.get("refresh", False))
-
 
 class Question(LoggedExtendedModel):
 
