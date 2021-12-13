@@ -6,7 +6,6 @@ from django_learning.models.projects import *
 from django_learning.models.sampling import *
 from django_learning.models.topics import *
 from django_learning.models.classification import *
-from django_learning.models.regression import *
 
 from django_learning.utils.balancing_variables import balancing_variables
 from django_learning.utils.dataset_code_filters import dataset_code_filters
