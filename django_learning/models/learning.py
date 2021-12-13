@@ -58,8 +58,9 @@ class LearningModel(LoggedExtendedModel):
         help_text="A pickle file of the parameters used to process the codes and generate the model",
     )
 
-    cv_folds = PickledObjectField(null=True)
-    cv_folds_test = PickledObjectField(null=True)
+    cv_folds = PickledObjectField(
+        null=True, help_text="Indices of the cross-validation folds"
+    )
 
     model_cache_hash = models.CharField(max_length=256, null=True)
     dataset_cache_hash = models.CharField(max_length=256, null=True)
