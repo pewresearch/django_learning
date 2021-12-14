@@ -20,50 +20,6 @@ from pewanalytics.internal import wmom
 from pewanalytics.stats.irr import compute_scores
 from pewtils import is_not_null
 
-#         scoring_function = None
-#         if "scoring_function" in self.parameters["model"].keys():
-#             scoring_function = self._get_scoring_function(
-#                 self.parameters["model"]["scoring_function"],
-#                 binary_base_code=smallest_code if len(y.unique()) == 2 else None
-#             )
-#     def _get_scoring_function(self, func_name, binary_base_code=None):
-#
-#         try:
-#
-#             from django_learning.utils.scoring_functions import scoring_functions
-#             scoring_function = make_scorer(scoring_functions[func_name])
-#
-#         except:
-#
-#             if "regression" in str(self.__class__):
-#                 func_map = {
-#                     "mean_squared_error": (mean_squared_error, False, False),
-#                     "r2": (r2_score, True, False)
-#                 }
-#                 func, direction, needs_proba = func_map[func_name]
-#                 scoring_function = make_scorer(func, needs_proba=needs_proba, greater_is_better=direction)
-#             elif binary_base_code:
-#                 func_map = {
-#                     "f1": (f1_score, True, False),
-#                     "precision": (precision_score, True, False),
-#                     "recall": (recall_score, True, False),
-#                     "brier_loss": (brier_score_loss, False, True)
-#                 }
-#                 func, direction, needs_proba = func_map[func_name]
-#                 scoring_function = make_scorer(func, needs_proba=needs_proba, greater_is_better=direction,
-#                                                pos_label=binary_base_code)
-#             else:
-#                 if self.parameters["model"]["scoring_function"] == "f1":
-#                     scoring_function = "f1_macro"
-#                     # scoring_function = "f1_micro"
-#                     # scoring_function = "f1_weighted"
-#                 elif self.parameters["model"]["scoring_function"] == "precision":
-#                     scoring_function = "precision"
-#                 else:
-#                     scoring_function = "recall"
-#
-#         return scoring_function
-
 
 def compute_scores_from_datasets_as_coders(
     dataset1,
@@ -75,6 +31,20 @@ def compute_scores_from_datasets_as_coders(
     discrete_classes=True,
     pos_label=None,
 ):
+    """
+    Given two compatible dataframes, computes scores that compare the two.
+
+    :param dataset1: Dataset #1
+    :param dataset2: Dataset #2
+    :param document_column: Name of the column that contains document IDs
+    :param outcome_column: Name of the column with the outcome variable
+    :param weight_column: (Optional) name of the column with weights
+    :param min_overlap: (default is 10) minimum number of documents that must be contained in each dataset
+    :param discrete_classes: (default is True) if True, scores are calculated for each value separately; if False, \
+        scores are calculated once across all values under the assumption that your outcome column is binary
+    :param pos_label: (Optional) specify the value in your outcome variable that indicates a positive case
+    :return: a dataframe of scores for each class
+    """
 
     dataset1 = copy.deepcopy(dataset1)
     dataset2 = copy.deepcopy(dataset2)
@@ -110,6 +80,20 @@ def compute_scores_from_dataset(
     discrete_classes=True,
     pos_label=None,
 ):
+    """
+    Given a vertically-concatenated dataframe of codes from different coders, returns IRR scores
+
+    :param dataset: A dataset with all of the codes across all coders
+    :param document_column: Name of the column that contains document IDs
+    :param outcome_column: Name of the column with the outcome variable
+    :param coder_column: Name of the column that contains coder IDs
+    :param weight_column: (Optional) name of the column with weights
+    :param min_overlap: (default is 10) minimum number of documents that must be contained in each dataset
+    :param discrete_classes: (default is True) if True, scores are calculated for each value separately; if False, \
+        scores are calculated once across all values under the assumption that your outcome column is binary
+    :param pos_label: (Optional) specify the value in your outcome variable that indicates a positive case
+    :return: a dataframe of scores for each class
+    """
 
     dataset = copy.deepcopy(dataset)
 
@@ -204,6 +188,19 @@ def get_probability_threshold_score_df(
     max_prob=1,
     n_thresholds=20,
 ):
+    """
+    Loops over the range (0, 1) and calculates IRR scores at different probability thresholds. Requires that your
+    ``predicted_df`` has a ``probability`` column.
+    :param predicted_df: a dataframe of predictions
+    :param comparison_df: a dataframe to compare the predictions against (e.g. the true values)
+    :param outcome_column: Name of the column with your outcome variable
+    :param base_code: (default is None) the base/negative value in your outcome column
+    :param pos_code: (default is None) the positive class in your outcome column
+    :param weight_column: (Optional) name of the column with weights
+    :param max_prob: (default is 1) maximum upper bound of the probability thresholds to test
+    :param n_thresholds: (default is 20) number of thresholds to test across the range of (0, ``max_prob``)
+    :return: A dataframe of scores with a ``threshold`` column indicating the threshold that was used
+    """
 
     predicted_df = copy.copy(predicted_df)
     threshold_scores = []
@@ -227,6 +224,13 @@ def get_probability_threshold_score_df(
 
 
 def get_probability_threshold_from_score_df(score_df, metric="precision_recall_min"):
+    """
+    Given a dataframe of scores with a ``threshold`` column (like that generated by ``get_probability_threshold_score_df``,
+    although you could concatenate results from multiple datasets together), returns the optimal probability threshold.
+    :param score_df: A dataframe of scores computed at different thresholds
+    :param metric: (default is "precision_recall_min") name of the scoring function to use to determine the probability threshold
+    :return: the probability threshold that maximizes the scoring metric
+    """
 
     sorted_df = (
         score_df.groupby("threshold")
@@ -253,6 +257,21 @@ def find_probability_threshold(
     max_prob=1,
     n_thresholds=20,
 ):
+    """
+    Runs ``get_probability_threshold_score_df`` and ``get_probability_threshold_from_score_df`` in sequence.
+
+    :param predicted_df: a dataframe of predictions
+    :param comparison_df: a dataframe to compare the predictions against (e.g. the true values)
+    :param outcome_column: Name of the column with your outcome variable
+    :param base_code: (default is None) the base/negative value in your outcome column
+    :param pos_code: (default is None) the positive class in your outcome column
+    :param metric: (default is "precision_recall_min") name of the scoring function to use to determine the probability threshold
+    :param weight_column: (Optional) name of the column with weights
+    :param max_prob: (default is 1) maximum upper bound of the probability thresholds to test
+    :param n_thresholds: (default is 20) number of thresholds to test across the range of (0, ``max_prob``)
+
+    :return: optimal probability threshold
+    """
 
     score_df = get_probability_threshold_score_df(
         predicted_df,
@@ -270,6 +289,16 @@ def find_probability_threshold(
 def apply_probability_threshold(
     predicted_df, threshold, outcome_column="label_id", base_code=None, pos_code=None
 ):
+    """
+    Given a dataset of predictions with a ``probability`` column, applies a probability threshold and converts
+    the probabilities into a discrete outcome column
+    :param predicted_df: dataframe of predictions
+    :param threshold: probability threshold between 0 and 1
+    :param outcome_column: (default is "label_id") name of the outcome column
+    :param base_code: (Optional) the base/negative code in your outcome column
+    :param pos_code: the positive class in your outcome column
+    :return: a dataframe with your outcome column converted into discrete values based on the threshold
+    """
 
     if (
         "probability" not in predicted_df.columns

@@ -5,6 +5,17 @@ When extracting a dataset, you can use categorical variables to balance the weig
 across different groups. This can be useful during machine learning, if you want to make sure that
 different groups of documents are given equal weight during training.
 
+When extracting a `document_dataset`, `document_coder_datset`, or `document_coder_label` dataset, you can
+pass in a keyword argument containing the names of `balancing_variables` that correspond to functions defined
+in your `settings.DJANGO_LEARNING_BALANCING_VARIABLES` folders. Weights will be computed to evenly balance all
+classes within the partitions (using the combinations if multiple variables are included) and the results will
+be contained in a `balancing_weight` column in the returned dataset. If you specify a balancing weight in the
+training dataset for a machine learning pipeline, the `LearningModel` will use the balancing weight from the
+dataset when computing its training weight. If class weights and/or sampling weights are included, these will
+be multiplied by the balancing weight. Balancing weights will NOT be used when evaluating model performance.
+They exist in Django Learning solely for the training phase of machine learning, or simply for your own
+convenience when you're extracting datasets.
+
 Defining balancing weights
 --------------------------
 

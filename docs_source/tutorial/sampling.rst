@@ -1,4 +1,5 @@
-# Sampling
+Sampling
+=========
 
 ### Components
 #### Sampling frames

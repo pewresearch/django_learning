@@ -1,4 +1,5 @@
 Qualification tests and scorers
+================================
 
 Qualification tests are simplified versions project codebooks and HIT types combined into one. They're intended to
 specify a series of questions that potential coders must answer before being allowed to complete any HITs. They are
@@ -11,6 +12,7 @@ to the qualification_tests section:
     "qualification_tests": ["my_test"]
 
 Qualification test config
+--------------------------
 
 Below is an example of a qualification test, which consists of a series of questions and some general Mechanical
 Turk configuration parameters. For more information on
@@ -80,6 +82,7 @@ config file when you run ``.save()``:
     <BasicExtendedManager [<QualificationTest: my_test>]>
 
 Qualification scorers
+----------------------
 
 Qualification scorers should be placed in the ``settings.DJANGO_LEARNING_PROJECT_QUALIFICATION_SCORERS`` folders. The
 files should contain a single function called ``scorer`` that will be passed a ``QualificationTestAssignment`` object
@@ -97,6 +100,7 @@ questions. Ultimately, the function should return ``True`` if the coder qualifie
             return False
 
 Sandboxing
+-----------
 
 Qualification tests have separate versions stored for the Mechanical Turk sandbox. When you first create a project,
 associated qualification tests will be created with ``mturk_sandbox=True``. When you switch the project out of the
