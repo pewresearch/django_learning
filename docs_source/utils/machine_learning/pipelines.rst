@@ -90,6 +90,7 @@ be passed. Each step should be a tuple of a name and a valid sklearn processor o
 For example, we might wish to extract TF-IDF features, so we could add this to our pipeline:
 
 .. code:: python
+
     "steps": [
         ("tfidf", feature_extractors["tfidf"]())
     ]

@@ -7,3 +7,4 @@ Utility modules
     Dataset extraction <dataset_extraction/index>
     Machine learning <machine_learning/index>
     Multipurpose utilities <multipurpose/index>
+    Non-extendable utilities <misc/index>

@@ -10,8 +10,10 @@ tried-and-true methods and validating them to ensure that they achieve performan
 
 .. toctree::
     :maxdepth: 10
+    :hidden:
     :caption: Table of Contents:
 
     Tutorial <tutorial/index>
-    Utility modules <utilities/index>
+    Models <models/index>
+    Utility modules <utils/index>
     Commands <commands/index>

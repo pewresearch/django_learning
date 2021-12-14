@@ -24,9 +24,21 @@ from pewanalytics.stats.sampling import compute_sample_weights_from_frame
 
 class SamplingFrame(LoggedExtendedModel):
 
-    name = models.CharField(max_length=200, unique=True)
+    """
+    Sampling frames define a population of documents about which you want to learn something. They should represent
+    the full scope of documents you want to study, and from this frame you can draw representative samples and train
+    classifiers to make inferences about the population. They are defined in configurations files of the same name.
+    """
+
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text="Name of the sampling frame (must correspond to a config file)",
+    )
     documents = models.ManyToManyField(
-        "django_learning.Document", related_name="sampling_frames"
+        "django_learning.Document",
+        related_name="sampling_frames",
+        help_text="The documents that belong to the sampling frame",
     )
 
     def __str__(self):
@@ -45,9 +57,19 @@ class SamplingFrame(LoggedExtendedModel):
 
     @property
     def config(self):
+        """
+        Returns the configuration for the sampling frame from the config file
+        :return:
+        """
         return sampling_frames[self.name]()
 
     def extract_documents(self, refresh=False):
+        """
+        Uses the parameters in the config file to select a subset of documents for the frame.
+        :param refresh: (default is False) if True, will refresh the documents associated with the sampling frame and
+            overwrite any existing relations
+        :return:
+        """
 
         print("Extracting sample frame '{}'".format(self.name))
         if self.documents.count() == 0 or refresh:
@@ -92,6 +114,22 @@ class SamplingFrame(LoggedExtendedModel):
             )
 
     def get_sampling_flags(self, refresh=False, sampling_search_subset=None):
+        """
+        Iterates over samples that have been drawn from the sampling frame, notes any stratification or keyword
+        oversampling variables that were used to pull the samples, and computes a dataframe with all of the required
+        variables (binary flags) for sampling and weighting. This gets saved to the cache.
+
+        :param refresh: (default is False) if True, existing cached data will be ignored and everything will be recomputed
+        :param sampling_search_subset: (Optional) by default, this function will loop over all samples and compute binary
+            columns for all of the ``regex_filter`` functions that were used in oversampling. Based on all of these searches,
+            a ``search_none`` column is then computed to flag documents that don't match to any of the regexes used in
+            sampling. If you wish to compute the ``search_none`` function off of a subset of regex flags (e.g. just the
+            flags that were used to pull a particular sample) you can pass a list of those ``regex_filters`` to this
+            variable, and the ``search_none`` column will be computed accordingly, effectively ignoring other regex
+            searches that may have been for sampling in other samples linked to the frame. This has no effect on the
+            cached data, it gets computed after the cached data is loaded.
+        :return: A dataframe with binary columns for all of the variables that have been used to sample from the frame
+        """
 
         cache = CacheHandler(
             os.path.join(
@@ -178,44 +216,54 @@ class SamplingFrame(LoggedExtendedModel):
 
 
 class Sample(LoggedExtendedModel):
+    """
+    A sample of documents that have been drawn from a sampling frame.
+    """
 
-    DISPLAY_CHOICES = (
-        ("article", "Article"),
-        ("image", "Image"),
-        ("audio", "Audio"),
-        ("video", "Video"),
+    name = models.CharField(
+        max_length=100,
+        help_text="A name for the sample (must be unique within the project)",
     )
-
-    name = models.CharField(max_length=100)
     project = models.ForeignKey(
-        "django_learning.Project", related_name="samples", on_delete=models.CASCADE
+        "django_learning.Project",
+        related_name="samples",
+        on_delete=models.CASCADE,
+        help_text="The coding project the sample belongs to",
     )
 
     frame = models.ForeignKey(
         "django_learning.SamplingFrame",
         related_name="samples",
         on_delete=models.CASCADE,
+        help_text="The sampling frame the sample was drawn from",
     )
-    sampling_method = models.CharField(max_length=200, null=True, default="random")
+    sampling_method = models.CharField(
+        max_length=200,
+        null=True,
+        default="random",
+        help_text="The method used for sampling (must correspond to a sampling method file)",
+    )
 
     parent = models.ForeignKey(
         "django_learning.Sample",
         related_name="subsamples",
         null=True,
         on_delete=models.SET_NULL,
+        help_text="The parent sample, if it's a subsample",
     )
 
     documents = models.ManyToManyField(
         "django_learning.Document",
         through="django_learning.SampleUnit",
         related_name="samples",
+        help_text="Documents in the sample",
     )
-
-    display = models.CharField(max_length=20, choices=DISPLAY_CHOICES)
 
     # AUTO-FILLED RELATIONS
     qualification_tests = models.ManyToManyField(
-        "django_learning.QualificationTest", related_name="samples"
+        "django_learning.QualificationTest",
+        related_name="samples",
+        help_text="Qualification tests required to code the sample (set automatically)",
     )
 
     class Meta:
@@ -242,6 +290,10 @@ class Sample(LoggedExtendedModel):
         self.qualification_tests.set(self.project.qualification_tests.all())
 
     def get_params(self):
+        """
+        Loads the sampling method from the config file
+        :return:
+        """
 
         try:
             return sampling_methods.get(self.sampling_method, None)()
@@ -249,6 +301,12 @@ class Sample(LoggedExtendedModel):
             return {}
 
     def sync_with_frame(self, override_doc_ids=None):
+        """
+        Syncs the sample with the frame, adding or removing documents accordingly. Will raise warnings and confirmation
+        prompts if this will result in data loss.
+        :param override_doc_ids: (Optional) pass a specific list of Document primary keys to set the sample to
+        :return:
+        """
 
         if not override_doc_ids:
             override_doc_ids = list(self.documents.values_list("pk", flat=True))
@@ -282,6 +340,22 @@ class Sample(LoggedExtendedModel):
         skip_weighting=False,
         seed=None,
     ):
+        """
+        Pulls a sample from the frame using ``sampling_method``. If documents already exist for the specified sample,
+        the existing sample will be expanded with ``size`` additional documents using the sampling method.
+
+        :param size: Size of the sample to pull
+        :param recompute_weights: (default is False) if True, recomputes the weights on the sample units
+        :param override_doc_ids: (default is None) pass a specific list of Document primary keys to set the sample to
+        :param allow_overlap_with_existing_project_samples: (default is False) if True, documents that are already
+            associated with other samples in the project will be avaialble for sampling and inclusion in this sample;
+            by default, documents can only be included in one sample for each project
+        :param clear_existing_documents: (default is False) if True, existing documents will be removed and a fresh
+            sample will be pulled; otherwise new documents will be added to the existing sample
+        :param skip_weighting: (default is False) if True, sampling weights won't be computed
+        :param seed: (Optional) random seed to be used during sampling
+        :return:
+        """
 
         if clear_existing_documents:
             print("Clearing out existing documents")
@@ -463,18 +537,27 @@ class Sample(LoggedExtendedModel):
 
 
 class SampleUnit(LoggedExtendedModel):
+    """
+    A document that belongs to a sample. Contains a ``weight`` with the sampling weight designed to make the
+    sample representative of the frame from which it was drawn.
+    """
 
     document = models.ForeignKey(
         "django_learning.Document",
         related_name="sample_units",
         on_delete=models.CASCADE,
+        help_text="The document that was sampled",
     )
     sample = models.ForeignKey(
         "django_learning.Sample",
         related_name="document_units",
         on_delete=models.CASCADE,
+        help_text="The sample the document belongs to",
     )
-    weight = models.FloatField(default=1.0)
+    weight = models.FloatField(
+        default=1.0,
+        help_text="Sampling weight based on the sample and sampling frame the document belongs to",
+    )
 
     class Meta:
         unique_together = ("document", "sample")

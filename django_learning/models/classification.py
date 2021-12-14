@@ -944,7 +944,7 @@ def _process_document_chunk(model_id, chunk, i, save, document_filters, refresh)
 
 class Classification(LoggedExtendedModel):
     """
-    Equivalent to ``Code``, but gets applied by ``DocumentClassificationModel``s instead of ``Coder``s.
+    Equivalent to ``Code``, but gets applied by ``DocumentClassificationModel`` instead of ``Coder``.
     """
 
     document = models.ForeignKey(

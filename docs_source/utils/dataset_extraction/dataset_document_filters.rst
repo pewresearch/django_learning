@@ -1,5 +1,5 @@
 Dataset document filters
-====================
+=========================
 
 Dataset document filters filter datasets to specific documents. These are applied last, after ``dataset_code_filters``
 and ``dataset_coder_filters``.
@@ -9,23 +9,32 @@ and ``dataset_coder_filters``.
     corpus as a whole, so they need to deal with document attributes.
 
 Defining dataset document filters
------------------------------
+----------------------------------
 
 Dataset document filters require a ``filter`` function that accepts the dataframe as well
-as positional and keyword arguments, and returns a subset of the dataframe.
+as positional and keyword arguments, and returns a subset of the dataframe. Here's an example of a
+filter that filters the dataset by a search term:
 
 .. code:: python
+
+    def filter(self, df, search_text):
+
+        return df[df['text'].str.contains(search_text)
+
 
 
 Using dataset document filters
----------------------------
+-------------------------------
 
 Dataset document filters get applied by dataset extractors, so you'll most commonly use them when
 building a machine learning pipeline. They can be passed to dataset extractors using the
-"document_filters" key:
+"document_filters" key, which takes a tuple with the filter name, position arguments, and keyword arguments:
 
 .. code:: python
 
+    "document_filters": [
+        ("my_document_filter", ["search_term"], {})
+    ]
 
 Built-in dataset document filters
 ---------------------------------
@@ -100,7 +109,7 @@ filter those rows to those that were given code "10".
 
 
 ``filter_by_other_model_prediction``
-*********************************
+*************************************
 
 Similar to the above, but instead of filtering based off of a model's training and test data,
 this instead filters based on the model's predictions. Useful if you train one model to predict

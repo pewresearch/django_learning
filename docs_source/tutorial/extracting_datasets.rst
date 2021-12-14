@@ -1,4 +1,6 @@
-# Extracting datasets and collapsing coders
+Extracting datasets and collapsing coders
+==========================================
+
 ## Components
 ### Dataset Code Filters
 Code filters are the broadest way of excluding codes from a dataset when pulling an extract from the database.

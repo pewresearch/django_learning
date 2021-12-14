@@ -1,5 +1,5 @@
 Classification
-===========
+===============
 
 ClassificationModel
 ~~~~~~~~~~~~~~~~~~~~~
