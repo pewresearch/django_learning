@@ -9,7 +9,7 @@ from django_learning.utils.mturk import MTurk
 class Command(BasicCommand):
 
     """
-    Deletes all of the Mechanical Turk HITs associated with the given sample. Uses the project's sandbox flag to
+    Deletes all of the Mechanical Turk HITs associated with the given sample. Uses the project's ``mturk_sandbox`` flag to
     determine which API to use. It's best to double-check what that's set to before using this command.
 
     :param project_name: Name of an existing project

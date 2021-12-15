@@ -33,6 +33,7 @@ class, it also accepts the following
     * ``stopword_sets``: a list of names corresponding to Django Learning stopword sets
     * ``stopword_whitelists``: a list of names corresponding to Django Learning stopword whitelists
     * ``regex_replacers``: a list of names corresponding to Django Learning regex replacers
+    * ``refresh_stopwords``: force the preprocessor to recompute the ``stopword_sets`` instead of using cached versions
 
 .. code:: python
 

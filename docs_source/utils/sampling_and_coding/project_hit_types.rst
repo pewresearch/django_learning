@@ -5,7 +5,7 @@ Project HIT types specify a type of task to be completed. They primarily contain
 specifying how much a task should cost, and other things like how long HITs should remain active until they expire.
 They're specified in JSON files.
 
-.. code:: python
+.. code:: json
 
     {
       "title": "Label some documents",

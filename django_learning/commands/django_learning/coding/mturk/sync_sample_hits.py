@@ -11,7 +11,8 @@ class Command(BasicCommand):
     """
     Sync with the Mechanical Turk API and download completed HITs. Can optionally approve HITs while looping over
     the completed ones, and can do so slowly over time to make it seem like we're reviewing (to encourage Turkers
-    to continue doing a good job).
+    to continue doing a good job). Uses the project's ``mturk_sandbox`` flag
+    to determine whether or not to use the sandbox.
 
     :param project_name: Name of an existing project
     :param sample_name: Name of a sample with Mechanical Turk HITs

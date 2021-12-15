@@ -1,6 +1,35 @@
 How Django Learning works
 --------------------------
 
+Installing
+===========
+
+To install Django Learning, simply add "django_learning" to your app's list of ``INSTALLED_APPS`` in ``settings.py``.
+It should come before your own app, and after most everything else. You also need to install ``django_commander``.
+
+.. code:: python
+
+    INSTALLED_APPS = [
+        "django.contrib.auth",
+        "django.contrib.contenttypes",
+        "django.contrib.staticfiles",
+        "django_commander",
+        "django_learning",
+        "my_app",
+    ]
+
+Django Learning also provides an interface for coding and project management. To add these pages to your app, you
+need to extend your ``urls.py`` file to add the Django Learning urls:
+
+.. code:: python
+
+    from django.conf.urls import include, url
+
+    urlpatterns += [
+        url(r"^learning/", include("django_learning.urls"))
+    ]
+
+
 Modular resources
 ==================
 
@@ -115,3 +144,5 @@ your own project setup scripts, for example:
 
     from django_commander.commands import commands
     commands["django_learning_create_project"](project_name="MY_PROJECT_FILE_NAME").run()
+
+Now that we've got Django Learning installed, let's :doc:`create some documents </tutorial/documents>`.

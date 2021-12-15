@@ -1,62 +1,102 @@
 Project setup
 ==============
 
+Defining a project
+--------------------
 
-Example project
--------------------------------
+To start a coding project, you first need to create a :doc:`Project codebook </utils/sampling_and_coding/projects>`.
 
+Here's an example of a simple codebook. Let's say that we saved it in a file called ``movie_reviews.json``:
 
-### JSON specifications
-
-### Components
-#### Projects
-- Question types
-- Dependencies
-#### Project HIT Types
-#### Project Qualification Scorers
-#### Project Qualification Tests
-
-### Commands
-- create_project
-- create_sample_hits
-- extract_sample
-- extract_sampling_frame
-- create_coder
-
-Starting a Project
-==================
-
-1. Create a project JSON file and put it in the projects folder (defined in ``settings.DJANGO_LEARNING_PROJECTS``, usually ``learning/projects``). This should contain the questions you want to ask.
-2. Run the command ``python manage.py run_command create_project <name>`` where ``<name>`` is the JSON file's name **without the file extension**.
-3. Every database object that you want to code must have a corresponding Document object to which it is related; make sure you've created Documents for all the codeable objects.
-4. Now you need to define a sampling frame which filters the total universe of documents down to a subset with features you care about--this is the “population” of documents against which you’ll weight your sample. Sampling frames are python files with a ``def get_frame()`` that returns a dictionary of frame parameters, such as::
-
-    def get_frame():
-        return {
-            'filter_dict': {
-                'text__contains': 'pew'
-            }
-        }
-
-5. Extract your sampling frame by running ``python manage.py run_command extract_sampling_frame <name>`` where ``<name>`` is the python file's name **without the file extension**.
-6. Next, we need to create a JSON defining a HIT Type, which is mostly configuration for how mturk will list your tasks and who can do them--you will need a HIT type defined in ``settings.DJANGO_LEARNING_PROJECT_HIT_TYPES`` (usually ``learning/project_hit_types``) even for in-house / expert coding. An example hit type::
+.. code:: json
 
     {
-        "display_type": "faces",
-        "title": "Identify and label faces",
-        "description": "We're identifying human faces in photos; labeling these faces accurately will help us train and validate machine learning models.",
-        "keywords": ["face recognition", "images", "computer vision", "coding", "training"],
-        "price": 0.05,
-        "approval_wait_hours": 24,
-        "duration_minutes": 10,
-        "lifetime_days": 7,
-        "min_approve_pct": 0.95,
-        "min_approve_cnt": 100,
-        "qualification_tests": []
+      "instructions": "Answer a question about a movie review",
+      "qualification_tests": ["movie_test"],
+      "admins": ["me"],
+      "coders": ["me", "someone_else"],
+      "questions": [
+        {
+          "prompt": "Is this review positive or negative?",
+          "name": "review_sentiment",
+          "display": "radio",
+          "labels": [
+            {"label": "Positive", "value": "1", "pointers": []},
+            {"label": "Negative", "value": "0", "pointers": []}
+          ],
+          "tooltip": "",
+          "examples": []
+        }
+      ]
     }
 
-7. Now it’s time to extract a sample for coding. This tutorial will just use a random sampling process, which is the default. You will need to name the sample (underscores and alphanumeric characters only) and select a size::
+Defining a qualification test and scorer
+-----------------------------------------
 
-    python manage.py run_command extract_sample <project name> <hit_type name> <sample name> --size <sample size> --sampling_frame_name <frame name>
+Since we also specified a qualification test in our projext JSON - which isn't necessary, but we're doing it here as an
+example - we need to create a
+:doc:`qualification test and scorer </utils/sampling_and_coding/project_qualification_tests_and_scorers>`.
 
-8. Optionally, if you want to use a customized question layout rather than the default (which displays the ‘text’ field on each Document object), define that template in ``learning/project_hit_templates``.
+Let's make it simple: we only want coders who watch movies. Let's create our qualification test and put it in a file
+with the name that our project expects, ``movie_test.json``:
+
+.. code:: json
+
+    {
+      "instructions": "See if you qualify to label movie reviews",
+      "title": "Movie review qualification test",
+      "description": "Answer the following questions to qualify",
+      "price": 0.1,
+      "approval_wait_hours": 24,
+      "duration_minutes": 5,
+      "lifetime_days": 7,
+      "questions": [
+        {
+          "prompt": "Do you watch movies?",
+          "name": "watch_movies",
+          "display": "radio",
+          "labels": [
+            {"label": "Yes", "value": "1"},
+            {"label": "No", "value": "0"}
+          ]
+        }
+      ]
+    }
+
+If we're only doing in-house coding, some of the above parameters won't be used. In-house HITs are always free, for
+example. But if we deploy HITs on Mechanical Turk, we'll be paying the Turkers 10 cents to complete the qualification
+test.
+
+Now we need to create a scorer for the test, in a file with the same name: ``movie_test.py``.
+
+.. code:: python
+
+    def scorer(qual_assignment):
+
+        code = qual_assignment.codes.get(label__question__name="watch_movies")
+        if int(code.label.value) == 1:
+            return True
+        else:
+            return False
+
+Creating a project in the database
+----------------------------------
+
+Now we're good to go!  As long as all of these files are in folders that are included in your Django Learning
+settings, Django Learning will be able to find and use them.
+
+To create your project in the database, you can run the following command:
+
+.. code:: bash
+
+    python manage.py run_command django_learning_coding_create_project movie_reviews
+
+If we make changes to the project, we can just re-run this command, or access the project in the database and
+call the ``save`` function:
+
+.. code:: python
+
+    from django_learning.models import Project
+    Project.objects.get(name="movie_reviews").save()
+
+Now that that's done, let's start :doc:`sampling </tutorial/sampling>`.

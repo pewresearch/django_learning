@@ -1,41 +1,62 @@
 Extracting datasets and collapsing coders
 ==========================================
 
-## Components
-### Dataset Code Filters
-Code filters are the broadest way of excluding codes from a dataset when pulling an extract from the database.
-You can pass a parameter called `code_filters` to a `document_dataset`, `document_coder_datset`, or
-`document_coder_label` extractor, which should be a list of tuples of the form `(FILTER_NAME, args, kwargs)`,
-where `FILTER_NAME` corresponds to a file with a `filter` function defined in it, found in a folder contained
-in one of your `settings.DJANGO_LEARNING_DATASET_CODER_FILTERS` folders. The function should appear as follows:
+Once you have coding data, you can extract it using one of the built-in Django Learning
+:doc:`dataset extractors </utils/dataset_extraction/dataset_extractors>`.
 
-```python
-def filter(self, df, *args, **kwargs):
+To get all of the coding data for your project, across multiple question and coders, you can use a
+``document_coder_label_dataset`` extractor:
 
-    return df[df["label_id"] == 12]
-```
-The function will receive the full dataframe of codes as the first argument (`df`), followed by any additional
-arguments and keyword arguments that you specified in a list and dictionary, respectively, when passing the name
-of the filter file to the extractor.
+.. code:: python
 
-NOTE: code filters are always executed first, followed by coder filters, and then document filters.
+    from django_learning.utils.dataset_extractors import dataset_extractors
 
+    extractor = dataset_extractors["document_coder_label_dataset"](**{
+        "project_name": "movie_reviews",
+        "sample_names": ["movie_review_sample_random"],
+        "question_names": ["watch_movies", "another_question"]
+    })
+    >>> extractor.extract(refresh=True)
 
-### Dataset Coder Filters
-Function the same way as code filters
+To get a coder-level dataset for a specific question - which is useful for calculating IRR - you can use a
+``document_coder_dataset``.
 
-### Dataset Document Filters
-Function the same way as code/coder filters.
+.. code:: python
 
-WITH ONE EXCEPTION: they will be also applied to the sampling frame when computing sampling weights.
-If you want to extract a dataset that's filtered in some way, and then weight it back to the full unfiltered sampling
-frame, you'll need to do that manually. Generally speaking, if you're systematically excluding certain observations
-from a sample, the subset shouldn't be used to make inferences about any data that was excluded. Right now, Django
-Learning assumes that if you're filtering to documents pertaining category or range (like dates), then those filters
-should be applied whenever the dataset is related back to the broader population from which it was drawn. This is
-particularly relevant when using a dataset to train a machine learning model; document filters will be propagated and
-used not only to compute sampling weights, but they will ALSO be automatically applied a trained model is applied to a
-dataset. Document filters are considered to be a universal scoping mechanism and they move in one direction only.
+    from django_learning.utils.dataset_extractors import dataset_extractors
 
-### Dataset Extractors
+    extractor = dataset_extractors["document_coder_dataset"](**{
+        "project_name": "movie_reviews",
+        "sample_names": ["movie_review_sample_random"],
+        "question_names": ["watch_movies"]
+    })
+    >>> extractor.extract(refresh=True)
 
+Normally, the point of coding is to arrive at a dataset for analysis, with one row per document. To extract such a
+dataset, you can use a ``document_dataset`` extractor. For samples where only one coder coded each document, you'll
+naturally get such a dataset. For samples with more than one coder per dataset, you can either A) adjudicate
+disagreements in the interface and then pass ``exclude_consensus_ignore=True`` to the dataset extractor, for in-house
+HITs, or B) you can specify a threshold for collapsing multiple coders into a single value for each document.
+This is detailed more in the :doc:`dataset extractors section</utils/dataset_extraction/dataset_extractors>`.
+
+.. code:: python
+
+    from django_learning.utils.dataset_extractors import dataset_extractors
+    from django_learning.models import Question
+    base_class_id = (
+        Question.objects\
+            .filter(project__name="movie_reviews")
+            .get(name="watch_movies")
+            .labels.get(value="0").pk
+    )
+
+    extractor = dataset_extractors["document_dataset"](**{
+        "project_name": "movie_reviews",
+        "sample_names": ["movie_review_sample_random"],
+        "question_names": ["watch_movies"],
+        "coder_aggregation_function": "mean",
+        "convert_to_discrete": True,
+        "threshold": 0.5,
+        "base_class_id": base_class_id
+    })
+    >>> extractor.extract(refresh=True)
