@@ -126,9 +126,10 @@ def filter_assignments(
 def filter_coders(project=None, sample=None, min_hit_count=None):
     """
     Returns a query set of coders based on various filtering criteria.
+
     :param project: Optionally filters to coders assigned to a particular project
     :param sample: Optionally filters to coders that have completed assignments belonging to a particular sample
-    :param min_hit_count: Optionally filters to coders that have completed a minimum number of HITs on the project
+    :param min_hit_count: Optionally filters to coders that have completed a minimum number of HITs on the project \
         (and sample, if specified)
     :return: A query set of coders
     """
