@@ -6,7 +6,15 @@ and ``dataset_coder_filters``.
 
 .. note:: Document filters must be able to be applied to a dataframe using only the ``document_id`` column;
     unlike the other filters, these filters are used in weighting the dataset to be representative of the
-    corpus as a whole, so they need to deal with document attributes.
+    corpus as a whole, so they need to deal with document attributes. If you want to extract a dataset that's
+    filtered in some way, and then weight it back to the full unfiltered sampling
+    frame, you'll need to do that manually. Generally speaking, if you're systematically excluding certain observations
+    from a sample, the subset shouldn't be used to make inferences about any data that was excluded. Right now, Django
+    Learning assumes that if you're filtering to documents pertaining to a particular category or range (like dates), then those filters
+    should be applied whenever the dataset is related back to the broader population from which it was drawn. This is
+    particularly relevant when using a dataset to train a machine learning model; document filters will be propagated and
+    used not only to compute sampling weights, but they will ALSO be automatically applied when a trained model is applied to a
+    dataset. Document filters are considered to be a universal scoping mechanism and they move in one direction only.
 
 Defining dataset document filters
 ----------------------------------

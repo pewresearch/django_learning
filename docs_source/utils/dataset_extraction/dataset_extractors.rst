@@ -70,7 +70,6 @@ document in one or more samples, for a given set of questions. The basic paramet
 
     extractor = dataset_extractors["document_coder_label_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name"],
         "document_filters": [],
@@ -106,7 +105,6 @@ label options across the combined set of questions, like so:
 
     extractor = dataset_extractors["document_coder_label_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name", "another_question"],
         "document_filters": [],
@@ -146,7 +144,6 @@ have a generally higher or lower propensity to pick certain codes.
 
     extractor = dataset_extractors["document_coder_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name"],
         "document_filters": [],
@@ -169,7 +166,6 @@ have a generally higher or lower propensity to pick certain codes.
 
     extractor = dataset_extractors["document_coder_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name", "another_question],
         "document_filters": [],
@@ -220,7 +216,6 @@ For starters, let's just aggregate coders by averaging:
 
     extractor = dataset_extractors["document_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name"],
         "document_filters": [],
@@ -228,7 +223,7 @@ For starters, let's just aggregate coders by averaging:
         "code_filters": [],
         "balancing_variables": [],
         "ignore_stratification_weights": False,
-        "standardize_coders": True,
+        "standardize_coders": False,
         "coder_aggregation_function": "mean",
         "convert_to_discrete": False,
         "threshold": None,
@@ -253,7 +248,6 @@ column for each unique code combination:
 
     extractor = dataset_extractors["document_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name", "another_question"],
         "document_filters": [],
@@ -261,7 +255,7 @@ column for each unique code combination:
         "code_filters": [],
         "balancing_variables": [],
         "ignore_stratification_weights": False,
-        "standardize_coders": True,
+        "standardize_coders": False,
         "coder_aggregation_function": "mean",
         "convert_to_discrete": False,
         "threshold": None,
@@ -305,7 +299,6 @@ document with the base class.
 
     extractor = dataset_extractors["document_dataset"](**{
         "project_name": "my_project_name",
-        "sandbox": False,
         "sample_names": ["my_sample_name"],
         "question_names": ["my_question_name", "another_question"],
         "document_filters": [],
@@ -313,7 +306,7 @@ document with the base class.
         "code_filters": [],
         "balancing_variables": [],
         "ignore_stratification_weights": False,
-        "standardize_coders": True,
+        "standardize_coders": False,
         "coder_aggregation_function": "mean",
         "convert_to_discrete": True,
         "threshold": 0.4,

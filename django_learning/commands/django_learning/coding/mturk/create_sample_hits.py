@@ -8,7 +8,8 @@ from django_learning.utils.mturk import MTurk
 
 class Command(BasicCommand):
     """
-    Create and launch Mechanical Turk HITs for an existing project and sample
+    Create and launch Mechanical Turk HITs for an existing project and sample. Uses the project's ``mturk_sandbox`` flag
+    to determine whether or not to use the sandbox.
 
     :param project_name: Name of an existing project
     :param sample_name: Name of an existing sample

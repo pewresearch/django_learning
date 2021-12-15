@@ -10,4 +10,5 @@ Tutorial
     sampling
     coding
     extracting_datasets
+    computing_irr
     machine_learning

@@ -2,7 +2,8 @@ Projects (codebooks)
 -------------------------------
 
 Projects are specified as JSON configuration files, and they define all of the questions you want to ask about
-the documents you're coding. They have the following components:
+the documents you're coding. They should be stored in one of your ``settings.DJANGO_LEARNING_PROJECTS`` folders.
+They have the following components:
 
 Instructions
 ============
@@ -189,6 +190,39 @@ Text questions are open-ends, simple as that. Requires a placeholder label forma
       "show_notes": true,
       "optional": true
     }
+
+Dependencies
+=============
+
+You can make questions dependent on the responses to other questions through the use of dependencies. Questions with
+dependencies must come after the question they depend on. You can specify them by adding a "dependency" key to your
+question like so:
+
+.. code:: json
+
+    {
+      "prompt": "Do you prefer cats or dogs?",
+      "name": "cats_dogs",
+      "display": "radio",
+      "labels": [
+        {"label": "Cats", "value": "cats"},
+        {"label": "Dogs", "value": "dogs"}
+      ]
+    },
+    {
+      "prompt": "Have you ever owned a cat?",
+      "name": "owned_cat",
+      "display": "radio",
+      "dependency": {"question_name": "cats_dogs", "label_value": "cats"},
+      "labels": [
+        {"label": "Yes", "value": "1"},
+        {"label": "No", "value": "0"}
+      ],
+      "optional": true
+    },
+
+In the above example, the "owned_cat" question will only appear in the interface if the coder selects "cats" on the
+"cats_dogs" question.
 
 Syncing project config with the database
 ==============================================
