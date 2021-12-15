@@ -14,7 +14,7 @@ every unique combination of codes treated as a different value, we can first ext
     extractor = dataset_extractors["document_coder_label_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies", "another_question"],
+        "question_names": ["review_sentiment", "another_question"],
     })
     dataset = extractor.extract(refresh=True)
     >>> dataset
@@ -78,7 +78,7 @@ question in ``question_names``:
     extractor = dataset_extractors["document_coder_label_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies"],
+        "question_names": ["review_sentiment"],
     })
     dataset = extractor.extract(refresh=True)
     >>> dataset
@@ -115,7 +115,7 @@ binary question, for example, or perhaps a particular category from a list of to
     extractor = dataset_extractors["document_coder_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies"],
+        "question_names": ["review_sentiment"],
     })
     >>> extractor.extract(refresh=True)
 
@@ -181,14 +181,14 @@ that dataset extractor like we do for the Mechanical Turk one.
     base_class_id = (
         Question.objects\
             .filter(project__name="movie_reviews")
-            .get(name="watch_movies")
+            .get(name="review_sentiment")
             .labels.get(value="0").pk
     )
 
     in_house = dataset_extractors["document_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies"],
+        "question_names": ["review_sentiment"],
         "coder_aggregation_function": "mean",
         "coder_filters": [("exclude_mturk", [], {})],
         "convert_to_discrete": True,
@@ -198,7 +198,7 @@ that dataset extractor like we do for the Mechanical Turk one.
     mturk = dataset_extractors["document_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies"],
+        "question_names": ["review_sentiment"],
         "coder_aggregation_function": "mean",
         "coder_filters": [("exclude_experts", [], {})],
         "convert_to_discrete": True,

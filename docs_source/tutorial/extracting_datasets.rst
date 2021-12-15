@@ -14,7 +14,7 @@ To get all of the coding data for your project, across multiple question and cod
     extractor = dataset_extractors["document_coder_label_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies", "another_question"]
+        "question_names": ["review_sentiment", "another_question"]
     })
     >>> extractor.extract(refresh=True)
 
@@ -28,7 +28,7 @@ To get a coder-level dataset for a specific question - which is useful for calcu
     extractor = dataset_extractors["document_coder_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies"]
+        "question_names": ["review_sentiment"]
     })
     >>> extractor.extract(refresh=True)
 
@@ -46,14 +46,14 @@ This is detailed more in the :doc:`dataset extractors section</utils/dataset_ext
     base_class_id = (
         Question.objects\
             .filter(project__name="movie_reviews")
-            .get(name="watch_movies")
+            .get(name="review_sentiment")
             .labels.get(value="0").pk
     )
 
     extractor = dataset_extractors["document_dataset"](**{
         "project_name": "movie_reviews",
         "sample_names": ["movie_review_sample_random"],
-        "question_names": ["watch_movies"],
+        "question_names": ["review_sentiment"],
         "coder_aggregation_function": "mean",
         "convert_to_discrete": True,
         "threshold": 0.5,
