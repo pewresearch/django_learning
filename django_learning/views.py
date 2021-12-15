@@ -1,5 +1,6 @@
 from builtins import str
 import random, datetime, os
+import pandas as pd
 
 from io import StringIO
 
@@ -718,7 +719,7 @@ def adjudicate_question(request, project_name, sample_name, question_name):
             experts_only=True,
         )
 
-        codes = pandas.DataFrame.from_records(
+        codes = pd.DataFrame.from_records(
             Code.objects.filter(consensus_ignore=False)
             .filter(assignment__hit__in=completed_expert_hits)
             .filter(label__question__name=question_name)
