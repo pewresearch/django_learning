@@ -28,7 +28,7 @@ the documents that match to the filter we wrote.
 Creating coders
 ----------------
 
-Django Learning uses the :doc:`Coder </models/coders>` model to track the people who code your projects. It's a simple
+Django Learning uses the :doc:`Coder </models/coding>` model to track the people who code your projects. It's a simple
 model where each coder is given a name, and is linked to ``django.contrib.auth.models.User``. You can create coders
 using the ``django_learning_coding_create_coder`` command, which will create a coder with the specified name in the database, and
 will give them the default password of "pass". Since Django Learning is meant to be deployed internally, the purpose

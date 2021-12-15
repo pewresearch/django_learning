@@ -28,11 +28,6 @@ get_param_repr
 
 .. autofunction:: django_learning.utils.get_param_repr
 
-get_param_repr
-~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: django_learning.utils.get_param_repr
-
 wmom
 ~~~~~~~~~~~~~~~~~~~~~
 

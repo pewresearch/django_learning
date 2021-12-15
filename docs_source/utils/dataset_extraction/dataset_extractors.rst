@@ -329,7 +329,7 @@ no coding data attached. You can pass it either a list of Document primary keys 
 or the name of a sampling frame via ``sampling_frame_name``. It also accepts ``document_filters``, which functions
 the same as with the other built-in extractors above.
 
-..code:: python
+.. code:: python
 
     from django_learning.utils.dataset_extractors import dataset_extractors
 
@@ -382,7 +382,7 @@ return the raw predictions (and, if applicable, probabilities) from the sklearn 
 
 If you've optimized the probability threshold, it won't be applied, and by default it will warn you of this.
 The preferred way of making predictions with a trained model is to use the model directly via one of its functions,
-like ``produce_prediction_dataset`:
+like ``produce_prediction_dataset``:
 
 .. code:: python
 

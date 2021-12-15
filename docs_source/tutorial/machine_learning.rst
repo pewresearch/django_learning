@@ -278,12 +278,12 @@ we could apply our model to our sampling frame like so:
     docs = pd.DataFrame.from_records(frame.documents.values("text"))
     df = model.produce_prediction_dataset(docs)
     >>> df
-                                                      text label_id  probability
-0    plot : two teen couples go to a church party ,...       11     0.995819
-1    the happy bastard's quick movie review \ndamn ...       11     0.979824
-2    it is movies like these that make a jaded movi...       11     0.985981
-3     " quest for camelot " is warner bros . ' firs...       11     0.985981
-4    synopsis : a mentally unstable man undergoing ...       11     0.997317
+                                                 text label_id  probability
+    plot : two teen couples go to a church party ,...       11     0.995819
+    the happy bastard's quick movie review \ndamn ...       11     0.979824
+    it is movies like these that make a jaded movi...       11     0.985981
+     " quest for camelot " is warner bros . ' firs...       11     0.985981
+    synopsis : a mentally unstable man undergoing ...       11     0.997317
 
 
 We can also skip the step of having to compile a dataset ourselves by using a shortcut function that's unique to
@@ -294,12 +294,12 @@ We can also skip the step of having to compile a dataset ourselves by using a sh
     df = model.apply_model_to_documents(frame.documents.all(), save=False)
     >>> df
 
-         document_id                                               text       date document_type label_id  probability
-0              0  plot : two teen couples go to a church party ,... 2000-01-01  movie_review       11     0.995819
-1              1  the happy bastard's quick movie review \ndamn ... 2000-01-02  movie_review       11     0.979824
-2              2  it is movies like these that make a jaded movi... 2000-01-03  movie_review       11     0.985981
-3              3   " quest for camelot " is warner bros . ' firs... 2000-01-04  movie_review       11     0.985981
-4              4  synopsis : a mentally unstable man undergoing ... 2000-01-05  movie_review       11     0.997317
+    document_id                                               text       date document_type label_id  probability
+              0  plot : two teen couples go to a church party ,... 2000-01-01  movie_review       11     0.995819
+              1  the happy bastard's quick movie review \ndamn ... 2000-01-02  movie_review       11     0.979824
+              2  it is movies like these that make a jaded movi... 2000-01-03  movie_review       11     0.985981
+              3   " quest for camelot " is warner bros . ' firs... 2000-01-04  movie_review       11     0.985981
+              4  synopsis : a mentally unstable man undergoing ... 2000-01-05  movie_review       11     0.997317
 
 Or we can make it even simpler by letting the model auto-detect the sampling frame based on the samples it was
 trained on:
@@ -309,12 +309,12 @@ trained on:
     df = model.apply_model_to_frame(save=False)
     >>> df
 
-         document_id                                               text       date document_type label_id  probability
-0              0  plot : two teen couples go to a church party ,... 2000-01-01  movie_review       11     0.995819
-1              1  the happy bastard's quick movie review \ndamn ... 2000-01-02  movie_review       11     0.979824
-2              2  it is movies like these that make a jaded movi... 2000-01-03  movie_review       11     0.985981
-3              3   " quest for camelot " is warner bros . ' firs... 2000-01-04  movie_review       11     0.985981
-4              4  synopsis : a mentally unstable man undergoing ... 2000-01-05  movie_review       11     0.997317
+    document_id                                               text       date document_type label_id  probability
+              0  plot : two teen couples go to a church party ,... 2000-01-01  movie_review       11     0.995819
+              1  the happy bastard's quick movie review \ndamn ... 2000-01-02  movie_review       11     0.979824
+              2  it is movies like these that make a jaded movi... 2000-01-03  movie_review       11     0.985981
+              3   " quest for camelot " is warner bros . ' firs... 2000-01-04  movie_review       11     0.985981
+              4  synopsis : a mentally unstable man undergoing ... 2000-01-05  movie_review       11     0.997317
 
 
 Applying the classifier to the database
