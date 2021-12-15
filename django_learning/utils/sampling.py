@@ -47,10 +47,10 @@ def get_sampling_weights(
         stratify_by = params.get("stratify_by", None)
         if is_not_null(stratify_by):
             strat_vars.add(stratify_by)
-        sampling_searches = params.get("sampling_searches", {})
-        if len(sampling_searches) > 0:
-            for search_name in list(sampling_searches.keys()):
-                keyword_weight_columns.add(search_name)
+        sampling_searches = params.get("sampling_searches", [])
+        for search in sampling_searches:
+            if search["regex_filter"] not in keyword_weight_columns:
+                keyword_weight_columns.add(search["regex_filter"])
         for additional_var in list(params.get("additional_weights", {}).keys()):
             additional_vars.add(additional_var)
 
@@ -185,13 +185,13 @@ def update_frame_and_expand_samples(frame_name):
             weight_vars = []
             if (
                 "sampling_searches" in params.keys()
-                and len(params["sampling_searches"].keys()) > 0
+                and len(params["sampling_searches"]) > 0
             ):
                 weight_vars.append("search_none")
                 weight_vars.extend(
                     [
-                        "search_{}".format(name)
-                        for name in params["sampling_searches"].keys()
+                        "search_{}".format(search["regex_filter"])
+                        for search in params["sampling_searches"]
                     ]
                 )
 
