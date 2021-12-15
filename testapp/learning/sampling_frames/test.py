@@ -13,5 +13,4 @@ def get_frame():
         "filter_dict": {"text__regex": "action"},
         "exclude_dict": {"text__regex": "adventure"},
         "complex_filters": [],
-        "code_weights": [],
     }
