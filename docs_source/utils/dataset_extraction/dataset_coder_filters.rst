@@ -1,11 +1,11 @@
 Dataset coder filters
-====================
+======================
 
 Dataset coder filters filter datasets to specific coders and/or documents based on coder attributes.
 These are applied second, after ``dataset_code_filters`` and before ``dataset_document_filters``.
 
 Defining dataset coder filters
------------------------------
+-------------------------------
 
 Dataset coder filters require a ``filter`` function that accepts the dataframe as well
 as positional and keyword arguments, and returns a subset of the dataframe. Here's an
