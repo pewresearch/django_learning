@@ -2,6 +2,7 @@ from __future__ import print_function
 import copy, pandas, time
 
 from django.db import models
+from django.db.models import F
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
 from multiprocessing.pool import Pool
@@ -889,13 +890,15 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         base_code = self._get_largest_code()
         pos_code = self._get_positive_code()
         switch_to_pos = self.classifications.filter(label_id=base_code).filter(
-            probability__gte=self.probability_threshold
+            probability__lte=(1 - self.probability_threshold)
         )
         switch_to_neg = self.classifications.filter(label_id=pos_code).filter(
             probability__lt=self.probability_threshold
         )
         switch_to_pos.update(label_id=pos_code)
+        switch_to_pos.update(probability=1.0 - F("probability"))
         switch_to_neg.update(label_id=base_code)
+        switch_to_neg.update(probability=1.0 - F("probability"))
 
 
 def _process_document_chunk(model_id, chunk, i, save, document_filters, refresh):
