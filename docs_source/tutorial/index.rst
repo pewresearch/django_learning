@@ -12,3 +12,4 @@ Tutorial
     extracting_datasets
     computing_irr
     machine_learning
+    topic_modeling

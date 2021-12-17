@@ -66,7 +66,7 @@ class SamplingFrame(LoggedExtendedModel):
     def extract_documents(self, refresh=False):
         """
         Uses the parameters in the config file to select a subset of documents for the frame.
-        :param refresh: (default is False) if True, will refresh the documents associated with the sampling frame and
+        :param refresh: (default is False) if True, will refresh the documents associated with the sampling frame and \
             overwrite any existing relations
         :return:
         """
