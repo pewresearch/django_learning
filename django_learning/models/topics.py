@@ -101,14 +101,11 @@ class TopicModel(LoggedExtendedModel):
                     sample_ids = frame_ids
                 else:
                     sample_ids = SampleExtractor(
-                        id_col="pk", sampling_strategy="random"
+                        pandas.DataFrame({"pk": frame_ids}), "pk"
                     ).extract(
-                        pandas.DataFrame({"pk": frame_ids}),
-                        self.parameters["sample_size"],
+                        self.parameters["sample_size"], sampling_strategy="random"
                     )
-                self.training_documents = get_model("Document").objects.filter(
-                    pk__in=sample_ids
-                )
+                self.training_documents.set(sample_ids)
                 sample = pandas.DataFrame.from_records(
                     self.training_documents.values("pk", "text")
                 )
@@ -171,10 +168,15 @@ class TopicModel(LoggedExtendedModel):
                     empty_lists_are_null=True,
                 )
                 topic.ngrams.all().delete()
-                for ngram, weight in topic_ngrams:
-                    TopicNgram.objects.create(
-                        name=str(ngram), topic=topic, weight=weight
-                    )
+                for ngram, weight, corr in topic_ngrams:
+                    # The "corr" is either 1 or -1; as per the corex documentation:
+                    # If it is positive (1), then the word's presence is informative for the topic.
+                    # If it is negative (-1), then word's absensce is informative for the topic
+                    # Accordingly, we'll only look at positive terms
+                    if corr > 0:
+                        TopicNgram.objects.create(
+                            name=str(ngram), topic=topic, weight=weight
+                        )
                 print(str(topic))
 
                 old_topic = old_topic_map.get(i, None)
@@ -301,7 +303,7 @@ class TopicNgram(LoggedExtendedModel):
         help_text="The topic the ngram belongs to",
     )
     weight = models.FloatField(
-        help_text="Weight indicating 'how much' the ngram belongs to the topic"
+        help_text="Weight indicating 'how much' the ngram belongs to the topic; the mutual information of the wored with the topic"
     )
 
     def __str__(self):
