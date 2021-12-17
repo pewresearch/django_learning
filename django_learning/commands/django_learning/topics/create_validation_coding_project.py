@@ -19,16 +19,9 @@ def get_method():
     return {
         "sampling_strategy": "random",
         "stratify_by": None, 
-        "sampling_searches": {
-            '"""
+        "sampling_searches": [{"regex_filter": \""""
 
-sampling_method_template_middle = """': {
-                "pattern": \""""
-
-sampling_method_template_end = """\",
-                "proportion": .5
-            }
-        }
+sampling_method_template_end = """\", "proportion": .5}]
     }
 """
 
@@ -40,6 +33,28 @@ def get_regex():
     return re.compile(r\""""
 
 regex_filter_template_end = """\", re.IGNORECASE)"""
+
+
+def _save_to_file(topic_model, folder_name, text, file_ext):
+
+    import django_learning
+
+    path = None
+    for f in getattr(settings, folder_name):
+        if os.path.dirname(django_learning.__file__) not in f:
+            path = f
+            break
+    if is_null(path):
+        raise Exception(
+            "Your app needs to specify a folder in settings.{}".format(folder_name)
+        )
+    outpath = os.path.join(path, "topic_model_{}.{}".format(topic_model.name, file_ext))
+    print("Saving to {}".format(outpath))
+    with closing(open(outpath, "w")) as output:
+        if file_ext == "json":
+            json.dump(text, output, indent=4)
+        else:
+            output.write(text)
 
 
 def create_topic_sampling_method(topic_model):
@@ -54,38 +69,41 @@ def create_topic_sampling_method(topic_model):
         [
             sampling_method_template_start,
             "topic_model_{}".format(topic_model.name),
-            sampling_method_template_middle,
-            "topic_model_{}".format(topic_model.name),
             sampling_method_template_end,
         ]
     )
-    with closing(
-        open(
-            os.path.join(
-                settings.DJANGO_LEARNING_SAMPLING_METHODS[0],
-                "topic_model_{}.py".format(topic_model.name),
-            ),
-            "wb",
-        )
-    ) as output:
-        output.write(sampling_method_text)
+    _save_to_file(
+        topic_model, "DJANGO_LEARNING_SAMPLING_METHODS", sampling_method_text, "py"
+    )
 
     regex_filter_text = "".join(
         [regex_filter_template_start, regex, regex_filter_template_end]
     )
-    with closing(
-        open(
-            os.path.join(
-                settings.DJANGO_LEARNING_REGEX_FILTERS[0],
-                "topic_model_{}.py".format(topic_model.name),
-            ),
-            "wb",
-        )
-    ) as output:
-        output.write(regex_filter_text)
+    _save_to_file(topic_model, "DJANGO_LEARNING_REGEX_FILTERS", regex_filter_text, "py")
 
 
 class Command(BasicCommand):
+
+    """
+    Command to set up a coding project to validate a topic model once it's been trained and finalized. You can first
+    run this command with ``create_project_files=True`` to create and save a codebook file automatically. The codebook
+    will consist of a question for each labeled topic in the model, asking whether or not the document mentions that
+    topic or not. The command will also make a custom sampling method that pulls a sample where 50% of the documents
+    match to at least one of the anchor terms in the model.
+
+    Once you've created the project file, you can then run the command without the ``--create_project_files`` option,
+    and specify a ``sample_size`` and ``num_coders`` and coding samples and HITs will be created automatically for you,
+    oversampled on the topic model's anchor terms.
+
+    :param topic_model_name: Name of an existing topic model
+    :param admin_name: Name of the Coder who will be set up as the project admin
+    :param project_hit_type: Name of the HIT type to use on the project
+    :param sample_size: (default is 100) size of the validation sample to pull
+    :param num_coders: (default is 2) number of coders to complete each HIT
+    :param reset_project: (default is False) if True, deletes the project and recreates it if it already exists
+    :param create_project_files: (default is False) if True, compiles a codebook file automatically and saves it to \
+        the ``settings.DJANGO_LEARNING_PROJECTS[0]`` folder with the name ``topic_model_[TOPIC_MODEL_NAME].json``
+    """
 
     parameter_names = ["topic_model_name", "admin_name", "project_hit_type"]
     dependencies = []
@@ -148,23 +166,14 @@ class Command(BasicCommand):
                         "examples": [],
                     }
                 )
-            with closing(
-                open(
-                    os.path.join(
-                        settings.DJANGO_LEARNING_PROJECTS[0],
-                        "topic_model_{}.json".format(topic_model.name),
-                    ),
-                    "wb",
-                )
-            ) as output:
-                json.dump(project, output, indent=4)
+            _save_to_file(topic_model, "DJANGO_LEARNING_PROJECTS", project, "json")
 
             if self.options["reset_project"]:
                 Project.objects.get(
                     name="topic_model_{}".format(topic_model.name)
                 ).delete()
 
-            commands["create_project"](
+            commands["django_learning_coding_create_project"](
                 project_name="topic_model_{}".format(topic_model.name)
             ).run()
 
@@ -193,17 +202,22 @@ class Command(BasicCommand):
                 == 0
             ):
 
-                commands["extract_sample"](
+                from django_learning.utils import regex_filters, sampling_methods
+
+                reload(regex_filters)
+                reload(sampling_methods)
+
+                commands["django_learning_coding_extract_sample"](
                     project_name=project.name,
-                    hit_type_name=hit_type.name,
                     sample_name=project.name,
                     sampling_frame_name=topic_model.frame.name,
                     sampling_method="topic_model_{}".format(topic_model.name),
                     size=self.options["sample_size"],
                 ).run()
-                commands["create_sample_hits_experts"](
+                commands["django_learning_coding_create_sample_hits"](
                     project_name=project.name,
                     sample_name=project.name,
+                    hit_type_name=hit_type.name,
                     num_coders=self.options["num_coders"],
                 ).run()
 

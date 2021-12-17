@@ -33,6 +33,10 @@ def _get_label(key, val, label=""):
 
 class Command(BasicCommand):
 
+    """
+    Reloads the LIWC ngram sets.
+    """
+
     parameter_names = []
     dependencies = []
 

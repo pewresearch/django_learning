@@ -243,18 +243,31 @@ ability to run preprocessors on the text - and you also get
 Google Word2Vec
 *****************
 
+If you download the ``GoogleNews-vectors-negative300.bin.gz`` pre-trained Word2Vec model and place it in the
+``settings.FILE_ROOT`` folder, you can extract features using this model with the ``google_word2vec`` feature extractor.
+No parameters are required, but you can pass a ``limit`` that will load the first N features from the model (it has
+millions of features, but if you only want to load the first 100k, you could pass ``limit=100000``, and it will run
+more efficiently, but less effectively).
+
+.. code:: python
+
+    extractor = feature_extractors["google_word2vec"](limit=None)
+
+
 Topics
 *****************
 
-Doc2Vec
-*****************
+If you've trained a topic model, you can easily plug the model in and grab features using the ``topics`` feature
+extractor. Simply pass the model name in:
 
-Word2Vec
-*****************
+.. code:: python
+
+    extractor = feature_extractors["topics"](model_name="my_topic_model")
 
 
 
 Making a custom feature extractor
+----------------------------------
 
 Custom feature extractors require ``fit``, ``transform``, and ``get_feature_names`` functions. Looking at the source
 code for the built-in feature extractors is a good way to see how to build one of your own.

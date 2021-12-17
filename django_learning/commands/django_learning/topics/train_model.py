@@ -5,6 +5,14 @@ from django_learning.models import SamplingFrame, TopicModel
 
 class Command(BasicCommand):
 
+    """
+    Takes the name of a topic model config file and trains the model according to its specification.
+
+    :param name: Name of the topic model (corresponding to a config file)
+    :param refresh_model: (default is False) refit the model even if it already exists
+    :param refresh_vectorizer: (default is False) refit the vectorizer even if it already exists
+    """
+
     parameter_names = ["name"]
     dependencies = []
 

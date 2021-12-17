@@ -23,11 +23,6 @@ filter_queryset_by_params
 
 .. autofunction:: django_learning.utils.filter_queryset_by_params
 
-get_param_repr
-~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: django_learning.utils.get_param_repr
-
 wmom
 ~~~~~~~~~~~~~~~~~~~~~
 

@@ -9,6 +9,11 @@ from django_commander.commands import BasicCommand
 
 
 class Command(BasicCommand):
+
+    """
+    Reloads the NRC emotions ngram sets.
+    """
+
     parameter_names = []
     dependencies = []
 
