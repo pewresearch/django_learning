@@ -4,16 +4,16 @@ from __future__ import absolute_import
 def get_parameters():
 
     return {
-        "frame": "test",
-        "num_topics": 10,
-        "sample_size": 50,
+        "frame": "all_documents",
+        "num_topics": 5,
+        "sample_size": 1000,
         "anchor_strength": 4,
         "vectorizer": {
             "sublinear_tf": False,
             "max_df": 0.9,
-            "min_df": 5,
+            "min_df": 10,
             "max_features": 8000,
-            "ngram_range": (1, 3),
+            "ngram_range": (1, 2),
             "use_idf": False,
             "norm": None,
             "binary": True,
