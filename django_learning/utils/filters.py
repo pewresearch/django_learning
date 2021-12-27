@@ -12,8 +12,8 @@ def filter_hits(
     unfinished_only=False,
     assignments=None,
     exclude_coders=None,
-    filter_coders=None,
     documents=None,
+    **kwargs
 ):
     """
     Returns a query set of HITs based on various filtering criteria.
@@ -46,8 +46,8 @@ def filter_hits(
         hits = hits.filter(finished=False)
     if exclude_coders != None:
         hits = hits.exclude(assignments__coder__in=exclude_coders)
-    if filter_coders != None:
-        hits = hits.filter(assignments__coder__in=filter_coders)
+    if kwargs.get("filter_coders", None) != None:
+        hits = hits.filter(assignments__coder__in=kwargs["filter_coders"])
     if assignments != None:
         hits = hits.filter(assignments__in=assignments)
     if documents != None:
@@ -67,7 +67,6 @@ def filter_assignments(
     incomplete_only=False,
     hits=None,
     exclude_coders=None,
-    filter_coders=None,
     documents=None,
     **kwargs
 ):
@@ -113,8 +112,8 @@ def filter_assignments(
         assignments = assignments.filter(time_finished__isnull=True)
     if exclude_coders != None:
         assignments = assignments.exclude(coder__in=exclude_coders)
-    if filter_coders != None:
-        assignments = assignments.filter(coder__in=filter_coders)
+    if kwargs.get("filter_coders", None) != None:
+        assignments = assignments.filter(coder__in=kwargs["filter_coders"])
     if hits != None:
         assignments = assignments.filter(hit__in=hits)
     if documents != None:
