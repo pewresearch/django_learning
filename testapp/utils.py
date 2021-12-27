@@ -72,8 +72,8 @@ def set_up_test_sample(sample_name, size):
     test_project.coders.add(coder1)
     test_project.coders.add(coder2)
 
-    df = Document.objects.filter(samples__name=sample_name).dataframe(
-        "document_text", refresh=True
+    df = pd.DataFrame.from_records(
+        Document.objects.filter(samples__name=sample_name).values("pk", "text")
     )
 
     df = df.sort_values("pk")
