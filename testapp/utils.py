@@ -121,13 +121,16 @@ def set_up_test_sample(sample_name, size):
             document_id=row["pk"]
         )
         hit = HIT.objects.get(sample_unit=su)
-        assignment, _ = Assignment.objects.get_or_create(hit=hit, coder=coder1)
-        Code.objects.create(
-            label=Label.objects.filter(question__name=question).get(value=row["genre"]),
-            assignment=assignment,
-        )
-        assignment.time_finished = datetime.datetime.now()
-        assignment.save()
+        for coder in [coder1, coder2]:
+            assignment, _ = Assignment.objects.get_or_create(hit=hit, coder=coder)
+            Code.objects.create(
+                label=Label.objects.filter(question__name=question).get(
+                    value=row["genre"]
+                ),
+                assignment=assignment,
+            )
+            assignment.time_finished = datetime.datetime.now()
+            assignment.save()
         hit.save()
 
 
