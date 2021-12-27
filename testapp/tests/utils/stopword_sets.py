@@ -25,10 +25,7 @@ class StopwordSetsTests(DjangoTestCase):
         from django_learning.utils.stopword_sets import stopword_sets
         from django_commander.commands import commands
 
-        commands["django_learning_nlp_extract_entities"](
-            document_type="movie_review"
-        ).run()
-        for val in ["english", "entities", "html", "months", "numbers", "social_media"]:
+        for val in ["english", "html", "months", "numbers", "social_media"]:
             self.assertIn(val, stopword_sets.keys())
             stopwords = stopword_sets[val]()
             self.assertIsNotNone(stopwords)
