@@ -33,8 +33,6 @@ class FeatureExtractorsTests(DjangoTestCase):
             "regex_counts",
             "tfidf",
             "topics",
-            "word2vec",
-            "doc2vec",
         ]:
             self.assertIn(val, feature_extractors.keys())
             self.assertIsNotNone(feature_extractors[val]())
@@ -132,8 +130,7 @@ class FeatureExtractorsTests(DjangoTestCase):
             ]
         ).fit_transform(df)
         self.assertEqual(len(results), len(df))
-        self.assertEqual(len(set(results["text"])), 1)
-        for index, row in df[df["text"] != ""].iterrows():
+        for index, row in results[results["text"] != ""].iterrows():
             self.assertIn("comedy", row["text"])
 
     def test_punctuation_indicators(self):
@@ -144,11 +141,8 @@ class FeatureExtractorsTests(DjangoTestCase):
         results = feature_extractors["punctuation_indicators"](
             feature_name_prefix="punct"
         ).fit_transform(df)
-        import pdb
-
-        pdb.set_trace()
         self.assertEqual(len(results), len(df))
-        self.assertGreaterEqual(len(results.columns), 6)
+        self.assertGreaterEqual(len(results.columns), 8)
 
     def test_regex_counts(self):
 
@@ -181,14 +175,6 @@ class FeatureExtractorsTests(DjangoTestCase):
         self.assertEqual(results.shape[1], 237)
 
     # def test_topics(self):
-    #     pass
-    #     # TODO: test this
-    #
-    # def test_word2vec(self):
-    #     pass
-    #     # TODO: test this
-    #
-    # def test_doc2vec(self):
     #     pass
     #     # TODO: test this
 
