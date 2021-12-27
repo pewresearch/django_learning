@@ -18,7 +18,7 @@ class ProjectsTests(DjangoTestCase):
     """
 
     def setUp(self):
-        set_up_test_project()
+        set_up_test_project(10)
 
     def test_projects(self):
         from django_learning.utils.projects import projects
