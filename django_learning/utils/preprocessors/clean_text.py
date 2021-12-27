@@ -15,10 +15,11 @@ class Preprocessor(BasicPreprocessor):
     def __init__(self, *args, **kwargs):
         """
 
-        :param stopword_sets: Names of `django_learning` stopword lists
+        :param stopword_sets: Names of `django_learning` stopword lists. By default, no stopwords will be used! It is \
+            recommended to at least pass ["english"] to use a built-in list of English stopwords.
         :param stopword_whitelists: Names of `django_learning` stopword whitelists (used to override stopword_sets)
-        :param regex_filters: Names of `django_learning` regex filters; sentences that don't match to *all* of the
-        provided filters will be removed
+        :param regex_filters: Names of `django_learning` regex filters; sentences that don't match to *all* of the \
+            provided filters will be removed
         :param regex_replacers: Names of `django_learning` regex replacers to use
         :param refresh_stopwords: Whether or not to refresh a custom list of stopwords from the cache (default is False)
         :param kwargs: All other keyword arguments are passed along to a `pewanalytics.text.TextCleaner` object
