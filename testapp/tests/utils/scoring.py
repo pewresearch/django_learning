@@ -117,7 +117,12 @@ class ScoringTests(DjangoTestCase):
         scores = compute_scores_from_dataset(
             dataset, "document_id", "label_id", "coder_id"
         )
-        scores = scores.set_index("outcome_column").to_dict("index")["label_id__10"]
+        pos_class_id = (
+            Question.objects.get(name="test_checkbox").labels.get(value="1").pk
+        )
+        scores = scores.set_index("outcome_column").to_dict("index")[
+            "label_id__{}".format(int(pos_class_id))
+        ]
         for metric, score in [
             ("cohens_kappa", 0.7113997113997114),
             ("precision", 0.7272727272727273),
