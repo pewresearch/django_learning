@@ -57,7 +57,7 @@ class DatasetExtractorsTests(DjangoTestCase):
             "document_coder_label_dataset",
             params={"question_names": ["test_checkbox", "test_radio"]},
         )
-        for val in ["00101", "00001", "10001", "10010", "00110", "00010", "01001"]:
+        for val in ["00101", "10001", "10010", "00110", "01001"]:
             self.assertIn(val, df["label_id"].unique())
 
     def test_document_coder_dataset_extractor(self):
@@ -106,8 +106,6 @@ class DatasetExtractorsTests(DjangoTestCase):
             },
         )
         for col in [
-            "label_00001",
-            "label_00010",
             "label_00101",
             "label_00110",
             "label_01001",
@@ -182,7 +180,7 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                [100],
+                [76, 9, 7, 4, 3, 1],
             ),
             (
                 {
@@ -329,7 +327,7 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                {"00001": 90, "00010": 10},
+                {"00101": 78, "01001": 9, "00110": 7, "10001": 5, "10010": 1},
             ),
             (
                 {
@@ -339,7 +337,7 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                {},
+                {"00101": 76, "01001": 9, "00110": 7, "10001": 3, "10010": 1},
             ),
             (
                 {
@@ -349,7 +347,7 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                {"00001": 90, "00010": 10},
+                {"00101": 78, "01001": 9, "00110": 7, "10001": 5, "10010": 1},
             ),
             (
                 {
@@ -359,10 +357,9 @@ class DatasetExtractorsTests(DjangoTestCase):
                     "base_class_id": None,
                     "question_names": ["test_checkbox", "test_radio"],
                 },
-                {"00001": 90, "00010": 10},
+                {"00101": 78, "01001": 9, "00110": 7, "10001": 5, "10010": 1},
             ),
         ]:
-
             df = extract_dataset("document_dataset", params=update_params)
             vals = df["label_id"].value_counts().to_dict()
             self.assertEqual(vals, values)
@@ -389,9 +386,8 @@ class DatasetExtractorsTests(DjangoTestCase):
         df = dataset_extractors["model_prediction_dataset"](
             dataset=df, learning_model=model, disable_probability_threshold_warning=True
         ).extract()
-
         self.assertEqual(
-            sorted(list(dict(df["label_id"].value_counts()).values())), [31, 119]
+            sorted(list(dict(df["label_id"].value_counts()).values())), [30, 120]
         )
 
     def tearDown(self):
