@@ -342,7 +342,7 @@ class Extractor(DatasetExtractor):
     def compute_overall_scores(self, refresh=False):
 
         dataset = self.extract(refresh=refresh)
-        return compute_overall_scores(dataset, "document_id", "coder_id", "label_value")
+        return compute_overall_scores(dataset, "label_value", "document_id", "coder_id")
 
     def compute_scores(
         self, refresh=False, min_overlap=10, discrete_classes=True, pos_label=None
