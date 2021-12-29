@@ -287,7 +287,7 @@ def view_sample(request, project_name, sample_name):
                         experts_only=True,
                         coder=coder,
                         completed_only=True,
-                        uncodeable=True
+                        uncodeable=True,
                     ),
                     experts_only=True,
                 )
@@ -296,7 +296,7 @@ def view_sample(request, project_name, sample_name):
                         "coder": coder,
                         "completed_expert_hits": coder_completed_expert_hits,
                         "available_expert_hits": coder_available_expert_hits,
-                        "uncodeable": coder_completed_expert_hits_uncodeable
+                        "uncodeable": coder_completed_expert_hits_uncodeable,
                     }
                 )
 
@@ -460,7 +460,7 @@ def view_expert_assignments(request, project_name, sample_name):
             filter_coders=filter_coders,
             completed_only=completed_only,
             incomplete_only=incomplete_only,
-            uncodeable=uncodeable
+            uncodeable=uncodeable,
         ).distinct()
         assignments = assignments.order_by(*queue_ordering)
 
@@ -472,7 +472,7 @@ def view_expert_assignments(request, project_name, sample_name):
                 "sample": sample,
                 "coder_id": coder_id,
                 "state": state,
-                "uncodeable": uncodeable
+                "uncodeable": uncodeable,
             },
         )
 
