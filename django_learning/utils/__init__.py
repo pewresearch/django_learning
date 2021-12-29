@@ -16,11 +16,21 @@ from django_pewtils import get_model, get_app_settings_folders
 
 
 def get_document_types():
+    """
+    Returns a list of names of all models that have a one-to-one relationship with the Document model.
+    :return:
+    """
 
     return [f.name for f in get_model("Document")._meta.get_fields() if f.one_to_one]
 
 
 def get_pipeline_repr(pipeline, name=None):
+    """
+    Given a machine learning pipeline configuration, returns a string representation that's used for hashing.
+    :param pipeline:
+    :param name:
+    :return:
+    """
 
     text_repr = OrderedDict()
     if isinstance(pipeline, Pipeline):
@@ -47,6 +57,11 @@ def get_pipeline_repr(pipeline, name=None):
 
 
 def get_param_repr(params):
+    """
+    Given a dictionary of parameters, returns a unique string representation that's used for hashing.
+    :param params:
+    :return:
+    """
 
     if type(params) == dict:
         new_params = OrderedDict()
@@ -77,6 +92,13 @@ def get_param_repr(params):
 
 
 def filter_queryset_by_params(objs, params):
+    """
+    Takes a query set and a dictionary containing Django Learning sampling frame configuration parameters (see
+    documentation) and filters the query set accordingly.
+    :param objs: A QuerySet of objects
+    :param params: A dictionary containing one or more of: filter_dict/exclude_dict/complex_filters/complex_excludes
+    :return: A filtered query st
+    """
 
     if "filter_dict" in params.keys() and params["filter_dict"]:
         objs = objs.filter(**params["filter_dict"])
