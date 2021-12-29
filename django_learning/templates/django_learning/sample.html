@@ -44,7 +44,7 @@
             <!--</div>-->
         <!--{% elif total_expert_hits.count > 0 %}-->
         <!--{% endif %} -->
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="panel panel-primary">
                 <div class="panel-heading">In-House HITs</div>
                 <table class="panel-body table table-condensed">
@@ -53,6 +53,7 @@
                         <th>Total HITs</th>
                         <th>HITs Completed</th>
                         <th>HITs Available</th>
+                        <th></th>
                         <th></th>
                         <th></th>
                     </tr>
@@ -69,6 +70,9 @@
                         <td>
                             <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ request.user.coder.pk }}">View Assignments</a>
                         </td>
+                        <td>
+                            <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ request.user.coder.pk }}&uncodeable=True">Review Uncodeable ({{ uncodeable.count }})</a>
+                        </td>
                     </tr>
                     {% if request.user.coder in sample.project.admins.all %}
                         {% for coder in expert_coder_completion %}
@@ -81,80 +85,17 @@
                                 <td>
                                     <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ coder.coder.pk }}">View Assignments</a>
                                 </td>
+                                <td>
+                                    <a class="btn btn-primary" href="{% url 'django_learning:view_expert_assignments' sample.project.name sample.name %}?coder_id={{ coder.coder.pk }}&uncodeable=True">Review Uncodeable ({{ coder.uncodeable.count }})</a>
+                                </td>
                             </tr>
                         {% endfor %}
                     {% endif %}
                 </table>
             </div>
         </div>
-        <!--{% if total_turk_hits.count == 0 and request.user.coder in sample.project.admins.all %}-->
-            <!--<div class="col-md-6">-->
-                <!--<div class="panel panel-danger">-->
-                    <!--<div class="panel-heading">Create Mechanical Turk HITs</div>-->
-                    <!--<table class="panel-body table table-condensed">-->
-                        <!--<tr><th>Num Coders</th><th>Production</th><th></th></tr>-->
-                        <!--<form class="form-inline" method="post" action="{% url 'django_learning:create_sample_hits_mturk' sample.project.name %}">-->
-                            <!--{% csrf_token %}-->
-                            <!--<tr>-->
-                                <!--<input type="hidden" name="sample_name" id="sample_name" value="{{ sample.name }}">-->
-                                <!--<td>-->
-                                    <!--<div class="form-group">-->
-                                        <!--<input type="number" value="0" id="num_coders" name="num_coders">-->
-                                    <!--</div>-->
-                                <!--</td>-->
-                                <!--<td>-->
-                                    <!--False<input type="hidden" value="0" id="prod" name="prod">-->
-                                <!--</td>-->
-                                <!--<td>-->
-                                    <!--<div class="form-group">-->
-                                        <!--<button type="submit" class="btn btn-danger">Launch</button>-->
-                                    <!--</div>-->
-                                <!--</td>-->
-                            <!--</tr>-->
-                        <!--</form>-->
-                    <!--</table>-->
-                <!--</div>-->
-            <!--</div>-->
-        <!--{% elif total_turk_hits.count > 0 %}-->
-        <!--{% endif %} -->
-        <div class="col-md-6">
-            <div class="panel panel-primary">
-                <div class="panel-heading">Mechanical Turk HITs</div>
-                <table class="panel-body table table-condensed">
-                    <tr>
-                        <th>Coder</th>
-                        <th>Total HITs</th>
-                        <th>HITs Completed</th>
-                        <th>Total Assignments</th>
-                        <th>Assignments Completed</th>
-                    </tr>
-                    <tr>
-                        <td>ALL</td>
-                        <td>{{ total_turk_hits.count }}</td>
-                        <td>{{ completed_turk_hits.count }}</td>
-                        <td>{{ total_turk_assignments }}</td>
-                        <td>{{ completed_turk_assignments.count }}</td>
-                    </tr>
-                    <!--
-                        {% if request.user.coder in sample.project.admins.all %}
-                            {% for coder in mturk_coder_completion %}
-                                <tr>
-                                    <td>{{ coder.coder.name }}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td>{{ coder.total_turk_assignments.count }}</td>
-                                    <td>{{ coder.completed_turk_assignments.count }}</td>
-                                </tr>
-                            {% endfor %}
-                        {% endif %}
-                    -->
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="row">
         {% if request.user.coder in sample.project.admins.all %}
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="panel panel-primary">
                     <div class="panel-heading">Adjudicate Disagreements</div>
                     <table class="panel-body table table-condensed">
