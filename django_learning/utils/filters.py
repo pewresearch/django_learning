@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from django_pewtils import get_model
+from pewtils import is_not_null
 
 
 def filter_hits(
@@ -52,6 +53,7 @@ def filter_assignments(
     incomplete_only=False,
     hits=None,
     exclude_coders=None,
+    uncodeable=None,
     # filter_coders=None,
     documents=None,
     **kwargs
@@ -82,6 +84,8 @@ def filter_assignments(
         assignments = assignments.exclude(coder__in=exclude_coders)
     if "filter_coders" in kwargs and kwargs["filter_coders"] != None:
         assignments = assignments.filter(coder__in=kwargs["filter_coders"])
+    if is_not_null(uncodeable):
+        assignments = assignments.filter(uncodeable=uncodeable)
     if hits != None:
         assignments = assignments.filter(hit__in=hits)
     if documents != None:
