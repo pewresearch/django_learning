@@ -27,9 +27,7 @@ Gets passed to ``pewanalytics.sampling.SampleExtractor``. Valid options are:
     - "random": Random sample
     - "stratify": Proportional stratification, method from Kish, Leslie. "Survey sampling." (1965). Chapter 4.
     - "stratify_even": Sample evenly from each strata (will obviously not be representative)
-    - "stratify_guaranteed": Proportional stratification, but the sample is guaranteed to contain at least one \
-        observation from each strata (if sample size is small and/or there are many small strata, the resulting \
-        sample may be far from representative)
+    - "stratify_guaranteed": Proportional stratification, but the sample is guaranteed to contain at least one observation from each strata (if sample size is small and/or there are many small strata, the resulting sample may be far from representative)
 
 stratify_by
 ************
