@@ -314,6 +314,18 @@
 
             {% endfor %}
 
+            {% for q in questions %}
+                {% for label in q.labels.all %}
+                    {% if label.pk in q.existing_label_ids %}
+                        $("#{{ q.name }}_{{ label.value }}").prop("checked", true);
+                        $("#{{ q.name }}_{{ label.value }}").prop("selected", true);
+                        $("#{{ q.name }}_{{ label.value }}").trigger("change");
+                        $("#{{ q.name }}").trigger("change");
+                    {% endif %}
+                {% endfor %}
+
+            {% endfor %}
+
         });
     </script>
 
