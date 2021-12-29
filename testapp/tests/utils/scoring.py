@@ -144,7 +144,7 @@ class ScoringTests(DjangoTestCase):
         scores = compute_scores_from_dataset(
             dataset,
             "document_id",
-            "label_10",
+            "label_{}".format(int(pos_class_id)),
             "coder_id",
             weight_column="sampling_weight",
             pos_label=1,
