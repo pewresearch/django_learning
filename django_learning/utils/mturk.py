@@ -489,11 +489,11 @@ class MTurk(object):
         API that may have failed to sync with the database, using all of the HIT types associated with the sample in the
         database.
         :param sample: the sample to sync
-        :param resync: (default is False) if True, finished HITs and assignments will be re-synced even if they already
+        :param resync: (default is False) if True, finished HITs and assignments will be re-synced even if they already \
             exist in the database
-        :param approve: (default is False) if True, approves and issues payments for finished assignments that have
+        :param approve: (default is False) if True, approves and issues payments for finished assignments that have \
             not already been approved
-        :param approve_probability: (default is 1.0) if ``approve=True`` this specifies the probability that
+        :param approve_probability: (default is 1.0) if ``approve=True`` this specifies the probability that \
             unapproved assignments will be approved and paid
         :return:
         """
