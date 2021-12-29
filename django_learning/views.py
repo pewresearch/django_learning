@@ -5,6 +5,7 @@ import pandas as pd
 from io import StringIO
 
 from django.shortcuts import render, redirect
+from django.http import HttpResponse
 from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate
@@ -15,11 +16,24 @@ from django.http import StreamingHttpResponse
 from django.conf import settings
 from django.utils import timezone
 
-from django_commander.utils import run_command_task
+from django_commander.utils import run_command_async
 
 from django_learning.exceptions import RequiredResponseException
-from django_learning.models import *
-from django_learning.utils.filters import *
+from django_learning.models import (
+    Project,
+    SamplingFrame,
+    Sample,
+    HIT,
+    Coder,
+    Question,
+    Assignment,
+    Code,
+    Document,
+    QualificationTest,
+    QualificationAssignment,
+)
+
+from django_learning.utils.filters import filter_hits, filter_assignments, filter_coders
 from django_learning.utils.projects import projects as project_configs
 from django_learning.utils.sampling_frames import (
     sampling_frames as sampling_frame_configs,
@@ -30,6 +44,7 @@ from django_learning.utils.sampling_methods import (
 from django_learning.utils.project_hit_types import (
     project_hit_types as project_hit_type_configs,
 )
+from django_learning.utils.dataset_extractors import dataset_extractors
 
 from pewtils import is_not_null
 from django_pewtils import get_model
@@ -106,7 +121,7 @@ def view_project(request, project_name):
 @login_required
 def create_project(request, project_name):
 
-    run_command_task.delay("create_project", {"project_name": project_name})
+    run_command_async("create_project", **{"project_name": project_name})
 
     return home(request)
 
@@ -186,9 +201,9 @@ def view_sampling_frame(request, sampling_frame_name):
 @login_required
 def extract_sampling_frame(request, sampling_frame_name):
 
-    run_command_task.delay(
+    run_command_async(
         "extract_sampling_frame",
-        {"sampling_frame_name": sampling_frame_name, "refresh": True},
+        **{"sampling_frame_name": sampling_frame_name, "refresh": True},
     )
 
     return view_sampling_frame(request, sampling_frame_name)
@@ -200,9 +215,9 @@ def extract_sample(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_task.delay(
+        run_command_async(
             "extract_sample",
-            {
+            **{
                 "project_name": project_name,
                 "hit_type_name": request.POST.get("hit_type_name"),
                 "sample_name": request.POST.get("sample_name"),
@@ -332,14 +347,59 @@ def view_sample(request, project_name, sample_name):
 
 
 @login_required
+def download_sample(request, project_name, sample_name):
+
+    project = Project.objects.get(name=project_name)
+    sample = project.samples.get(name=sample_name)
+
+    dfs = []
+    for question in project.questions.all():
+        # Extract the codes for each question
+        extractor = dataset_extractors["document_coder_label_dataset"](
+            project_name=project.name,
+            sample_names=[sample_name],
+            question_names=[question.name],
+            coder_filters=[],
+            exclude_consensus_ignore=False,
+        )
+        df = extractor.extract(refresh=True)
+        dfs.append(
+            df[["coder_name", "document_id", "label_value"]].rename(
+                columns={"label_value": question.name}
+            )
+        )
+    # Smoosh it all together so there's a column for each code
+    df = pd.concat(
+        [df.set_index(["coder_name", "document_id"]) for df in dfs], axis=1
+    ).reset_index()
+    notes = pd.DataFrame.from_records(
+        Assignment.objects.filter(sample__name=sample_name).values(
+            "coder__name", "hit__sample_unit__document_id", "uncodeable", "notes"
+        )
+    ).rename(
+        columns={
+            "coder__name": "coder_name",
+            "hit__sample_unit__document_id": "document_id",
+        }
+    )
+    df = df.merge(notes, how="left", on=("coder_name", "document_id"))
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = "attachment; filename={}.csv".format(sample_name)
+    df.to_csv(path_or_buf=response, encoding="utf8", index=False)
+
+    return response
+
+
+@login_required
 def create_sample_hits_experts(request, project_name):
 
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_task.delay(
+        run_command_async(
             "create_sample_hits_experts",
-            {
+            **{
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
@@ -355,9 +415,9 @@ def create_sample_hits_mturk(request, project_name):
     project = Project.objects.get(name=project_name)
 
     if request.user.coder in project.admins.all():
-        run_command_task.delay(
+        run_command_async(
             "create_sample_hits_mturk",
-            {
+            **{
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
