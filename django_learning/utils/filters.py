@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from django_pewtils import get_model
+from pewtils import is_not_null
 
 
 def filter_hits(
@@ -67,6 +68,7 @@ def filter_assignments(
     incomplete_only=False,
     hits=None,
     exclude_coders=None,
+    uncodeable=None,
     documents=None,
     **kwargs
 ):
@@ -85,6 +87,7 @@ def filter_assignments(
     :param hits: Optionally filters to assignments associated with a particular query set of HITs
     :param exclude_coders: Optionally filters to assignments that are not associated with a particular query set of coders
     :param filter_coders: Optionally filters to assignments that are associated with a particular query set of coders
+    :param uncodeable: Optionally filters assignments by the ``uncodeable`` flag (can be True or False)
     :param documents: Optionally filters to assignments associated with a particular query set of documents
     :return: A query set of assignments
     """
@@ -114,6 +117,8 @@ def filter_assignments(
         assignments = assignments.exclude(coder__in=exclude_coders)
     if kwargs.get("filter_coders", None) != None:
         assignments = assignments.filter(coder__in=kwargs["filter_coders"])
+    if is_not_null(uncodeable):
+        assignments = assignments.filter(uncodeable=uncodeable)
     if hits != None:
         assignments = assignments.filter(hit__in=hits)
     if documents != None:
