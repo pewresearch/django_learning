@@ -47,7 +47,7 @@ def filter_hits(
         hits = hits.filter(finished=False)
     if exclude_coders != None:
         hits = hits.exclude(assignments__coder__in=exclude_coders)
-    if kwargs.get("filter_coders", None) != None:
+    if kwargs.get("filter_coders", None) is not None:
         hits = hits.filter(assignments__coder__in=kwargs["filter_coders"])
     if assignments != None:
         hits = hits.filter(assignments__in=assignments)
@@ -115,7 +115,7 @@ def filter_assignments(
         assignments = assignments.filter(time_finished__isnull=True)
     if exclude_coders != None:
         assignments = assignments.exclude(coder__in=exclude_coders)
-    if kwargs.get("filter_coders", None) != None:
+    if kwargs.get("filter_coders", None) is not None:
         assignments = assignments.filter(coder__in=kwargs["filter_coders"])
     if is_not_null(uncodeable):
         assignments = assignments.filter(uncodeable=uncodeable)
