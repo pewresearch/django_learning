@@ -16,7 +16,6 @@ from sklearn.metrics import (
 )
 from scipy.stats import ttest_ind
 
-from django_learning.utils import wmom
 from pewanalytics.stats.irr import compute_scores
 from pewtils import is_not_null
 
