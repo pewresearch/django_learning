@@ -84,7 +84,7 @@ class Project(LoggedExtendedModel):
                 "This project already has live MTurk HITs, you can't switch it back to sandbox mode!"
             )
         elif self.mturk_sandbox == False and self.__init_mturk_sandbox == True:
-            test_hits = project.hits.filter(turk=True)
+            test_hits = projects.hits.filter(turk=True)
             print(
                 "About to delete {} sandbox HITs and switch to live mode: continue?".format(
                     test_hits.count()
