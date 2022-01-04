@@ -90,9 +90,6 @@ class Project(LoggedExtendedModel):
                     test_hits.count()
                 )
             )
-            import pdb
-
-            pdb.set_trace()
             test_hits.delete()
             from django_commander.commands import commands
 
@@ -103,9 +100,6 @@ class Project(LoggedExtendedModel):
             if self.name not in projects.projects.keys():
                 print(self.name)
                 print(projects.projects.keys())
-                import pdb
-
-                pdb.set_trace()
                 raise Exception(
                     "Project '{}' is not defined in any of the known folders".format(
                         self.name
