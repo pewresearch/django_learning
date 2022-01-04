@@ -10,20 +10,26 @@ from django_learning.utils.dataset_document_filters import dataset_document_filt
 from pewanalytics.stats.sampling import compute_sample_weights_from_frame
 
 
-def extract_sample():
-    pass
-
-
-def extract_sampling_frame():
-    pass
-
-
 def get_sampling_weights(
     samples,
     refresh_flags=False,
     ignore_stratification_weights=False,
     document_filters=None,
 ):
+    """
+    Given a query set of samples that belong to the same sampling frame, compiles and returns a dataframe that
+    contains weights calculated using all of the variables used in sampling (stratification variables, regex filters,
+    additional weights, balancing variables, etc.)
+
+    :param samples: a query set of Samples
+    :param refresh_flags: (default is False) if True, it will recompile the sampling frame's weighting variable
+        dataframe using ``SamplingFrame.get_sampling_flags`` even if it's already been computed and cached
+    :param ignore_stratification_weights: (default is False) if True, stratification variables will not be used
+        in the weight calculations
+    :param document_filters: Optional list of dataset extractor document filters to filter the frame before
+        calculating weights (weights will be calculated against the filtered frame)
+    :return: a dataframe of weights for all of the documents in the samples
+    """
 
     frame_ids = set(list(samples.values_list("frame_id", flat=True)))
     if len(frame_ids) == 1:
@@ -41,10 +47,10 @@ def get_sampling_weights(
         stratify_by = params.get("stratify_by", None)
         if is_not_null(stratify_by):
             strat_vars.add(stratify_by)
-        sampling_searches = params.get("sampling_searches", {})
-        if len(sampling_searches) > 0:
-            for search_name in list(sampling_searches.keys()):
-                keyword_weight_columns.add(search_name)
+        sampling_searches = params.get("sampling_searches", [])
+        for search in sampling_searches:
+            if search["regex_filter"] not in keyword_weight_columns:
+                keyword_weight_columns.add(search["regex_filter"])
         for additional_var in list(params.get("additional_weights", {}).keys()):
             additional_vars.add(additional_var)
 
@@ -147,6 +153,17 @@ def get_sampling_weights(
 
 
 def update_frame_and_expand_samples(frame_name):
+    """
+    Resyncs a sampling frame with the database, and if it has expanded with new documents, existing samples will be
+    expanded proportionally across all of the different strata to be representative of the new frame. It's important
+    that your samples have weighting variables that capture the reason for the frame's expansion. For example, if
+    your frame expands over time, your samples should have some representation of time (e.g. month) as a stratification
+    variable. If your frame expands due to adding new social media accounts, you should have account IDs as a
+    stratification variable, etc.
+
+    :param frame_name: Name of the sampling fame
+    :return:
+    """
 
     # TODO: this doesn't properly support all sampling methods like stratify_guaranteed and stratify_even
 
@@ -168,13 +185,13 @@ def update_frame_and_expand_samples(frame_name):
             weight_vars = []
             if (
                 "sampling_searches" in params.keys()
-                and len(params["sampling_searches"].keys()) > 0
+                and len(params["sampling_searches"]) > 0
             ):
                 weight_vars.append("search_none")
                 weight_vars.extend(
                     [
-                        "search_{}".format(name)
-                        for name in params["sampling_searches"].keys()
+                        "search_{}".format(search["regex_filter"])
+                        for search in params["sampling_searches"]
                     ]
                 )
 
@@ -256,11 +273,3 @@ def update_frame_and_expand_samples(frame_name):
                     return_object=False,
                     save_nulls=False,
                 )
-
-
-#         frame_counts = new_frame.groupby(weight_vars)['count'].sum()
-#         frame_pct = frame_counts / new_frame['count'].sum()
-#         sample_counts = sample.groupby(weight_vars)['count'].sum()
-#         sample_pct = sample_counts / sample['count'].sum()
-#         pcts = pd.concat([frame_pct, frame_counts, sample_pct, sample_counts], axis=1).fillna(0.0)
-#         pcts.columns = ["frame_pct", "frame_count", "sample_pct", "sample_count"]

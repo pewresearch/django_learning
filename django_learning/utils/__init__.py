@@ -1,5 +1,7 @@
 import re, os
 
+import numpy as np
+
 from collections import OrderedDict
 from sklearn.pipeline import Pipeline, FeatureUnion
 from django.apps import apps
@@ -14,11 +16,21 @@ from django_pewtils import get_model, get_app_settings_folders
 
 
 def get_document_types():
+    """
+    Returns a list of names of all models that have a one-to-one relationship with the Document model.
+    :return:
+    """
 
     return [f.name for f in get_model("Document")._meta.get_fields() if f.one_to_one]
 
 
 def get_pipeline_repr(pipeline, name=None):
+    """
+    Given a machine learning pipeline configuration, returns a string representation that's used for hashing.
+    :param pipeline:
+    :param name:
+    :return:
+    """
 
     text_repr = OrderedDict()
     if isinstance(pipeline, Pipeline):
@@ -45,6 +57,11 @@ def get_pipeline_repr(pipeline, name=None):
 
 
 def get_param_repr(params):
+    """
+    Given a dictionary of parameters, returns a unique string representation that's used for hashing.
+    :param params:
+    :return:
+    """
 
     if type(params) == dict:
         new_params = OrderedDict()
@@ -75,6 +92,13 @@ def get_param_repr(params):
 
 
 def filter_queryset_by_params(objs, params):
+    """
+    Takes a query set and a dictionary containing Django Learning sampling frame configuration parameters (see
+    documentation) and filters the query set accordingly.
+    :param objs: A QuerySet of objects
+    :param params: A dictionary containing one or more of: filter_dict/exclude_dict/complex_filters/complex_excludes
+    :return: A filtered query st
+    """
 
     if "filter_dict" in params.keys() and params["filter_dict"]:
         objs = objs.filter(**params["filter_dict"])
@@ -88,3 +112,68 @@ def filter_queryset_by_params(objs, params):
             objs = objs.exclude(c)
 
     return objs
+
+
+### DO NOT RELEASE
+def wmom(arrin, weights_in, inputmean=None, calcerr=False, sdev=False):
+    """
+    A weighted average function that was taken from https://github.com/esheldon/esutil/blob/master/esutil/stat/util.py
+
+    NAME:
+      wmom()
+    PURPOSE:
+      Calculate the weighted mean, error, and optionally standard deviation of
+      an input array.  By default error is calculated assuming the weights are
+      1/err^2, but if you send calcerr=True this assumption is dropped and the
+      error is determined from the weighted scatter.
+    CALLING SEQUENCE:
+     wmean,werr = wmom(arr, weights, inputmean=None, calcerr=False, sdev=False)
+    INPUTS:
+      arr: A numpy array or a sequence that can be converted.
+      weights: A set of weights for each elements in array.
+    OPTIONAL INPUTS:
+      inputmean:
+          An input mean value, around which them mean is calculated.
+      calcerr=False:
+          Calculate the weighted error.  By default the error is calculated as
+          1/sqrt( weights.sum() ).  If calcerr=True it is calculated as sqrt(
+          (w**2 * (arr-mean)**2).sum() )/weights.sum()
+      sdev=False:
+          If True, also return the weighted standard deviation as a third
+          element in the tuple.
+    OUTPUTS:
+      wmean, werr: A tuple of the weighted mean and error. If sdev=True the
+         tuple will also contain sdev: wmean,werr,wsdev
+    REVISION HISTORY:
+      Converted from IDL: 2006-10-23. Erin Sheldon, NYU
+   """
+
+    # no copy made if they are already arrays
+    arr = np.array(arrin, ndmin=1, copy=False)
+
+    # Weights is forced to be type double. All resulting calculations
+    # will also be double
+    weights = np.array(weights_in, ndmin=1, dtype="f8", copy=False)
+
+    wtot = weights.sum()
+
+    # user has input a mean value
+    if inputmean is None:
+        wmean = (weights * arr).sum() / wtot
+    else:
+        wmean = float(inputmean)
+
+    # how should error be calculated?
+    if calcerr:
+        werr2 = (weights ** 2 * (arr - wmean) ** 2).sum()
+        werr = np.sqrt(werr2) / wtot
+    else:
+        werr = 1.0 / np.sqrt(wtot)
+
+    # should output include the weighted standard deviation?
+    if sdev:
+        wvar = (weights * (arr - wmean) ** 2).sum() / wtot
+        wsdev = np.sqrt(wvar)
+        return wmean, werr, wsdev
+    else:
+        return wmean, werr

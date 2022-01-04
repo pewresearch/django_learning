@@ -2,6 +2,7 @@ from __future__ import print_function
 import copy, pandas, time
 
 from django.db import models
+from django.db.models import F
 from django.core.exceptions import ValidationError, NON_FIELD_ERRORS
 
 from multiprocessing.pool import Pool
@@ -31,11 +32,32 @@ from django_pewtils import get_model
 
 class ClassificationModel(LearningModel):
 
-    probability_threshold = models.FloatField(default=None, null=True)
+    """
+    A generic classification model that doesn't interact with the database. Can be trained on any arbitrary
+    dataset extractor. Extends ``django_learning.models.learning.LearningModel`` with classification-specific
+    functionality.
+    """
+
+    probability_threshold = models.FloatField(
+        default=None,
+        null=True,
+        help_text="Optional probability threshold for binary classifiers",
+    )
 
     # classifications = GenericRelation(Classification, related_query_name="classification_model")
 
     def _train_model(self, pipeline_steps, params, num_cores=1, **kwargs):
+
+        """
+        Wrapper around ``LearningModel._train_model`` that removes any exiting probability threshold
+        when the model is retrained.
+
+        :param pipeline_steps: Pipeline steps
+        :param params: Pipeline parameters
+        :param num_cores: (default is 1) number of cores to use during training
+        :param kwargs: Additional kwargs to be passed to ``LearningModel``.
+        :return:
+        """
 
         results = super(ClassificationModel, self)._train_model(
             pipeline_steps, params, num_cores=num_cores, **kwargs
@@ -48,6 +70,14 @@ class ClassificationModel(LearningModel):
         return results
 
     def extract_dataset(self, refresh=False, **kwargs):
+        """
+        Wrapper around ``LearningModel.extract_dataset`` that adds support for ``use_class_weights`` to
+        mix class-balancing weights into the training weights.
+
+        :param refresh: (default is False) whether or not to refresh the dataset if it's already cached
+        :param kwargs: Additional kwargs to be passed to ``LearningModel``
+        :return:
+        """
 
         super(ClassificationModel, self).extract_dataset(refresh=refresh, **kwargs)
 
@@ -97,6 +127,12 @@ class ClassificationModel(LearningModel):
 
     @require_model
     def show_top_features(self, n=10):
+        """
+        Shows the top features for the trained classification model.
+
+        :param n: (default is 10) number of top features to show
+        :return:
+        """
 
         if hasattr(self.model, "best_estimator_"):
             model = self.model.best_estimator_
@@ -149,11 +185,21 @@ class ClassificationModel(LearningModel):
 
     @require_model
     def describe_model(self):
+        """
+        Adds ``show_top_features`` to the base ``LearningModel.describe_model()`` function.
+        :return:
+        """
 
         super(ClassificationModel, self).describe_model()
         self.show_top_features()
 
     def _get_positive_code(self):
+        """
+        For binary classifiers, this function auto-detects the positive class by assuming that the most common
+        class is the base class.
+
+        :return: Auto-detected positive class (the least common of the two)
+        """
 
         codes = self.dataset[self.dataset_extractor.outcome_column].unique()
         if len(codes) == 2:
@@ -162,6 +208,14 @@ class ClassificationModel(LearningModel):
             return None
 
     def print_test_prediction_report(self, refresh=False, only_load_existing=True):
+        """
+        Prints a classification report in addition to the test prediction scores.
+
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :return:
+        """
 
         results = self.get_test_prediction_results(
             refresh=refresh, only_load_existing=only_load_existing
@@ -206,6 +260,14 @@ class ClassificationModel(LearningModel):
 
     @require_model
     def get_test_prediction_results(self, refresh=False, only_load_existing=False):
+        """
+        Returns test prediction scores.
+
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :return:
+        """
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
@@ -224,6 +286,15 @@ class ClassificationModel(LearningModel):
     def get_incorrect_predictions(
         self, correct_label_id=None, refresh=False, only_load_existing=False
     ):
+        """
+        Returns a subset of the test dataset where the classifier made incorrect predictions.
+
+        :param correct_label_id: (optional) filter to a specific label_id that the classifier got wrong
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :return:
+        """
 
         self.predict_dataset = None
         if is_not_null(self.dataset):
@@ -254,9 +325,19 @@ class ClassificationModel(LearningModel):
     def get_cv_prediction_results(
         self, refresh=False, only_load_existing=False, return_averages=True
     ):
+        """
+        Returns CV prediction scores.
+
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, will not compute test predictions if they
+            do not already exist
+        :param return_averages: (default is True) if False, returns a full vertically-concatenated dataframe of
+            all fold scores, otherwise returns averages across all folds
+        :return:
+        """
 
         print("Computing cross-fold predictions")
-        _final_model = self.model
+        _final_model = copy.deepcopy(self.model)
         if hasattr(self.model, "best_estimator_"):
             _final_model_best_estimator = self.model.best_estimator_
         else:
@@ -335,12 +416,13 @@ class ClassificationModel(LearningModel):
     def find_probability_threshold(self, metric="precision_recall_min", save=False):
 
         """
-        :param metric:
-        :param save:
-        :return:
+        Iterates over possible thresholds (0-1) and finds the one that maximizes the minimum of the specified metric
+        between the test and CV fold prediction datasets.
 
-        Iterates over thresholds and finds the one that maximizes the minimum of the specified metric
-        between the test and CV fold prediction datasets
+        :param metric: (default is "precision_recall_min") the scoring function to use to optimize the threshold
+        :param save: (default is False) if True, saves the probability threshold to the database so that future
+            predictions will use it
+        :return: The optimal probability threshold for maximizing the specified metric in both the test dataset and CV folds
         """
 
         print("Scanning CV folds for optimal probability threshold")
@@ -352,139 +434,154 @@ class ClassificationModel(LearningModel):
         if pos_code:
             pos_code = str(pos_code)
 
-        if save:
-            self.probability_threshold = None
-        if is_not_null(self.cv_folds):
-
-            predict_dataset = self.produce_prediction_dataset(
-                self.test_dataset,
-                cache_key="predict_test",
-                refresh=False,
-                only_load_existing=True,
-                ignore_probability_threshold=True,
+        if not pos_code or not base_code:
+            print(
+                "Probability thresholding currently only works with binary classifications"
             )
-            if "probability" not in predict_dataset.columns:
-                raise Exception("This model does not produce probabilities")
-            test_threshold_scores = None
-            if is_not_null(predict_dataset):
-                test_threshold_scores = get_probability_threshold_score_df(
-                    predict_dataset,
+            return None
+        else:
+
+            if save:
+                self.probability_threshold = None
+            if is_not_null(self.cv_folds):
+
+                predict_dataset = self.produce_prediction_dataset(
                     self.test_dataset,
-                    outcome_column=self.dataset_extractor.outcome_column,
-                    weight_column="sampling_weight"
-                    if "sampling_weight" in predict_dataset.columns
-                    and self._check_for_valid_weights(
-                        predict_dataset["sampling_weight"]
-                    )
-                    else None,
-                    base_code=base_code,
-                    pos_code=pos_code,
-                )
-
-            dataset = copy.copy(self.train_dataset)
-
-            all_fold_scores = []
-            for i, folds in enumerate(self.cv_folds):
-                fold_train_index, fold_test_index = folds
-                # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
-                fold_train_dataset = dataset.loc[
-                    pandas.Series(dataset.index).iloc[fold_train_index].values
-                ]  # self.dataset.ix[fold_train_index]
-                fold_test_dataset = dataset.loc[
-                    pandas.Series(dataset.index).iloc[fold_test_index].values
-                ]  # self.dataset.ix[fold_test_index]
-
-                fold_predict_dataset = self.produce_prediction_dataset(
-                    fold_test_dataset,
-                    cache_key="predict_fold_{}".format(i),
+                    cache_key="predict_test",
                     refresh=False,
                     only_load_existing=True,
                     ignore_probability_threshold=True,
                 )
-                # threshold = None
-                if is_not_null(fold_predict_dataset):
-                    fold_threshold_scores = get_probability_threshold_score_df(
-                        fold_predict_dataset,
-                        fold_test_dataset,
+                if "probability" not in predict_dataset.columns:
+                    raise Exception("This model does not produce probabilities")
+                test_threshold_scores = None
+                if is_not_null(predict_dataset):
+                    test_threshold_scores = get_probability_threshold_score_df(
+                        predict_dataset,
+                        self.test_dataset,
                         outcome_column=self.dataset_extractor.outcome_column,
                         weight_column="sampling_weight"
-                        if "sampling_weight" in fold_predict_dataset.columns
+                        if "sampling_weight" in predict_dataset.columns
                         and self._check_for_valid_weights(
-                            fold_predict_dataset["sampling_weight"]
+                            predict_dataset["sampling_weight"]
                         )
                         else None,
                         base_code=base_code,
                         pos_code=pos_code,
                     )
-                    if is_not_null(test_threshold_scores):
-                        fold_threshold_scores[metric] = [
-                            min(list(x))
-                            for x in zip(
-                                test_threshold_scores[metric],
-                                fold_threshold_scores[metric],
+
+                dataset = copy.copy(self.train_dataset)
+
+                all_fold_scores = []
+                for i, folds in enumerate(self.cv_folds):
+                    fold_train_index, fold_test_index = folds
+                    # NOTE: KFold returns numerical index, so you need to remap it to the dataset index (which may not be numerical)
+                    fold_train_dataset = dataset.loc[
+                        pandas.Series(dataset.index).iloc[fold_train_index].values
+                    ]  # self.dataset.ix[fold_train_index]
+                    fold_test_dataset = dataset.loc[
+                        pandas.Series(dataset.index).iloc[fold_test_index].values
+                    ]  # self.dataset.ix[fold_test_index]
+
+                    fold_predict_dataset = self.produce_prediction_dataset(
+                        fold_test_dataset,
+                        cache_key="predict_fold_{}".format(i),
+                        refresh=False,
+                        only_load_existing=True,
+                        ignore_probability_threshold=True,
+                    )
+                    # threshold = None
+                    if is_not_null(fold_predict_dataset):
+                        fold_threshold_scores = get_probability_threshold_score_df(
+                            fold_predict_dataset,
+                            fold_test_dataset,
+                            outcome_column=self.dataset_extractor.outcome_column,
+                            weight_column="sampling_weight"
+                            if "sampling_weight" in fold_predict_dataset.columns
+                            and self._check_for_valid_weights(
+                                fold_predict_dataset["sampling_weight"]
                             )
-                        ]
-                    all_fold_scores.append(fold_threshold_scores)
+                            else None,
+                            base_code=base_code,
+                            pos_code=pos_code,
+                        )
+                        if is_not_null(test_threshold_scores):
+                            fold_threshold_scores[metric] = [
+                                min(list(x))
+                                for x in zip(
+                                    test_threshold_scores[metric],
+                                    fold_threshold_scores[metric],
+                                )
+                            ]
+                        all_fold_scores.append(fold_threshold_scores)
 
-                #     # if is_not_null(test_threshold_scores):
-                #     #     fold_threshold_scores[metric] = [min(list(x)) for x in zip(test_threshold_scores[metric], fold_threshold_scores[metric])]
-                #     threshold = get_probability_threshold_from_score_df(
-                #         fold_threshold_scores,
-                #         metric=metric
-                #     )
-                #     fold_predict_dataset = apply_probability_threshold(
-                #         fold_predict_dataset,
-                #         threshold,
-                #         outcome_column=self.dataset_extractor.outcome_column,
-                #         base_code=base_code,
-                #         pos_code=pos_code
-                #     )
-                #
-                # if is_not_null(fold_predict_dataset):
-                #     fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
-                #     fold_scores['probability_threshold'] = threshold
+                    #     # if is_not_null(test_threshold_scores):
+                    #     #     fold_threshold_scores[metric] = [min(list(x)) for x in zip(test_threshold_scores[metric], fold_threshold_scores[metric])]
+                    #     threshold = get_probability_threshold_from_score_df(
+                    #         fold_threshold_scores,
+                    #         metric=metric
+                    #     )
+                    #     fold_predict_dataset = apply_probability_threshold(
+                    #         fold_predict_dataset,
+                    #         threshold,
+                    #         outcome_column=self.dataset_extractor.outcome_column,
+                    #         base_code=base_code,
+                    #         pos_code=pos_code
+                    #     )
+                    #
+                    # if is_not_null(fold_predict_dataset):
+                    #     fold_scores = self.compute_prediction_scores(fold_test_dataset, predicted_df=fold_predict_dataset)
+                    #     fold_scores['probability_threshold'] = threshold
+                    # else:
+                    #     fold_scores = None
+                    # all_fold_scores.append(fold_scores)
+
+                if any([is_null(f) for f in all_fold_scores]):
+                    print(
+                        "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+                    )
+                    if save:
+                        self.set_probability_threshold(None)
+                    return None
+                else:
+                    fold_score_df = pandas.concat(all_fold_scores).fillna(0.0)
+                    threshold = (
+                        fold_score_df.groupby(["threshold", "outcome_column"])
+                        .mean()[metric]
+                        .sort_values(ascending=False)
+                        .index[0][0]
+                    )
+                    if save:
+                        self.set_probability_threshold(threshold)
+                    return threshold
+
+                # if any([is_null(f) for f in all_fold_scores]):
+                #     print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
+                #     return None
                 # else:
-                #     fold_scores = None
-                # all_fold_scores.append(fold_scores)
-
-            if any([is_null(f) for f in all_fold_scores]):
-                print(
-                    "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
-                )
+                #     fold_score_df = pandas.concat(all_fold_scores)
+                #     fold_score_df = pandas.concat([
+                #         all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
+                #         fold_score_df.groupby(fold_score_df.index).mean()
+                #     ], axis=1)
+                #     threshold = fold_score_df['probability_threshold'].mean()
+                #     if save:
+                #         self.set_probability_threshold(threshold)
+                #     return threshold
+            else:
                 if save:
                     self.set_probability_threshold(None)
                 return None
-            else:
-                fold_score_df = pandas.concat(all_fold_scores).fillna(0.0)
-                threshold = (
-                    fold_score_df.groupby(["threshold", "outcome_column"])
-                    .mean()[metric]
-                    .sort_values(ascending=False)
-                    .index[0][0]
-                )
-                if save:
-                    self.set_probability_threshold(threshold)
-                return threshold
-
-            # if any([is_null(f) for f in all_fold_scores]):
-            #     print "You don't have CV predictions saved in the cache; please run 'get_cv_prediction_results' first"
-            #     return None
-            # else:
-            #     fold_score_df = pandas.concat(all_fold_scores)
-            #     fold_score_df = pandas.concat([
-            #         all_fold_scores[0][["coder1", "coder2", "outcome_column"]],
-            #         fold_score_df.groupby(fold_score_df.index).mean()
-            #     ], axis=1)
-            #     threshold = fold_score_df['probability_threshold'].mean()
-            #     if save:
-            #         self.set_probability_threshold(threshold)
-            #     return threshold
-        else:
-            if save:
-                self.set_probability_threshold(None)
-            return None
 
     def set_probability_threshold(self, threshold):
+
+        """
+        Set the probability threshold to the specified value. Saves to the database and will use the threshold for
+        future predictions.
+
+        :param threshold: The threshold to set
+        :return:
+        """
 
         self.probability_threshold = threshold
         self.save()
@@ -496,6 +593,17 @@ class ClassificationModel(LearningModel):
         clear_temp_cache=True,
         disable_probability_threshold_warning=False,
     ):
+        """
+        Extends the base ``LearningModel.apply_model`` function to add a warning if the probability threshold is set.
+        (This is a base-level function that is used all over the place, so it doesn't apply the threshold - you should
+        use ``produce_prediction_dataset`` instead.)
+
+        :param data: Dataframe to make predictions on
+        :param keep_cols: (default is None) truncate the dataframe to specific columns when passing it to the model
+        :param clear_temp_cache: (default is True) if False, the temporary cache will be preserved
+        :param disable_probability_threshold_warning: (default is False) if True, overrides the warning
+        :return:
+        """
 
         results = super(ClassificationModel, self).apply_model(
             data, keep_cols=keep_cols, clear_temp_cache=clear_temp_cache
@@ -522,6 +630,20 @@ class ClassificationModel(LearningModel):
         only_load_existing=False,
         ignore_probability_threshold=False,
     ):
+        """
+        Produce a prediction dataset. Extends ``LearningModel.produce_prediction_dataset`` to apply the probability
+        threshold, if one has been set.
+
+        :param df_to_predict: Dataframe to make predictions on
+        :param cache_key: (optional) a unique key for the dataset to be used in caching
+        :param refresh: (default is False) if True, the predictions will be refreshed even if the dataset's cache key
+            already corresponds to existing predictions in the cache
+        :param only_load_existing: (default is False) if True, only load existing prediction from the cache that
+            correspond to the specificed ``cache_key``; do not compute anything if there's nothing in the cache
+        :param ignore_probability_threshold: (default is False) if True, don't apply the probability threshold
+            (the default threshold of .5 will be used)
+        :return: The dataset with predictions added in by the classifier
+        """
 
         base_code = self._get_largest_code()
         if base_code:
@@ -559,7 +681,20 @@ class ClassificationModel(LearningModel):
 
 
 class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
+    """
+    Inherits from ``ClassificationModel`` and provides additional functionality for training classifiers on
+    dataset extractors that pull from the database. If you're training a model on a sample of Django Learning
+    Documents, this is what you want to use.
+    """
+
     def extract_dataset(self, refresh=False, **kwargs):
+        """
+        Extends ``ClassificationModel.extract_dataset`` to add suppoort for mixing in balancing variables.
+
+        :param refresh: (default is False) if True, the dataset will be refreshed even if it is already cached
+        :param kwargs: Additional kwargs passed to ``ClassificationModel.extract_dataset``
+        :return:
+        """
 
         super(DocumentClassificationModel, self).extract_dataset(
             refresh=refresh, **kwargs
@@ -573,6 +708,12 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         self.document_types = self.dataset["document_type"].unique()
 
     def _get_all_document_types(self):
+        """
+        Auto-detects all of the possible Django Learning Document types based off of the models they have
+        one-to-one relationships with in your app.
+
+        :return: List of model names that have Document associations
+        """
 
         return [
             f.name
@@ -585,6 +726,17 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
     def apply_model_to_documents(
         self, documents, save=True, document_filters=None, refresh=False
     ):
+        """
+        Applies the model to an arbitrary query set of Documents.
+
+        :param documents: A query set of Documents
+        :param save: (default is True) if False, a dataframe of predictions is returned and nothing will be saved to
+            the database, otherwise new Classification objects will be created
+        :param document_filters: (optional) a list of document filters to apply to the documents in the query set
+        :param refresh: (default is False) if True, new predictions will be computed even if this set of documents
+            has already been predicted and cached by the model
+        :return:
+        """
 
         extractor = dataset_extractors["raw_document_dataset"](
             document_ids=list(documents.values_list("pk", flat=True)),
@@ -638,6 +790,20 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         num_cores=2,
         chunk_size=1000,
     ):
+        """
+        A multi-processed version of ``apply_model_to_documents`` that uses multiprocessing to create predictions
+        in batches.
+
+        :param document_ids: List of document IDs to process
+        :param save: (default is True) if False, you'll get a prediction dataframe back, otherwise the results will
+            be saved in the database as new Classification objects
+        :param document_filters: (optional) a list of document filters to apply to the documents in the list
+        :param refresh: (default is False) if True, new predictions will be computed even if this set of documents
+            has already been predicted and cached by the model
+        :param num_cores: (default is 2) number of cores to use
+        :param chunk_size: (default is 1000) number of documents to be included in each multiprocessing batch
+        :return:
+        """
 
         print("Processing {} documents".format(len(document_ids)))
 
@@ -673,6 +839,19 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
         num_cores=2,
         chunk_size=1000,
     ):
+        """
+        Wrapper around ``apply_model_to_documents`` and ``apply_model_to_documents_multiprocessed`` that applies the
+        model to all of the documents in the sampling frame associated with the classification model.
+
+        :param save: (default is True) if False, you'll get a prediction dataframe back, otherwise the results will
+            be saved in the database as new Classification objects
+        :param document_filters: (optional) a list of document filters to apply to the documents in the list
+        :param refresh: (default is False) if True, new predictions will be computed even if this set of documents
+            has already been predicted and cached by the model
+        :param num_cores: (default is 2) number of cores to use; if you pass 1, multiprocessing will be disabled
+        :param chunk_size: (default is 1000) number of documents to be included in each multiprocessing batch
+        :return:
+        """
 
         doc_ids = set(list(self.sampling_frame.documents.values_list("pk", flat=True)))
         if not refresh:
@@ -702,17 +881,24 @@ class DocumentClassificationModel(ClassificationModel, DocumentLearningModel):
             )
 
     def update_classifications_with_probability_threshold(self):
+        """
+        Updates existing Classification objects using the model's probability threshold, which has presumably
+        been changed since the model was last applied.
+        :return:
+        """
 
         base_code = self._get_largest_code()
         pos_code = self._get_positive_code()
         switch_to_pos = self.classifications.filter(label_id=base_code).filter(
-            probability__gte=self.probability_threshold
+            probability__lte=(1 - self.probability_threshold)
         )
         switch_to_neg = self.classifications.filter(label_id=pos_code).filter(
             probability__lt=self.probability_threshold
         )
         switch_to_pos.update(label_id=pos_code)
+        switch_to_pos.update(probability=1.0 - F("probability"))
         switch_to_neg.update(label_id=base_code)
+        switch_to_neg.update(probability=1.0 - F("probability"))
 
 
 def _process_document_chunk(model_id, chunk, i, save, document_filters, refresh):
@@ -760,22 +946,28 @@ def _process_document_chunk(model_id, chunk, i, save, document_filters, refresh)
 
 
 class Classification(LoggedExtendedModel):
+    """
+    Equivalent to ``Code``, but gets applied by ``DocumentClassificationModel`` instead of ``Coder``.
+    """
 
     document = models.ForeignKey(
         "django_learning.Document",
         on_delete=models.CASCADE,
         related_name="classifications",
+        help_text="The document that's been classified",
     )
     label = models.ForeignKey(
         "django_learning.Label",
         on_delete=models.CASCADE,
         related_name="classifications",
+        help_text="The label applied by the classification model",
     )
 
     classification_model = models.ForeignKey(
         "django_learning.DocumentClassificationModel",
         related_name="classifications",
         on_delete=models.CASCADE,
+        help_text="The classification model that made the prediction",
     )
 
     probability = models.FloatField(
@@ -803,40 +995,3 @@ class Classification(LoggedExtendedModel):
         return "<Classification label={0}, document={1}>".format(
             self.label, self.document
         )
-
-
-# ah, okay, so originally you had spec-ed out the model below
-# but... DocumentClassificationModels are the only thing that's every going to make
-# Classifications... on Documents... so... no need for a generic foreign key, right?
-# class Classification(LoggedExtendedModel):
-#
-#     document = models.ForeignKey("django_learning.Document", related_name="classifications")
-#     label = models.ForeignKey("django_learning.Label", related_name="classifications")
-#
-#     # classifier = models.ForeignKey("django_learning.Classifier", related_name="classifications")
-#     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-#     object_id = models.PositiveIntegerField()
-#     model = GenericForeignKey('content_type', 'object_id')
-#
-#     probability = models.FloatField(null=True, help_text="The probability of the assigned label, if applicable")
-#
-#     # def validate_unique(self, *args, **kwargs):
-#     #        super(Classification, self).validate_unique(*args, **kwargs)
-#     #        if not self.id:
-#     #            if not self.label.question.multiple:
-#     #                if self.model.objects\
-#     #                        .filter(label__question=self.label.question)\
-#     #                        .filter(document=self.document)\
-#     #                        .exists():
-#     #                    raise ValidationError(
-#     #                        {
-#     #                            NON_FIELD_ERRORS: [
-#     #                                'Classification with the same variable already exists'
-#     #                            ],
-#     #                        }
-#     #                    )
-#
-#     def __repr__(self):
-#         return "<Classification label={0}, document={2}>".format(
-#             self.label, self.document
-#         )

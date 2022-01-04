@@ -12,14 +12,13 @@ from testapp.utils import set_up_test_project
 
 
 class ProjectsTests(DjangoTestCase):
-    # TODO: change name for all of these test classes
 
     """
     To test, navigate to django_learning root folder and run `python manage.py test testapp.tests`
     """
 
     def setUp(self):
-        set_up_test_project()
+        set_up_test_project(10)
 
     def test_projects(self):
         from django_learning.utils.projects import projects

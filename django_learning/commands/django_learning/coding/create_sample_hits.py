@@ -5,6 +5,16 @@ from django_learning.models import Project, Sample, HIT, HITType
 
 class Command(BasicCommand):
 
+    """
+    Create in-house HITs for an existing project and sample.
+
+    :param project_name: Name of an existing project
+    :param sample_name: Name of an existing sample
+    :param hit_type_name: Name of an existing HIT type to assign to the newly created HITs
+    :param num_coders: (default is 1) number of coders to complete each HIT
+    :param template_name: (optional) the name of a custom project_hit_template
+    """
+
     parameter_names = ["project_name", "sample_name", "hit_type_name"]
     dependencies = []
 
@@ -15,14 +25,11 @@ class Command(BasicCommand):
         parser.add_argument("hit_type_name", type=str)
         parser.add_argument("--num_coders", default=1, type=int)
         parser.add_argument("--template_name", default=None, type=str)
-        parser.add_argument("--sandbox", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         sample = Sample.objects.get(
             name=self.parameters["sample_name"], project=project

@@ -8,9 +8,10 @@ def filter(self, df, model_name, filter_value):
     other_model = get_model(
         "DocumentClassificationModel", app_name="django_learning"
     ).objects.get(name=model_name)
-    predicted_df = dataset_extractors["model_prediction_dataset"](
-        dataset=df, learning_model=other_model
-    ).extract(refresh=True)
+    other_model.load_model(only_load_existing=True)
+    predicted_df = other_model.produce_prediction_dataset(
+        df, ignore_probability_threshold=False, refresh=True
+    )
     doc_ids = predicted_df[
         predicted_df[other_model.dataset_extractor.outcome_column] == filter_value
     ]["document_id"].unique()

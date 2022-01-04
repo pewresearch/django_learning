@@ -76,13 +76,15 @@ class ClassificationTests(DjangoTestCase):
         incorrect = model.get_incorrect_predictions()
         self.assertGreaterEqual(len(incorrect), 4)
         self.assertLessEqual(len(incorrect), 8)
+
+        model.set_probability_threshold(0.5)
         model.apply_model_to_documents(Document.objects.all())
         self.assertEqual(model.classifications.count(), 250)
         neg_count = model.classifications.filter(label_id=neg_label).count()
         pos_count = model.classifications.filter(label_id=pos_label).count()
 
-        self.assertTrue(228 <= neg_count <= 234)
-        self.assertTrue(16 <= pos_count <= 22)
+        self.assertTrue(218 <= neg_count <= 224)
+        self.assertTrue(26 <= pos_count <= 32)
 
         model.set_probability_threshold(0.25)
         model.update_classifications_with_probability_threshold()

@@ -30,15 +30,12 @@ class Extractor(DatasetExtractor):
         )
         weight_column = kwargs.get("weight_column", "sampling_weight")
         exclude_consensus_ignore = kwargs.get("exclude_consensus_ignore", False)
-        sandbox = kwargs.get("sandbox", False)
         # frame_filter_params = kwargs.get("frame_filter_params", False)
 
         super(Extractor, self).__init__(**kwargs)
 
-        self.project = (
-            get_model("Project", app_name="django_learning")
-            .objects.filter(sandbox=sandbox)
-            .get(name=project_name)
+        self.project = get_model("Project", app_name="django_learning").objects.get(
+            name=project_name
         )
         self.samples = self.project.samples.filter(name__in=sample_names)
         self.questions = self.project.questions.filter(name__in=question_names)
@@ -345,7 +342,7 @@ class Extractor(DatasetExtractor):
     def compute_overall_scores(self, refresh=False):
 
         dataset = self.extract(refresh=refresh)
-        return compute_overall_scores(dataset, "document_id", "label_value", "coder_id")
+        return compute_overall_scores(dataset, "label_value", "document_id", "coder_id")
 
     def compute_scores(
         self, refresh=False, min_overlap=10, discrete_classes=True, pos_label=None

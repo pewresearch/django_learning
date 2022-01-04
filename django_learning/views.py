@@ -10,6 +10,7 @@ from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate
 from django.db.models import Count, F
+from django.contrib.auth.models import User
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.http import StreamingHttpResponse
@@ -25,6 +26,8 @@ from django_learning.models import (
     Sample,
     HIT,
     Coder,
+    Label,
+    TopicModel,
     Question,
     Assignment,
     Code,
@@ -138,8 +141,7 @@ def edit_project_coders(request, project_name, mode):
 
         if request.method == "POST":
 
-            active_coders = []
-            inactive_coders = []
+            coders = []
             new_name = request.POST.get("new_name")
             if new_name:
                 try:
@@ -151,36 +153,23 @@ def edit_project_coders(request, project_name, mode):
                 coder = get_model("Coder").objects.create_or_update(
                     {"name": new_name}, {"is_mturk": False, "user": user}
                 )
-                status = request.POST.get("new")
-                if status == "active":
-                    active_coders.append(coder.pk)
-                else:
-                    inactive_coders.append(coder.pk)
+                coders.append(coder.pk)
 
             for coder_id, status in request.POST.items():
                 if not coder_id.startswith("new") and not coder_id.startswith("csrf"):
                     coder = Coder.objects.get(pk=coder_id)
-                    if status == "active":
-                        active_coders.append(coder.pk)
-                    else:
-                        inactive_coders.append(coder.pk)
+                    coders.append(coder.pk)
 
-            project.coders.set(Coder.objects.filter(pk__in=active_coders))
-            project.inactive_coders.set(Coder.objects.filter(pk__in=inactive_coders))
+            project.coders.set(Coder.objects.filter(pk__in=coders))
             project.save()
 
         coders = []
         for coder in project.coders.filter(is_mturk=True if mode == "mturk" else False):
-            coders.append({"name": str(coder), "pk": coder.pk, "status": "active"})
-        for coder in project.inactive_coders.filter(
-            is_mturk=True if mode == "mturk" else False
-        ):
-            coders.append({"name": str(coder), "pk": coder.pk, "status": "inactive"})
+            coders.append({"name": str(coder), "pk": coder.pk, "status": "assigned"})
         nonproject_coders = (
             get_model("Coder")
             .objects.filter(is_mturk=True if mode == "mturk" else False)
             .exclude(pk__in=project.coders.all())
-            .exclude(pk__in=project.inactive_coders.all())
         )
         for coder in nonproject_coders:
             coders.append({"name": str(coder), "pk": coder.pk, "status": "---"})
@@ -217,7 +206,7 @@ def extract_sampling_frame(request, sampling_frame_name):
 
     run_command_async(
         "extract_sampling_frame",
-        **{"sampling_frame_name": sampling_frame_name, "refresh": True}
+        **{"sampling_frame_name": sampling_frame_name, "refresh": True},
     )
 
     return view_sampling_frame(request, sampling_frame_name)
@@ -241,7 +230,7 @@ def extract_sample(request, project_name):
                 "allow_overlap_with_existing_project_samples": bool(
                     request.POST.get("allow_overlap_with_existing_project_samples")
                 ),
-            }
+            },
         )
 
     return view_project(request, project_name)
@@ -316,7 +305,7 @@ def view_sample(request, project_name, sample_name):
                         experts_only=True,
                         coder=coder,
                         completed_only=True,
-                        uncodeable=True
+                        uncodeable=True,
                     ),
                     experts_only=True,
                 )
@@ -325,7 +314,7 @@ def view_sample(request, project_name, sample_name):
                         "coder": coder,
                         "completed_expert_hits": coder_completed_expert_hits,
                         "available_expert_hits": coder_available_expert_hits,
-                        "uncodeable": coder_completed_expert_hits_uncodeable
+                        "uncodeable": coder_completed_expert_hits_uncodeable,
                     }
                 )
 
@@ -390,7 +379,12 @@ def download_sample(request, project_name, sample_name):
         Assignment.objects.filter(sample__name=sample_name).values(
             "coder__name", "hit__sample_unit__document_id", "uncodeable", "notes"
         )
-    ).rename(columns={"coder__name": "coder_name", "hit__sample_unit__document_id": "document_id"})
+    ).rename(
+        columns={
+            "coder__name": "coder_name",
+            "hit__sample_unit__document_id": "document_id",
+        }
+    )
     df = df.merge(notes, how="left", on=("coder_name", "document_id"))
 
     response = HttpResponse(content_type="text/csv")
@@ -412,7 +406,7 @@ def create_sample_hits_experts(request, project_name):
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
-            }
+            },
         )
 
     return view_sample(request, project_name, request.POST.get("sample_name"))
@@ -430,8 +424,7 @@ def create_sample_hits_mturk(request, project_name):
                 "project_name": project_name,
                 "sample_name": request.POST.get("sample_name"),
                 "num_coders": int(request.POST.get("num_coders")),
-                "sandbox": bool(request.POST.get("sandbox")),
-            }
+            },
         )
 
     return view_sample(request, project_name, request.POST.get("sample_name"))
@@ -530,7 +523,7 @@ def view_expert_assignments(request, project_name, sample_name):
             filter_coders=filter_coders,
             completed_only=completed_only,
             incomplete_only=incomplete_only,
-            uncodeable=uncodeable
+            uncodeable=uncodeable,
         ).distinct()
         assignments = assignments.order_by(*queue_ordering)
 
@@ -542,7 +535,7 @@ def view_expert_assignments(request, project_name, sample_name):
                 "sample": sample,
                 "coder_id": coder_id,
                 "state": state,
-                "uncodeable": uncodeable
+                "uncodeable": uncodeable,
             },
         )
 
@@ -814,7 +807,7 @@ def adjudicate_question(request, project_name, sample_name, question_name):
             experts_only=True,
         )
 
-        codes = pandas.DataFrame.from_records(
+        codes = pd.DataFrame.from_records(
             Code.objects.filter(consensus_ignore=False)
             .filter(assignment__hit__in=completed_expert_hits)
             .filter(label__question__name=question_name)

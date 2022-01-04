@@ -14,20 +14,20 @@ def scorer(y_true, y_pred, sample_weight=None):
             precision_score(
                 y_true,
                 y_pred,
-                average="binary",
-                pos_label=value,
+                average="weighted",
                 sample_weight=sample_weight,
-                labels=labels,
+                labels=[value],
+                zero_division=0,
             )
         )
         metrics.append(
             recall_score(
                 y_true,
                 y_pred,
-                average="binary",
-                pos_label=value,
+                average="weighted",
                 sample_weight=sample_weight,
-                labels=labels,
+                labels=[value],
+                zero_division=0,
             )
         )
     return min(metrics)

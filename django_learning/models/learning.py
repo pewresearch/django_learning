@@ -38,11 +38,18 @@ from django_pewtils import get_model, CacheHandler
 
 class LearningModel(LoggedExtendedModel):
 
+    """
+    The base class for machine learning models. This class gets inherited by ``ClassificationModel`` and
+    ``DocumentClassificationModel``. Provides generic functions for training and applying models that are compatible
+    with the sklearn framework.
+    """
+
     project = models.ForeignKey(
         "django_learning.Project",
         related_name="+",
         null=True,
         on_delete=models.SET_NULL,
+        help_text="Coding project associated with the model",
     )
     name = models.CharField(
         max_length=100, unique=True, help_text="Unique name of the classifier"
@@ -58,12 +65,25 @@ class LearningModel(LoggedExtendedModel):
         help_text="A pickle file of the parameters used to process the codes and generate the model",
     )
 
-    cv_folds = PickledObjectField(null=True)
-    cv_folds_test = PickledObjectField(null=True)
+    cv_folds = PickledObjectField(
+        null=True, help_text="Indices of the cross-validation folds"
+    )
 
-    model_cache_hash = models.CharField(max_length=256, null=True)
-    dataset_cache_hash = models.CharField(max_length=256, null=True)
-    test_dataset_cache_hash = models.CharField(max_length=256, null=True)
+    model_cache_hash = models.CharField(
+        max_length=256,
+        null=True,
+        help_text="A unique caching hash for the ML model, based on the current parameters",
+    )
+    dataset_cache_hash = models.CharField(
+        max_length=256,
+        null=True,
+        help_text="A unique caching hash for the training dataset, based on the current parameters",
+    )
+    test_dataset_cache_hash = models.CharField(
+        max_length=256,
+        null=True,
+        help_text="A unique caching hash for the test dataset, based on the current parameters",
+    )
 
     class Meta:
 
@@ -73,6 +93,11 @@ class LearningModel(LoggedExtendedModel):
         return self.name
 
     def __init__(self, *args, **kwargs):
+        """
+        Extends ``__init__`` to initialize caching handlers.
+        :param args:
+        :param kwargs:
+        """
 
         super(LearningModel, self).__init__(*args, **kwargs)
 
@@ -93,16 +118,17 @@ class LearningModel(LoggedExtendedModel):
             ),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
-            aws_access=settings.AWS_ACCESS_KEY_ID,
-            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
             bucket=settings.S3_BUCKET,
         )
         self.dataset_cache = CacheHandler(
-            os.path.join(settings.DJANGO_LEARNING_S3_CACHE_PATH, "datasets"),
+            os.path.join(
+                settings.DJANGO_LEARNING_S3_CACHE_PATH
+                if settings.DJANGO_LEARNING_USE_S3
+                else settings.DJANGO_LEARNING_LOCAL_CACHE_PATH,
+                "datasets",
+            ),
             hash=False,
             use_s3=settings.DJANGO_LEARNING_USE_S3,
-            aws_access=settings.AWS_ACCESS_KEY_ID,
-            aws_secret=settings.AWS_SECRET_ACCESS_KEY,
             bucket=settings.S3_BUCKET,
         )
         self.temp_cache = CacheHandler(
@@ -115,6 +141,12 @@ class LearningModel(LoggedExtendedModel):
         )
 
     def _refresh_parameters(self, key=None):
+        """
+        Refreshes the saved parameters from the pipeline configuration file. Optionally takes a ``key`` (e.g.
+        ``dataset_extractor``) to reload just a subset of the parameters.
+        :param key: (Optional) a ``key`` that refers to a specific section of the pipeline
+        :return:
+        """
 
         params = {}
         if self.pipeline_name:
@@ -144,6 +176,11 @@ class LearningModel(LoggedExtendedModel):
             print("Refreshed all parameters")
 
     def _get_dataset_extractor(self, key):
+        """
+        Initializes the dataset extractor as specified in the ``dataset_extractor`` section of the pipeline parameters
+        :param key: ``dataset_extractor`` or ``test_dataset_extractor``
+        :return:
+        """
 
         dataset_extractor = None
         try:
@@ -168,6 +205,14 @@ class LearningModel(LoggedExtendedModel):
         return len(set(weight_col)) > 1 or float(weight_col.unique()[0]) != 1.0
 
     def extract_dataset(self, refresh=False, only_load_existing=False, **kwargs):
+        """
+        Initializes the dataset extractor and extracts the dataset, saving it to the cache. The dataset becomes
+        available in ``self.dataset``.
+        :param refresh: (default is False) if True, the extractor will recompile the dataset rather than loading from the cache
+        :param only_load_existing: (default is False) if True, the extractor will only load a dataset if it exists in the cache
+        :param kwargs: 
+        :return:
+        """
 
         test_dataset = None
         if not refresh and self.dataset_cache_hash:
@@ -254,6 +299,18 @@ class LearningModel(LoggedExtendedModel):
         num_cores=1,
         **kwargs
     ):
+        """
+        Loads an existing model or trains a new one. Will attempt to load the model from the cache, and retrains if it
+        doesn't exist (or if ``refresh=True``). Once trained, the model becomes available in ``self.model`` as well as
+        the indices of the cross-validation folds in ``self.cv_folds``.
+
+        :param refresh: (default is False) if True, the model will be retrained regardless of whether it already exists in the cache
+        :param clear_temp_cache: (default is True) if False, row-level caching will not be automatically cleared before and after model training
+        :param only_load_existing: (default is False) if True, the model will not be trained if it doesn't exist in the cache
+        :param num_cores: (default is 1) number of cores to use during training
+        :param kwargs:
+        :return:
+        """
 
         if is_null(self.dataset):
             self.extract_dataset(only_load_existing=only_load_existing)
@@ -326,6 +383,11 @@ class LearningModel(LoggedExtendedModel):
                 setattr(self, k, v)
 
     def _get_largest_code(self):
+        """
+        If ``self.dataset_extractor`` has a base class ID, it uses that. If it does not, it returns the most common
+        value in ``self.dataset[self.dataset_extractor.outcome_column]``.
+        :return: Base class or most common code
+        """
 
         if (
             hasattr(self.dataset_extractor, "base_class_id")
@@ -342,6 +404,11 @@ class LearningModel(LoggedExtendedModel):
         return largest_code
 
     def _get_fit_params(self, train_dataset):
+        """
+        Compiles the fit parameters for the model and adds training weights to the sample weights passed to sklearn.
+        :param train_dataset: Training dataset (which is used to grab the weights)
+        :return:
+        """
 
         fit_params = {
             "model__{}".format(k): v
@@ -356,6 +423,14 @@ class LearningModel(LoggedExtendedModel):
         return fit_params
 
     def _train_model(self, pipeline_steps, params, num_cores=1, **kwargs):
+        """
+        Trains the model using sklearn's GridSearchCV
+        :param pipeline_steps: Pipeline steps (from the pipeline config)
+        :param params: Pipeline parameters (from the pipeline config)
+        :param num_cores: (default is 1) number of cores to use during grid search
+        :param kwargs:
+        :return:
+        """
 
         df = copy.copy(self.dataset)
 
@@ -374,13 +449,6 @@ class LearningModel(LoggedExtendedModel):
                 train_ids = [
                     i for i in self.dataset.index if not str(i).startswith("test_")
                 ]
-                # self.test_dataset['training_weight'] = 1.0
-                # self.test_dataset['balancing_weight'] = 1.0
-                # y_test = self.test_dataset[self.dataset_extractor.outcome_column]
-                # X_test = self.test_dataset[X_cols]
-                # self.test_dataset.index = self.test_dataset.index.map(lambda x: 'test_{}'.format(x))
-                # test_ids = self.test_dataset.index
-                # df = pandas.concat([df, self.test_dataset])
                 print(
                     "Adding {} test cases from separate dataset".format(len(test_ids))
                 )
@@ -470,11 +538,22 @@ class LearningModel(LoggedExtendedModel):
 
     @require_model
     def describe_model(self):
+        """
+        Placeholder for more specific model results (gets implemented on more specific models that inherit ``LearningModel``)
+        :return:
+        """
 
         print("'{}' results".format(self.dataset_extractor.outcome_column))
 
     @require_model
     def get_test_prediction_results(self, refresh=False, only_load_existing=False):
+        """
+        Runs the model on the test dataset (what was specified by ``holdout_pct`` or ``test_dataset_extractor`` and
+        computes the scores.
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, only returns exising cached results (does not try to apply the model)
+        :return:
+        """
 
         self.predict_dataset = None
         if is_not_null(self.test_dataset):
@@ -490,6 +569,12 @@ class LearningModel(LoggedExtendedModel):
             return scores
 
     def print_test_prediction_report(self, refresh=False, only_load_existing=True):
+        """
+        Wrapper around ``self.get_test_prediction_results`` that prints the results.
+        :param refresh: (default is False) if True, refreshes the test predictions
+        :param only_load_existing: (default is False) if True, only returns exising cached results (does not try to apply the model)
+        :return:
+        """
 
         print(
             self.get_test_prediction_results(
@@ -501,9 +586,18 @@ class LearningModel(LoggedExtendedModel):
     def get_cv_prediction_results(
         self, refresh=False, only_load_existing=False, return_averages=True
     ):
+        """
+        Applies the model using k-fold cross validation (number of folds is specified in the pipeline config in the
+        ``cv`` field). Computes the scores across all folds in ``self.cv_folds``.
+        :param refresh: (default is False) if True, does a fresh cross-validation run
+        :param only_load_existing: (default is False) if True, only returns existing cached results (does not try to apply the model)
+        :param return_averages: (default is True) if False, will return a vertically-concatenated dataframe of results from all folds;
+            if True, the results will be averaged across the folds
+        :return:
+        """
 
         print("Computing cross-fold predictions")
-        _final_model = self.model
+        _final_model = copy.deepcopy(self.model)
         _final_model_best_estimator = self.model.best_estimator_
         dataset = copy.copy(self.train_dataset)
 
@@ -576,6 +670,14 @@ class LearningModel(LoggedExtendedModel):
     def print_cv_prediction_report(
         self, refresh=False, only_load_existing=True, return_averages=True
     ):
+        """
+        Wrapper around ``self.get_cv_prediction_results`` that prints the results
+        :param refresh: (default is False) if True, does a fresh cross-validation run
+        :param only_load_existing: (default is False) if True, only returns existing cached results (does not try to apply the model)
+        :param return_averages: (default is True) if False, will return a vertically-concatenated dataframe of results from all folds;
+            if True, the results will be averaged across the folds
+        :return:
+        """
 
         print(
             self.get_cv_prediction_results(
@@ -586,6 +688,15 @@ class LearningModel(LoggedExtendedModel):
         )
 
     def _get_scoring_function(self, func_name, binary_base_code=None):
+        """
+        Creates the scoring function for the model. For classification with a ``binary_base_code`` specified, the
+        options are "f1", "precision", "recall" and "brier_loss". For classification without a base class specified,
+        options are "f1", "precision" and "recall".
+
+        :param func_name: Name of the scoring function
+        :param binary_base_code: Base label for binary classification
+        :return: Scoring function
+        """
 
         try:
 
@@ -660,17 +771,6 @@ class LearningModel(LoggedExtendedModel):
         else:
             if names[-1] in params.keys():
                 for k, v in params[names[-1]].items():
-                    # if k == "preprocessors":
-                    #     preprocessor_sets = []
-                    #     for pset in v:
-                    #         preprocessors = []
-                    #         try:
-                    #             for preprocessor_name, preprocessor_params in pset:
-                    #                 preprocessor_module = importlib.import_module("logos.learning.utils.preprocessors.{0}".format(preprocessor_name))
-                    #                 preprocessors.append(preprocessor_module.Preprocessor(**preprocessor_params))
-                    #         except ValueError: pass
-                    #         preprocessor_sets.append(preprocessors)
-                    #     v = preprocessor_sets
                     if len(v) > 0:
                         final_params["__".join(names + [k])] = v
             from django_learning.utils.feature_extractors import BasicExtractor
@@ -714,6 +814,15 @@ class LearningModel(LoggedExtendedModel):
         clear_temp_cache=True,
         disable_probability_threshold_warning=False,
     ):
+        """
+        Applies the model directly to a dataset.
+        :param data: A dataframe in the same format as the training data
+        :param keep_cols: (Optional) a subset of columns to filter to
+        :param clear_temp_cache: (default is True) if False, temporary row-level caches will be preserved
+        :param disable_probability_threshold_warning: (default is False) if True, a warning will not be raised if you
+            use the model when a probability threshold is set (only matters for ``ClassificationModel`` instances)
+        :return: Model predictions on the dataset
+        """
 
         if not keep_cols:
             keep_cols = []
@@ -750,6 +859,15 @@ class LearningModel(LoggedExtendedModel):
         only_load_existing=False,
         disable_probability_threshold_warning=False,
     ):
+        """
+        The preferred method of producing predictions for a dataset.
+        :param df_to_predict: A dataframe in the same format as the training data
+        :param cache_key: (Optional) a unique cache identifier for the dataset
+        :param refresh: (default is False) if True, existing cached predictions will be ignored and recomputed
+        :param only_load_existing: (default is False) if True, only returns existing cached results (will not recompute)
+        :param disable_probability_threshold_warning: (default is False) if True, disables the prediction threshold warning
+        :return: A dataset with model predictions
+        """
 
         from django_learning.utils.dataset_extractors import dataset_extractors
 
@@ -771,6 +889,18 @@ class LearningModel(LoggedExtendedModel):
         refresh=False,
         only_load_existing=False,
     ):
+        """
+        Computes scores for a dataset of predictions and a dataset of actual values. Expects that the existing dataset
+        (``df_to_predict``) already has ``self.dataset_extractor.outcome_column`` filled in with correct values.
+
+        :param df_to_predict: The original dataset to predict
+        :param predicted_df: (Optional) a dataset with predicted values; if nothing is passed, it will use the model
+            to produce new predictions
+        :param cache_key: (Optional) a unique cache identifier for the dataset
+        :param refresh: (default is False) if True, existing cached predictions will be ignored and recomputed
+        :param only_load_existing: (default is False) if True, only returns existing cached results (will not recompute)
+        :return: Scores that detail the model performance
+        """
 
         if (
             "sampling_weight" in df_to_predict.columns
@@ -799,27 +929,16 @@ class LearningModel(LoggedExtendedModel):
 
 
 class DocumentLearningModel(LearningModel):
+    """
+    Extends LearningModel for use with Documents.
+    """
 
     sampling_frame = models.ForeignKey(
         "django_learning.SamplingFrame",
         related_name="learning_models",
         on_delete=models.CASCADE,
+        help_text="Sampling frame that the model is associated with",
     )
-    # question = models.ForeignKey("django_learning.Question", related_name="learning_models")
-
-    # INHERITED FIELDS
-    # name = models.CharField(max_length=100, unique=True, help_text="Unique name of the classifier")
-    # outcome_column = models.CharField(max_length=256)
-    # pipeline_name = models.CharField(max_length=150, null=True,
-    #                                  help_text="The named pipeline used to seed the handler's parameters, if any; note that the JSON pipeline file may have changed since this classifier was created; refer to the parameters field to view the exact parameters used to compute the model")
-    # parameters = PickledObjectField(null=True,
-    #                                 help_text="A pickle file of the parameters used to process the codes and generate the model")
-    #
-    # cv_folds = PickledObjectField(null=True)
-    # cv_folds_test = PickledObjectField(null=True)
-    #
-    # training_data_hash = models.CharField(max_length=256, null=True)
-    # model_hash = models.CharField(max_length=256, null=True)
 
     class Meta:
 
@@ -830,6 +949,12 @@ class DocumentLearningModel(LearningModel):
         super(DocumentLearningModel, self).save(*args, **kwargs)
 
     def extract_dataset(self, refresh=False, **kwargs):
+        """
+        Auto-detects the sampling frame from the dataset extractor after loading the dataset.
+        :param refresh:
+        :param kwargs:
+        :return:
+        """
 
         super(DocumentLearningModel, self).extract_dataset(refresh=refresh, **kwargs)
         if (

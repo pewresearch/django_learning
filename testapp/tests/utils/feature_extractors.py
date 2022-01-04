@@ -18,7 +18,7 @@ class FeatureExtractorsTests(DjangoTestCase):
     """
 
     def setUp(self):
-        set_up_test_project()
+        set_up_test_project(200)
         set_up_test_sample("test_sample", 100)
 
     def test_loading(self):
@@ -33,7 +33,6 @@ class FeatureExtractorsTests(DjangoTestCase):
             "regex_counts",
             "tfidf",
             "topics",
-            "word2vec",
         ]:
             self.assertIn(val, feature_extractors.keys())
             self.assertIsNotNone(feature_extractors[val]())
@@ -49,20 +48,6 @@ class FeatureExtractorsTests(DjangoTestCase):
         results = extractor.fit_transform(df)
         self.assertEqual(len(results), len(df))
         self.assertEqual(results["movie_review__pk"].dtype.name, "float64")
-
-    # def test_google_word2vec(self):
-    #
-    #     from django_learning.utils.feature_extractors import feature_extractors
-    #
-    #     df = extract_dataset("document_dataset")
-    #     extractor = feature_extractors["google_word2vec"](
-    #         feature_name_prefix="w2v", limit=100
-    #     )
-    #     results = extractor.fit_transform(df)
-    #     import pdb
-    #
-    #     pdb.set_trace()
-    #     # TODO: finish testing this
 
     def test_ngram_set(self):
 
@@ -140,11 +125,13 @@ class FeatureExtractorsTests(DjangoTestCase):
 
         df = extract_dataset("document_dataset")
         results = feature_extractors["preprocessor"](
-            preprocessors=[("run_function", {"function": lambda x: "success"})]
+            preprocessors=[
+                ("run_function", {"function": lambda x: x if "comedy" in x else ""})
+            ]
         ).fit_transform(df)
         self.assertEqual(len(results), len(df))
-        self.assertEqual(len(set(results["text"])), 1)
-        self.assertEqual(results["text"].values[0], "success")
+        for index, row in results[results["text"] != ""].iterrows():
+            self.assertIn("comedy", row["text"])
 
     def test_punctuation_indicators(self):
 
@@ -155,7 +142,7 @@ class FeatureExtractorsTests(DjangoTestCase):
             feature_name_prefix="punct"
         ).fit_transform(df)
         self.assertEqual(len(results), len(df))
-        self.assertGreaterEqual(len(results.columns), 6)
+        self.assertGreaterEqual(len(results.columns), 8)
 
     def test_regex_counts(self):
 
@@ -166,7 +153,7 @@ class FeatureExtractorsTests(DjangoTestCase):
             df
         )
         self.assertEqual(len(results), len(df))
-        self.assertEqual(len(set(results["text"])), 4)
+        self.assertEqual(len(results.columns), 4)
 
     def test_tfidf(self):
 
@@ -187,13 +174,23 @@ class FeatureExtractorsTests(DjangoTestCase):
         self.assertEqual(results.shape[0], len(df))
         self.assertEqual(results.shape[1], 237)
 
-    def test_topics(self):
-        pass
-        # TODO: test this
+    # def test_topics(self):
+    #     pass
+    #     # TODO: test this
 
-    def test_word2vec(self):
-        pass
-        # TODO: test this
+    # def test_google_word2vec(self):
+    #
+    #     from django_learning.utils.feature_extractors import feature_extractors
+    #
+    #     df = extract_dataset("document_dataset")
+    #     extractor = feature_extractors["google_word2vec"](
+    #         feature_name_prefix="w2v", limit=100
+    #     )
+    #     results = extractor.fit_transform(df)
+    #     import pdb
+    #
+    #     pdb.set_trace()
+    #     # TODO: finish testing this
 
     def tearDown(self):
 

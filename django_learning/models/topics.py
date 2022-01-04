@@ -18,23 +18,32 @@ from pewanalytics.stats.sampling import SampleExtractor
 
 
 class TopicModel(LoggedExtendedModel):
+    """
+    A topic model that's been fit to a specific sampling frame. The ``model`` and ``vectorizer`` are pickled and saved
+    to their respective fields.
+    """
 
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(
+        max_length=200, unique=True, help_text="Unique name for the topic model"
+    )
     frame = models.ForeignKey(
         "django_learning.SamplingFrame",
         related_name="topic_models",
         on_delete=models.CASCADE,
+        help_text="Sampling frame the topic model belongs to",
     )
 
-    model = PickledObjectField(null=True)
-    vectorizer = PickledObjectField(null=True)
+    model = PickledObjectField(null=True, help_text="Pickled topic model")
+    vectorizer = PickledObjectField(null=True, help_text="Pickled vectorizer")
 
     parameters = PickledObjectField(
         null=True, help_text="A pickle file of the parameters used"
     )
 
     training_documents = models.ManyToManyField(
-        "django_learning.Document", related_name="topic_models_trained"
+        "django_learning.Document",
+        related_name="topic_models_trained",
+        help_text="Documents the model was trained on",
     )
 
     def __str__(self):
@@ -42,12 +51,22 @@ class TopicModel(LoggedExtendedModel):
         return self.name
 
     def save(self, *args, **kwargs):
+        """
+        Extends the ``save`` function to pull and save the parameters from the config file
+        :param args:
+        :param kwargs:
+        :return:
+        """
 
         self.parameters = topic_models.topic_models[self.name]()
         self.frame = SamplingFrame.objects.get(name=self.parameters["frame"])
         super(TopicModel, self).save(*args, **kwargs)
 
     def _get_document_ids(self):
+        """
+        Returns the primary keys of the documents in the sampling frame
+        :return:
+        """
 
         doc_ids = list(
             self.frame.documents.filter(text__isnull=False).values_list("pk", flat=True)
@@ -56,6 +75,12 @@ class TopicModel(LoggedExtendedModel):
         return doc_ids
 
     def load_model(self, refresh_model=False, refresh_vectorizer=False):
+        """
+        Loads an existing model or trains a new model.
+        :param refresh_model: (default is False) if True, the model will be re-trained even if it already exists
+        :param refresh_vectorizer: (default is False) if True, the vectorizer will be re-fit even if it already exists
+        :return:
+        """
 
         if refresh_model or is_null(self.model):
 
@@ -76,14 +101,11 @@ class TopicModel(LoggedExtendedModel):
                     sample_ids = frame_ids
                 else:
                     sample_ids = SampleExtractor(
-                        id_col="pk", sampling_strategy="random"
+                        pandas.DataFrame({"pk": frame_ids}), "pk"
                     ).extract(
-                        pandas.DataFrame({"pk": frame_ids}),
-                        self.parameters["sample_size"],
+                        self.parameters["sample_size"], sampling_strategy="random"
                     )
-                self.training_documents = get_model("Document").objects.filter(
-                    pk__in=sample_ids
-                )
+                self.training_documents.set(sample_ids)
                 sample = pandas.DataFrame.from_records(
                     self.training_documents.values("pk", "text")
                 )
@@ -146,10 +168,15 @@ class TopicModel(LoggedExtendedModel):
                     empty_lists_are_null=True,
                 )
                 topic.ngrams.all().delete()
-                for ngram, weight in topic_ngrams:
-                    TopicNgram.objects.create(
-                        name=str(ngram), topic=topic, weight=weight
-                    )
+                for ngram, weight, corr in topic_ngrams:
+                    # The "corr" is either 1 or -1; as per the corex documentation:
+                    # If it is positive (1), then the word's presence is informative for the topic.
+                    # If it is negative (-1), then word's absensce is informative for the topic
+                    # Accordingly, we'll only look at positive terms
+                    if corr > 0:
+                        TopicNgram.objects.create(
+                            name=str(ngram), topic=topic, weight=weight
+                        )
                 print(str(topic))
 
                 old_topic = old_topic_map.get(i, None)
@@ -161,6 +188,12 @@ class TopicModel(LoggedExtendedModel):
                     topic.save()
 
     def apply_model(self, df, probabilities=False):
+        """
+        Applies the topic model to a dataframe of documents with a ``text`` column.
+        :param df: Dataframe with a ``text`` column
+        :param probabilities: (default is False) if True, returns topic probabilities instead of discrete binary flags
+        :return: A dataframe with additional columns for each topic in the model
+        """
 
         tfidf = self.vectorizer.transform(df)
         topic_names = list(self.topics.order_by("num").values_list("name", flat=True))
@@ -181,16 +214,33 @@ class Topic(LoggedExtendedModel):
     A topic extracted by a topic model.
     """
 
-    num = models.IntegerField()
+    num = models.IntegerField(
+        help_text="Unique number of the topic in the model (unique together with ``model``)"
+    )
     model = models.ForeignKey(
         "django_learning.TopicModel",
         related_name="topics",
         null=True,
         on_delete=models.SET_NULL,
+        help_text="The model the topic belongs to (unique together with ``num``)",
     )
-    name = models.CharField(max_length=50, db_index=True, null=True)
-    label = models.CharField(max_length=300, db_index=True, null=True)
-    anchors = ArrayField(models.CharField(max_length=100), default=list)
+    name = models.CharField(
+        max_length=50,
+        db_index=True,
+        null=True,
+        help_text="Optional short name given to the topic",
+    )
+    label = models.CharField(
+        max_length=300,
+        db_index=True,
+        null=True,
+        help_text="Optional label/title given to the topic",
+    )
+    anchors = ArrayField(
+        models.CharField(max_length=100),
+        default=list,
+        help_text="Optional list of terms to be used as anchors for this topic when training the model",
+    )
 
     class Meta:
 
@@ -206,15 +256,29 @@ class Topic(LoggedExtendedModel):
             return self.top_ngrams()
 
     def set_label(self, label):
+        """
+        Sets the topic's label
+        :param label: Label to give to the topic
+        :return:
+        """
 
         self.label = label
         self.save()
 
     def anchor_string(self):
+        """
+        Returns a comma-delineated list of anchor terms belonging to the topic
+        :return:
+        """
 
         return ", ".join(self.anchors)
 
     def top_ngrams(self, top_n=25):
+        """
+        Returns a space-delineated string of the ``top_n`` terms belonging to the topic
+        :param top_n: Number of top terms to return
+        :return:
+        """
 
         return " ".join(
             [
@@ -225,71 +289,45 @@ class Topic(LoggedExtendedModel):
             ]
         )
 
-    # def distinctive_ngrams(self):
-    #
-    #     return " ".join([ngram.name.replace(" ", "_") for ngram in self.ngrams.order_by("-weight") if
-    #                      get_model("TopicNgram").objects.filter(name=ngram.name).filter(
-    #                          topic__model=self.model).order_by("-weight")[0].topic == self])
-    #
-    # def most_similar(self, with_value=False):
-    #     sim = self.similar_topics()
-    #     if len(sim) > 0:
-    #         if with_value:
-    #             return sim[0]
-    #         else:
-    #             return sim[0][0]
-    #     else:
-    #         return None
-
-    def values(self):
-        return list(self.documents.values_list("value", flat=True))
-
-    def values_at_least_1pct(self):
-        return list(
-            self.documents.filter(value__gte=0.01).values_list("value", flat=True)
-        )
-
-    def top_n_documents(self, n=10):
-        return self.documents.order_by("-value")[:n]
-
-    def coef_avg(self):
-        return numpy.average(list(self.ngrams.values_list("weight", flat=True)))
-
-    def coef_total(self):
-        return sum(list(self.ngrams.values_list("weight", flat=True)))
-
-    def coef_std(self):
-        return numpy.std(list(self.ngrams.values_list("weight", flat=True)))
-
-    def document_avg(self):
-        return numpy.average(list(self.documents.values_list("value", flat=True)))
-
-    def document_total(self):
-        return sum(list(self.documents.values_list("value", flat=True)))
-
-    def document_std(self):
-        return numpy.std(list(self.documents.values_list("value", flat=True)))
-
 
 class TopicNgram(LoggedExtendedModel):
-    name = models.CharField(max_length=40, db_index=True)
+    """
+    An ngram that belongs to a particular topic, with a given ``weight``
+    """
+
+    name = models.CharField(max_length=40, db_index=True, help_text="The ngram")
     topic = models.ForeignKey(
-        "django_learning.Topic", related_name="ngrams", on_delete=models.CASCADE
+        "django_learning.Topic",
+        related_name="ngrams",
+        on_delete=models.CASCADE,
+        help_text="The topic the ngram belongs to",
     )
-    weight = models.FloatField()
+    weight = models.FloatField(
+        help_text="Weight indicating 'how much' the ngram belongs to the topic; the mutual information of the wored with the topic"
+    )
 
     def __str__(self):
         return "{}*{}".format(self.name, self.weight)
 
 
 class DocumentTopic(LoggedExtendedModel):
+    """
+    Application of a topic model to a document; the degree to which the topic matches the document is indicated by ``value``.
+    """
+
     topic = models.ForeignKey(
-        "django_learning.Topic", related_name="documents", on_delete=models.CASCADE
+        "django_learning.Topic",
+        related_name="documents",
+        on_delete=models.CASCADE,
+        help_text="The topic",
     )
     document = models.ForeignKey(
-        "django_learning.Document", related_name="topics", on_delete=models.CASCADE
+        "django_learning.Document",
+        related_name="topics",
+        on_delete=models.CASCADE,
+        help_text="The document",
     )
-    value = models.FloatField()
+    value = models.FloatField(help_text="Presence of the topic in the document")
 
     class Meta:
         unique_together = ("topic", "document")

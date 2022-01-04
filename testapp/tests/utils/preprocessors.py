@@ -39,21 +39,24 @@ class PreprocessorsTests(DjangoTestCase):
 
         text = "Testing one two three and four but not five. This is an action movie and it's exciting."
         for params, expected in [
-            ({}, "testing one two three four five action movie exciting"),
+            (
+                {},
+                "testing one two three and four but not five this action movie and exciting",
+            ),
             (
                 {"regex_replacers": ["test"]},
-                "testing one two three four five action replacer_worked exciting",
+                "testing one two three and four but not five this action replacer_worked and exciting",
             ),
             ({"stopword_sets": ["english"]}, "testing action movie exciting"),
             ({"stopword_sets": ["english", "test"]}, "testing action exciting"),
-            ({"regex_filters": ["test"]}, "action movie exciting"),
+            ({"regex_filters": ["test"]}, "this action movie and exciting"),
             (
                 {"stopword_sets": ["english"], "stopword_whitelists": ["test"]},
                 "testing and action movie and exciting",
             ),
             (
                 {"refresh_stopwords": True},
-                "testing one two three four five action movie exciting",
+                "testing one two three and four but not five this action movie and exciting",
             ),
         ]:
             preprocessor = preprocessors["clean_text"](**params)

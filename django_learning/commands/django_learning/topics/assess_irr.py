@@ -180,6 +180,18 @@ def get_score(topic, df1, df2, sample_name, group_name):
 
 class Command(BasicCommand):
 
+    """
+    Once you've trained a topic model using the ``django_learning_topics_train_model`` command, and then coded a validation
+    sample using the ``django_learning_topics_create_validation_coding_project`` command, you can run this command to
+    calculate interrater reliability between the topic model and your own human coding of the topics.
+
+    :param topic_model_name: Name of an existing topic model that's has a completed validation coding sample
+    :param refresh_codes: (default is False) if True, refreshes the model's predictions even if they've already been
+        cached
+    :param export: (default is False) if True, saves the IRR results to a CSV named \
+        ``topic_model_[TOPIC_MODEL_NAME]_irr_results.csv``
+    """
+
     parameter_names = ["topic_model_name"]
     dependencies = []
 

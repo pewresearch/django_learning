@@ -7,6 +7,18 @@ from django_learning.utils.mturk import MTurk
 
 
 class Command(BasicCommand):
+    """
+    Create and launch Mechanical Turk HITs for an existing project and sample. Uses the project's ``mturk_sandbox`` flag
+    to determine whether or not to use the sandbox.
+
+    :param project_name: Name of an existing project
+    :param sample_name: Name of an existing sample
+    :param hit_type_name: Name of an existing HIT type to assign to the newly created HITs
+    :param num_coders: (default is 1) number of coders to complete each HIT
+    :param template_name: (optional) the name of a custom project_hit_template
+    :param force_hit_type_reset: (default is False) if True, the HIT type will be reset via the MTurk API, which
+        may be necessary - sometimes the API screws up, but this fixes it up
+    """
 
     parameter_names = ["project_name", "sample_name", "hit_type_name"]
     dependencies = []
@@ -18,7 +30,6 @@ class Command(BasicCommand):
         parser.add_argument("hit_type_name", type=str)
         parser.add_argument("--num_coders", default=1, type=int)
         parser.add_argument("--template_name", default=None, type=str)
-        parser.add_argument("--sandbox", default=False, action="store_true")
         parser.add_argument(
             "--force_hit_type_reset", default=False, action="store_true"
         )
@@ -26,9 +37,7 @@ class Command(BasicCommand):
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         sample = Sample.objects.get(
             name=self.parameters["sample_name"], project=project
@@ -38,7 +47,7 @@ class Command(BasicCommand):
             {"project": project, "name": self.parameters["hit_type_name"]}
         )
 
-        mturk = MTurk(sandbox=self.options["sandbox"])
+        mturk = MTurk(sandbox=project.mturk_sandbox)
         if not hit_type.turk_id or self.options["force_hit_type_reset"]:
             mturk.sync_hit_type(hit_type)
 
@@ -57,6 +66,3 @@ class Command(BasicCommand):
     def cleanup(self):
 
         pass
-
-
-# 3BH55VSCCHFXPE5TC7MLIA9DJDUBJ6 hit type

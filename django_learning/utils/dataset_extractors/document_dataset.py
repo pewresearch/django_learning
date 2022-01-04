@@ -29,6 +29,9 @@ class Extractor(DocumentCoderDatasetExtractor):
 
         dataset = super(Extractor, self)._additional_steps(dataset, **kwargs)
 
+        if len(dataset) == 0:
+            return dataset
+
         if self.coder_aggregation_function == "mean":
             dataset = dataset.groupby("document_id").mean().reset_index()
         elif self.coder_aggregation_function == "median":
@@ -48,25 +51,42 @@ class Extractor(DocumentCoderDatasetExtractor):
             def get_max(x):
 
                 if self.base_class_id:
-                    max_col, max_val = sorted(
-                        [
-                            (col, x[col])
-                            for col in self.outcome_columns
-                            if col != "label_{}".format(self.base_class_id)
-                        ],
-                        key=lambda x: x[1],
-                        reverse=True,
-                    )[0]
+                    try:
+                        max_col, max_val = sorted(
+                            [
+                                (col, x[col])
+                                for col in self.outcome_columns
+                                if col != "label_{}".format(self.base_class_id)
+                            ],
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[0]
+                    except IndexError:
+                        # In some cases, you may have filtered down to a dataset where only the base class is left
+                        max_col, max_val = sorted(
+                            [(col, x[col]) for col in self.outcome_columns],
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[0]
                 else:
                     max_col, max_val = sorted(
                         [(col, x[col]) for col in self.outcome_columns],
                         key=lambda x: x[1],
                         reverse=True,
                     )[0]
-                if not self.threshold or max_val >= self.threshold:
-                    return max_col.split("_")[-1]
-                else:
+
+                return_val = None
+                if self.threshold:
+                    if max_val >= self.threshold:
+                        return_val = max_col.split("_")[-1]
+                    elif self.base_class_id:
+                        return_val = str(self.base_class_id)
+                elif max_val > 0:
+                    return_val = max_col.split("_")[-1]
+                if return_val is None and self.base_class_id:
                     return str(self.base_class_id)
+                else:
+                    return return_val
 
             dataset["label_id"] = dataset.apply(get_max, axis=1)
             for col in self.outcome_columns:

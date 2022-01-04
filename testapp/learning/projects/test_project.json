@@ -5,12 +5,8 @@
     "coder1"
   ],
   "coders": [
-    {
-      "name": "coder1"
-    },
-    {
-      "name": "coder2"
-    }
+    "coder1",
+    "coder2"
   ],
   "questions": [
     {
@@ -19,13 +15,18 @@
       "display": "radio",
       "labels": [
         {
-          "label": "Good",
-          "value": "1",
+          "label": "Comedy",
+          "value": "comedy",
           "pointers": []
         },
         {
-          "label": "Bad",
-          "value": "0",
+          "label": "Action",
+          "value": "action",
+          "pointers": []
+        },
+        {
+          "label": "Other",
+          "value": "other",
           "pointers": []
         }
       ],
@@ -90,18 +91,7 @@
       "prompt": "Test Number",
       "name": "test_number",
       "display": "number",
-      "labels": [
-        {
-          "label": "Good",
-          "value": "1",
-          "pointers": []
-        },
-        {
-          "label": "Bad",
-          "value": "0",
-          "pointers": []
-        }
-      ],
+      "labels": [],
       "tooltip": "",
       "examples": [
         {

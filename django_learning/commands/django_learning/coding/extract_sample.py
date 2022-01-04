@@ -6,6 +6,25 @@ from django_learning.models import Project, Sample, SamplingFrame, HITType
 
 class Command(BasicCommand):
 
+    """
+    Extract a sample for an existing project. Can optionally specify the sampling frame, method, and size of the sample.
+
+    :param project_name: Name of an existing project
+    :param sample_name: The name to be given to the sample
+    :param sampling_frame_name: (default is "all_documents") name of an existing sampling fame
+    :param sampling_method: (default is "random") name of an existing sampling method
+    :param size: (default is 0, which is equivalent to all documents in the frame) size of the sample to pull
+    :param allow_overlap_with_existing_project_samples: (default is False) if True, documents that are already included
+        in other samples associated with this project will be eligible to be included in the new sample
+    :param recompute_weights: (default is False) if True and the sample already exists, sampling weights will be recomputed
+    :param clear_existing_documents: (default is False) if True, if the sample already exists, a fresh sample will be
+        pulled and will replace any existing documents currently associated with the sample
+    :param seed: (optional) a random seed to use
+    :param force_rerun: (default is False) if True, the ``sample.extract_documents`` function will be rerun even if
+        the sample already exists. This may cause new documents to be added to the existing sample.
+    :param skip_weighting: (default is False) if True, sampling weights will not be computed and cached
+    """
+
     parameter_names = ["project_name", "sample_name"]
     dependencies = []
 
@@ -28,14 +47,11 @@ class Command(BasicCommand):
         parser.add_argument("--seed", default=None, type=int)
         parser.add_argument("--force_rerun", default=False, action="store_true")
         parser.add_argument("--skip_weighting", default=False, action="store_true")
-        parser.add_argument("--sandbox", default=False, action="store_true")
         return parser
 
     def run(self):
 
-        project = Project.objects.get(
-            name=self.parameters["project_name"], sandbox=self.options["sandbox"]
-        )
+        project = Project.objects.get(name=self.parameters["project_name"])
 
         frame, created = SamplingFrame.objects.get_or_create(
             name=self.options["sampling_frame_name"]
