@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import gensim, json
 
+from pewtils import is_null
 from contextlib import closing
 
 from django_commander.commands import BasicCommand, log_command, commands
