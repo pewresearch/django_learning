@@ -21,7 +21,7 @@ spec:
           memory: "8Gi"
 
         requests:
-          cpu: "1.0"
+          cpu: "100m"
           memory: "2Gi"
 
       env:

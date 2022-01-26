@@ -15,8 +15,6 @@ class DjangoLearningConfig(AppConfig):
 
         setattr(settings, "DJANGO_LEARNING_BASE_DIR", DJANGO_LEARNING_BASE_DIR)
         for setting, default in [
-            ("AWS_ACCESS_KEY_ID", None),
-            ("AWS_SECRET_ACCESS_KEY", None),
             ("DJANGO_LEARNING_BASE_TEMPLATE", "django_learning/_template.html"),
             ("S3_BUCKET", None),
             ("LOCAL_CACHE_ROOT", "cache"),
