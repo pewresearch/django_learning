@@ -1,25 +1,21 @@
-from __future__ import print_function
-import itertools
-import math
-import os
-import pandas
-import random
-
 from django.conf import settings
 from django.db import models
-from django.conf import settings
-from tqdm import tqdm
-
 from django_commander.models import LoggedExtendedModel
 from django_learning.utils import filter_queryset_by_params
 from django_learning.utils.regex_filters import regex_filters
 from django_learning.utils.sampling_frames import sampling_frames
 from django_learning.utils.sampling_methods import sampling_methods
-from pewtils import is_null, decode_text, is_not_null
 from django_pewtils import get_model, CacheHandler
 from pewanalytics.stats.sampling import SampleExtractor
-from pewtils import get_hash
 from pewanalytics.stats.sampling import compute_sample_weights_from_frame
+from pewtils import get_hash
+from pewtils import is_null, decode_text, is_not_null
+from tqdm import tqdm
+import itertools
+import math
+import os
+import pandas
+import random
 
 
 class SamplingFrame(LoggedExtendedModel):
@@ -521,7 +517,7 @@ class Sample(LoggedExtendedModel):
 
                     pdb.set_trace()
 
-            for index, row in tqdm(df.iterrows(), desc="Updating sample documents"):
+            for index, row in tqdm(df.iterrows(), desc="Updating sample documents", disable=os.environ.get("DISABLE_TQDM", False)):
                 SampleUnit.objects.create_or_update(
                     {"document_id": row["pk"], "sample": self},
                     {"weight": row["weight"]},

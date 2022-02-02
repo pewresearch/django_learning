@@ -1,13 +1,10 @@
-from __future__ import print_function
-
-import pandas as pd
-
-from tqdm import tqdm
-
-from django_pewtils import get_model
-from pewtils import is_not_null
 from django_learning.utils.dataset_document_filters import dataset_document_filters
+from django_pewtils import get_model
 from pewanalytics.stats.sampling import compute_sample_weights_from_frame
+from pewtils import is_not_null
+from tqdm import tqdm
+import os
+import pandas as pd
 
 
 def get_sampling_weights(
@@ -264,7 +261,7 @@ def update_frame_and_expand_samples(frame_name):
                 compute_sample_weights_from_frame(new_frame, sample, weight_vars)
             )
 
-            for index, row in tqdm(sample.iterrows(), desc="Updating sample documents"):
+            for index, row in tqdm(sample.iterrows(), desc="Updating sample documents", disable=os.environ.get("DISABLE_TQDM", False)):
                 get_model(
                     "SampleUnit", app_name="django_learning"
                 ).objects.create_or_update(
