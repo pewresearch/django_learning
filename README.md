@@ -57,10 +57,6 @@ Installing ssdeep on Mac OS may involve a few additional steps, detailed below:
    Do this and try step 4 again.
 6. Now you should be able to run the main installation process detailed above.
 
-## Documentation
-
-Please refer to the [official documentation](https://pewresearch.github.io/django_learning/) for information on how to use this package.
-
 ## Use Policy
 
 In addition to the [license](https://github.com/pewresearch/django_learning/blob/master/LICENSE), Users must abide by the following conditions:
