@@ -69,10 +69,6 @@ In addition to the [license](https://github.com/pewresearch/django_learning/blob
 - User may not use the Center's name in any advertising, marketing or promotional materials.
 - User may not use the licensed materials in any manner that implies, suggests, or could otherwise be perceived as attributing a particular policy or lobbying objective or opinion to the Center, or as a Center endorsement of a cause, candidate, issue, party, product, business, organization, religion or viewpoint.
 
-## Issues and Pull Requests
-
-This code is provided as-is for use in your own projects. You are free to submit issues and pull requests with any questions or suggestions you may have. We will do our best to respond within a 30-day time period.
-
 ## Recommended Package Citation
 
 Pew Research Center, 2021, "django_learning" Available at: github.com/pewresearch/django_learning
